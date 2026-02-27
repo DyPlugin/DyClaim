@@ -1,0 +1,79 @@
+name: DyClaim
+version: ${version}
+main: dev.dyclaim.DyClaim
+api-version: '1.20'
+description: Lightweight chunk-based land claiming plugin with per-claim settings, trust system, and multi-language support.
+author: DyClaim
+website: https://modrinth.com/plugin/dyclaim
+softdepend:
+  - Vault
+  - floodgate
+  - WorldGuard
+  - GriefPrevention
+  - Towny
+  - Lands
+  - Residence
+  - GriefDefender
+
+commands:
+  claim:
+    description: Chunk claim commands
+    usage: /<command> [subcommand]
+    aliases:
+      - dyclaim
+  unclaim:
+    description: Remove your claim
+    usage: /<command>
+  onayla:
+    description: Confirm pending action
+    usage: /<command>
+    aliases:
+      - confirm
+  reddet:
+    description: Deny pending action
+    usage: /<command>
+    aliases:
+      - cancel
+
+permissions:
+  dyclaim.player:
+    description: All player permissions
+    default: true
+    children:
+      dyclaim.claim: true
+      dyclaim.sell: true
+      dyclaim.see: true
+      dyclaim.info: true
+      dyclaim.list: true
+      dyclaim.trust: true
+      dyclaim.teleport: true
+  dyclaim.admin:
+    description: All admin permissions
+    default: op
+    children:
+      dyclaim.player: true
+      dyclaim.admin.bypass: true
+  dyclaim.claim:
+    description: Allow claiming chunks
+    default: true
+  dyclaim.sell:
+    description: Allow selling claims
+    default: true
+  dyclaim.see:
+    description: Allow viewing chunk borders
+    default: true
+  dyclaim.info:
+    description: Allow viewing claim info
+    default: true
+  dyclaim.list:
+    description: Allow viewing claim list
+    default: true
+  dyclaim.trust:
+    description: Allow trusting players
+    default: true
+  dyclaim.teleport:
+    description: Allow teleporting to claims
+    default: true
+  dyclaim.admin.bypass:
+    description: Bypass claim protection
+    default: op

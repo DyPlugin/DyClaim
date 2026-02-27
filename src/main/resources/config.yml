@@ -1,0 +1,43 @@
+prefix: "&7[&dDyClaim&7]"
+
+lang: auto
+
+economy:
+  enabled: true
+  claim-price: 1500
+  previous-claim-price: 1500
+  auto-refund-price-difference: false
+  sell-refund-percent: 60
+
+cooldown:
+  enabled: false
+  seconds: 0
+
+claim:
+  max-claims-per-player: 10
+  allow-claiming: true
+
+teleport:
+  warmup-seconds: 3
+
+protection:
+  pvp-disabled: true
+  explosion-disabled: true
+  mob-griefing-disabled: true
+
+notification:
+  use-actionbar: true
+  show-enter: true
+  show-leave: true
+
+visualization:
+  duration-seconds: 10
+  particle: "FLAME"
+  bedrock-block: "ORANGE_STAINED_GLASS"
+
+confirmation-timeout: 30
+
+blacklisted-worlds: []
+
+update-checker:
+  enabled: true
