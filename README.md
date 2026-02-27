@@ -26,6 +26,7 @@ DyClaim is a lightweight yet powerful chunk claiming plugin that gives players f
 - Sell claims back for a refund percentage
 - Automatic price difference refunds when admins adjust prices
 - Configurable claim limits and cooldowns
+- Works without Vault — economy features disabled automatically
 
 **Protection**
 - Full block protection (break, place, interact, pistons, fire, water/lava flow)
@@ -38,6 +39,13 @@ DyClaim is a lightweight yet powerful chunk claiming plugin that gives players f
 - `/claim trust <player>` — let friends build in your claim
 - Per-claim trust management
 - Easy untrust and trust list commands
+
+**Teleportation**
+- `/claim tp <number>` — teleport to any of your claims
+- Configurable warmup timer (default: 3 seconds)
+- Blindness effect during warmup
+- Cancelled on movement — prevents abuse
+- Separate permission for fine-grained control
 
 **Smart Action Bar**
 - Towny-style action bar when entering claims
@@ -70,14 +78,15 @@ DyClaim is a lightweight yet powerful chunk claiming plugin that gives players f
 | `/unclaim` | Remove your claim |
 | `/claim see` | Visualize chunk borders |
 | `/claim info` | View claim details |
-| `/claim list` | See all your claims |
+| `/claim list` | See all your claims with coordinates |
+| `/claim tp <number>` | Teleport to a claim |
 | `/claim pvp` | Toggle PvP |
 | `/claim explosion` | Toggle explosions |
 | `/claim mob` | Toggle mob spawning |
 | `/claim trust <player>` | Trust a player |
 | `/claim untrust <player>` | Untrust a player |
-| `/confirm` `/onayla` | Confirm an action |
-| `/cancel` `/reddet` | Cancel an action |
+| `/confirm` | Confirm an action |
+| `/cancel` | Cancel an action |
 
 Admin commands available under `/claim admin` — run `/claim admin help` for the full list.
 
@@ -88,13 +97,19 @@ Admin commands available under `/claim admin` — run `/claim admin help` for th
 | Permission | Default | Description |
 |---|---|---|
 | `dyclaim.player` | Everyone | All player commands |
+| `dyclaim.teleport` | Everyone | Teleport to claims |
 | `dyclaim.admin` | OP | All admin commands + protection bypass |
 
-Individual permissions (`dyclaim.claim`, `dyclaim.sell`, `dyclaim.see`, `dyclaim.info`, `dyclaim.list`, `dyclaim.trust`) are also available for fine-grained control.
+Individual permissions (`dyclaim.claim`, `dyclaim.sell`, `dyclaim.see`, `dyclaim.info`, `dyclaim.list`, `dyclaim.trust`, `dyclaim.teleport`) are also available for fine-grained control.
 
 ---
 
 ## Compatibility
+
+| | |
+|--------|------------|
+| **Server** | Paper, Purpur, Spigot, Bukkit **1.20.x — 1.21.x** |
+| **Java** | Java 17+ |
 
 | Plugin | Integration |
 |--------|------------|
@@ -107,7 +122,7 @@ Individual permissions (`dyclaim.claim`, `dyclaim.sell`, `dyclaim.see`, `dyclaim
 | GriefDefender | Prevents claiming in GD claims |
 | Floodgate | Bedrock player visualization |
 
-All integrations are **optional** and detected automatically.
+All integrations are **optional** and detected automatically. The plugin works perfectly without any of them.
 
 ---
 
@@ -117,8 +132,6 @@ All integrations are **optional** and detected automatically.
 2. Start the server
 3. Edit `plugins/DyClaim/config.yml` to your liking
 4. `/claim admin reload` — done!
-
-**Server Requirements:** Paper, Purpur, or Spigot 1.21+
 
 ---
 
