@@ -1,0 +1,10 @@
+const fs=require('fs'),path=require('path'),{spawn}=require('child_process');
+const dir=path.resolve(process.env.DYCLAIM_TEST_SERVER || path.join(__dirname,'../../.local/server'));
+const jar=process.env.DYCLAIM_TEST_JAR || 'purpur.jar';
+const commands=path.join(dir,'commands.txt');fs.writeFileSync(commands,'');let offset=0;
+const child=spawn(process.env.DYCLAIM_TEST_JAVA || 'java',['-Xms256M','-Xmx1G','-jar',jar,'--nogui'],{cwd:dir,stdio:['pipe','pipe','pipe'],windowsHide:true});
+child.stdout.pipe(process.stdout);child.stderr.pipe(process.stderr);
+const timer=setInterval(()=>{const content=fs.readFileSync(commands,'utf8');if(content.length>offset){child.stdin.write(content.slice(offset));offset=content.length;}},100);
+child.on('error',error=>{clearInterval(timer);console.error(error);process.exitCode=1;});
+child.on('exit',code=>{clearInterval(timer);process.exitCode=code||0;});
+process.on('SIGINT',()=>child.stdin.write('stop\n'));

@@ -37,7 +37,7 @@ public class UpdateChecker implements Listener {
                     return;
                 }
 
-                String serverVersion = Bukkit.getMinecraftVersion();
+                String serverVersion = Bukkit.getBukkitVersion().split("-")[0];
 
                 String apiUrl = "https://api.modrinth.com/v2/project/" + projectId
                         + "/version?loaders=[\"purpur\",\"paper\",\"spigot\",\"bukkit\"]"
@@ -76,7 +76,7 @@ public class UpdateChecker implements Listener {
                 JsonObject latest = array.get(0).getAsJsonObject();
                 String versionNumber = latest.get("version_number").getAsString();
                 String currentVersion = plugin.getDescription().getVersion();
-                if (!versionNumber.equals(currentVersion)) {
+                if (dev.dyclaim.util.ReleaseVersion.newer(versionNumber, currentVersion)) {
                     latestVersion = versionNumber;
                     downloadUrl = "https://modrinth.com/plugin/" + projectId;
                     updateAvailable = true;
@@ -122,3 +122,5 @@ public class UpdateChecker implements Listener {
         return downloadUrl;
     }
 }
+
+

@@ -2,236 +2,49 @@ package dev.dyclaim.visualizer;
 
 import dev.dyclaim.DyClaim;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ChunkVisualizer {
-
     private final DyClaim plugin;
-    private final Set<UUID> activeVisualizations = ConcurrentHashMap.newKeySet();
-    private final Map<UUID, BukkitTask> activeTasks = new ConcurrentHashMap<>();
-    private final Map<UUID, List<Location>> bedrockBlocks = new ConcurrentHashMap<>();
-
-    private final boolean floodgateAvailable;
-    private Object floodgateInstance;
-    private java.lang.reflect.Method floodgateCheckMethod;
-
-    public ChunkVisualizer(DyClaim plugin) {
-        this.plugin = plugin;
-
-        boolean available = false;
-        try {
-            Class<?> floodgateApi = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
-            floodgateInstance = floodgateApi.getMethod("getInstance").invoke(null);
-            floodgateCheckMethod = floodgateApi.getMethod("isFloodgatePlayer", UUID.class);
-            available = true;
-        } catch (Exception ignored) {
-        }
-        this.floodgateAvailable = available;
-    }
-
-    public boolean isViewing(UUID playerUUID) {
-        return activeVisualizations.contains(playerUUID);
-    }
-
-    public void showChunkBorders(Player player) {
-        UUID uuid = player.getUniqueId();
-
-        if (activeVisualizations.contains(uuid)) {
-            return;
-        }
-
-        activeVisualizations.add(uuid);
-
-        Chunk chunk = player.getLocation().getChunk();
-        int duration = plugin.getConfigManager().getVisualizationDuration();
-
-        if (isBedrockPlayer(player)) {
-            showBedrockVisualization(player, chunk, duration);
-        } else {
-            showJavaVisualization(player, chunk, duration);
-        }
-    }
-
-    private void showJavaVisualization(Player player, Chunk chunk, int durationSeconds) {
-        UUID uuid = player.getUniqueId();
-        World world = chunk.getWorld();
-
-        int minX = chunk.getX() << 4;
-        int minZ = chunk.getZ() << 4;
-        int maxX = minX + 16;
-        int maxZ = minZ + 16;
-
-        Particle particleType;
-        try {
-            particleType = Particle.valueOf(plugin.getConfigManager().getParticleType());
-        } catch (IllegalArgumentException e) {
-            particleType = Particle.FLAME;
-        }
-
-        final Particle finalParticle = particleType;
-
-        BukkitTask task = new BukkitRunnable() {
-            int ticks = 0;
-
-            @Override
-            public void run() {
-                if (!player.isOnline() || ticks >= durationSeconds * 4) {
-                    cleanup(uuid);
-                    cancel();
-                    return;
+    private final Map<UUID,BukkitTask> tasks=new HashMap<>();
+    private final Map<UUID,List<Location>> fake=new HashMap<>();
+    public ChunkVisualizer(DyClaim plugin){this.plugin=plugin;}
+    public boolean isViewing(UUID uuid){return tasks.containsKey(uuid);}
+    public void showChunkBorders(Player p){showChunkBorders(p,p.getLocation().getChunk());}
+    public void showChunkBorders(Player p,Chunk chunk){
+        if(isViewing(p.getUniqueId()))return;
+        var cfg=plugin.getConfigManager().values();int duration=cfg.getInt("visualization.duration-seconds");
+        int minX=chunk.getX()*16,minZ=chunk.getZ()*16;
+        if(bedrock(p)) {
+            Material material=Material.valueOf(cfg.getString("visualization.bedrock-block"));BlockData data=material.createBlockData();List<Location> locations=new ArrayList<>();
+            int y=Math.max(chunk.getWorld().getMinHeight(),Math.min(p.getLocation().getBlockY(),chunk.getWorld().getMaxHeight()-1));
+            for(int i=0;i<16;i++){fake(p,new Location(chunk.getWorld(),minX+i,y,minZ),data,locations);fake(p,new Location(chunk.getWorld(),minX+i,y,minZ+15),data,locations);fake(p,new Location(chunk.getWorld(),minX,y,minZ+i),data,locations);fake(p,new Location(chunk.getWorld(),minX+15,y,minZ+i),data,locations);}
+            fake.put(p.getUniqueId(),locations);tasks.put(p.getUniqueId(),Bukkit.getScheduler().runTaskLater(plugin,()->cleanupPlayer(p),duration*20L));
+        }else{
+            Particle chosen=Particle.valueOf(cfg.getString("visualization.particle"));
+            Particle particle=chosen.getDataType()==Void.class||chosen.getDataType()==Particle.DustOptions.class?chosen:Particle.FLAME;
+            long expires=System.currentTimeMillis()+duration*1000L;
+            tasks.put(p.getUniqueId(),Bukkit.getScheduler().runTaskTimer(plugin,()->{
+                if(!p.isOnline()||p.getWorld()!=chunk.getWorld()||System.currentTimeMillis()>=expires){cleanupPlayer(p);return;}
+                Location centre=new Location(chunk.getWorld(),minX+8,p.getLocation().getY(),minZ+8);
+                if(p.getLocation().distanceSquared(centre)>Math.pow(cfg.getInt("visualization.max-distance"),2)){cleanupPlayer(p);return;}
+                int y=Math.max(chunk.getWorld().getMinHeight(),Math.min(p.getLocation().getBlockY(),chunk.getWorld().getMaxHeight()-2));
+                int budget=Math.min(160,cfg.getInt("visualization.max-particles-per-run")),count=0;
+                for(int height=0;height<2;height++)for(int i=0;i<=16;i++)for(int edge=0;edge<4;edge++) {
+                    if(count++>=budget)return;
+                    double x=switch(edge){case 0,1->minX+i;case 2->minX;default->minX+16;};
+                    double z=switch(edge){case 0->minZ;case 1->minZ+16;default->minZ+i;};
+                    if(particle.getDataType()==Particle.DustOptions.class)p.spawnParticle(particle,x,y+height+0.5,z,1,0,0,0,0,new Particle.DustOptions(Color.ORANGE,1));
+                    else p.spawnParticle(particle,x,y+height+0.5,z,1,0,0,0,0);
                 }
-
-                int y = player.getLocation().getBlockY();
-
-                for (int i = 0; i <= 16; i++) {
-                    spawnParticle(player, finalParticle, minX + i, y, minZ, world);
-                    spawnParticle(player, finalParticle, minX + i, y + 1, minZ, world);
-
-                    spawnParticle(player, finalParticle, minX + i, y, maxZ, world);
-                    spawnParticle(player, finalParticle, minX + i, y + 1, maxZ, world);
-
-                    spawnParticle(player, finalParticle, minX, y, minZ + i, world);
-                    spawnParticle(player, finalParticle, minX, y + 1, minZ + i, world);
-
-                    spawnParticle(player, finalParticle, maxX, y, minZ + i, world);
-                    spawnParticle(player, finalParticle, maxX, y + 1, minZ + i, world);
-                }
-
-                for (int dy = -1; dy <= 3; dy++) {
-                    spawnParticle(player, finalParticle, minX, y + dy, minZ, world);
-                    spawnParticle(player, finalParticle, maxX, y + dy, minZ, world);
-                    spawnParticle(player, finalParticle, minX, y + dy, maxZ, world);
-                    spawnParticle(player, finalParticle, maxX, y + dy, maxZ, world);
-                }
-
-                ticks++;
-            }
-        }.runTaskTimer(plugin, 0L, 5L);
-
-        activeTasks.put(uuid, task);
-    }
-
-    private static final Particle DUST_PARTICLE;
-    static {
-        Particle dust;
-        try {
-            dust = Particle.valueOf("DUST");
-        } catch (IllegalArgumentException e) {
-            dust = Particle.valueOf("REDSTONE");
-        }
-        DUST_PARTICLE = dust;
-    }
-
-    private void spawnParticle(Player player, Particle particle, double x, double y, double z, World world) {
-        Location loc = new Location(world, x + 0.5, y + 0.5, z + 0.5);
-        if (particle == DUST_PARTICLE) {
-            player.spawnParticle(particle, loc, 1, 0, 0, 0, 0,
-                    new Particle.DustOptions(Color.fromRGB(255, 165, 0), 1.0f));
-        } else {
-            player.spawnParticle(particle, loc, 1, 0, 0, 0, 0);
+            },1,5));
         }
     }
-
-    private void showBedrockVisualization(Player player, Chunk chunk, int durationSeconds) {
-        UUID uuid = player.getUniqueId();
-        World world = chunk.getWorld();
-
-        int minX = chunk.getX() << 4;
-        int minZ = chunk.getZ() << 4;
-        int maxX = minX + 15;
-        int maxZ = minZ + 15;
-        int y = player.getLocation().getBlockY();
-
-        Material blockMaterial;
-        try {
-            blockMaterial = Material.valueOf(plugin.getConfigManager().getBedrockBlock());
-        } catch (IllegalArgumentException e) {
-            blockMaterial = Material.ORANGE_STAINED_GLASS;
-        }
-
-        List<Location> placedBlocks = new ArrayList<>();
-        BlockData blockData = blockMaterial.createBlockData();
-
-        for (int i = 0; i <= 15; i++) {
-            sendFakeBlock(player, world, minX + i, y, minZ, blockData, placedBlocks);
-            sendFakeBlock(player, world, minX + i, y, maxZ, blockData, placedBlocks);
-
-            sendFakeBlock(player, world, minX, y, minZ + i, blockData, placedBlocks);
-            sendFakeBlock(player, world, maxX, y, minZ + i, blockData, placedBlocks);
-        }
-
-        bedrockBlocks.put(uuid, placedBlocks);
-
-        BukkitTask task = new BukkitRunnable() {
-            @Override
-            public void run() {
-                cleanupBedrockBlocks(player, uuid);
-                cleanup(uuid);
-            }
-        }.runTaskLater(plugin, durationSeconds * 20L);
-
-        activeTasks.put(uuid, task);
-    }
-
-    private void sendFakeBlock(Player player, World world, int x, int y, int z,
-            BlockData blockData, List<Location> placedBlocks) {
-        Location loc = new Location(world, x, y, z);
-        Block block = world.getBlockAt(loc);
-
-        if (block.getType() == Material.AIR || block.getType() == Material.CAVE_AIR) {
-            player.sendBlockChange(loc, blockData);
-            placedBlocks.add(loc);
-        }
-    }
-
-    private void cleanupBedrockBlocks(Player player, UUID uuid) {
-        List<Location> blocks = bedrockBlocks.remove(uuid);
-        if (blocks != null && player.isOnline()) {
-            for (Location loc : blocks) {
-                player.sendBlockChange(loc, loc.getBlock().getBlockData());
-            }
-        }
-    }
-
-    private void cleanup(UUID uuid) {
-        activeVisualizations.remove(uuid);
-        BukkitTask task = activeTasks.remove(uuid);
-        if (task != null && !task.isCancelled()) {
-            task.cancel();
-        }
-    }
-
-    public void cleanupAll() {
-        for (UUID uuid : new HashSet<>(activeVisualizations)) {
-            Player player = plugin.getServer().getPlayer(uuid);
-            if (player != null) {
-                cleanupBedrockBlocks(player, uuid);
-            }
-            cleanup(uuid);
-        }
-    }
-
-    private boolean isBedrockPlayer(Player player) {
-        if (floodgateAvailable) {
-            try {
-                Boolean isBedrock = (Boolean) floodgateCheckMethod.invoke(floodgateInstance, player.getUniqueId());
-                return isBedrock != null && isBedrock;
-            } catch (Exception ignored) {
-            }
-        }
-
-        String name = player.getName();
-        if (name != null && name.startsWith(".")) {
-            return true;
-        }
-
-        return false;
-    }
+    private void fake(Player p,Location loc,BlockData data,List<Location> list){if(loc.getBlock().getType().isAir()&&!list.contains(loc)){p.sendBlockChange(loc,data);list.add(loc);}}
+    public void cleanupPlayer(Player p){BukkitTask task=tasks.remove(p.getUniqueId());if(task!=null)task.cancel();List<Location> locations=fake.remove(p.getUniqueId());if(locations!=null&&p.isOnline())for(Location loc:locations)if(loc.getWorld()==p.getWorld())p.sendBlockChange(loc,loc.getBlock().getBlockData());}
+    public void cleanupAll(){for(UUID uuid:new HashSet<>(tasks.keySet())){Player p=Bukkit.getPlayer(uuid);if(p!=null)cleanupPlayer(p);else{tasks.remove(uuid).cancel();fake.remove(uuid);}}}
+    private boolean bedrock(Player p){try{Class<?> api=Class.forName("org.geysermc.floodgate.api.FloodgateApi");Object instance=api.getMethod("getInstance").invoke(null);return (boolean)api.getMethod("isFloodgatePlayer",UUID.class).invoke(instance,p.getUniqueId());}catch(ReflectiveOperationException|LinkageError ex){return false;}}
 }

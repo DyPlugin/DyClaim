@@ -47,7 +47,7 @@ public class WorldGuardHook {
             Class<?> bv3Class = Class.forName("com.sk89q.worldedit.math.BlockVector3");
             Method atMethod = bv3Class.getMethod("at", int.class, int.class, int.class);
             Object min = atMethod.invoke(null, minX, chunk.getWorld().getMinHeight(), minZ);
-            Object max = atMethod.invoke(null, maxX, chunk.getWorld().getMaxHeight(), maxZ);
+            Object max = atMethod.invoke(null, maxX, chunk.getWorld().getMaxHeight() - 1, maxZ);
 
             Class<?> cuboidClass = Class.forName("com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion");
             Object testRegion = cuboidClass.getConstructor(String.class, bv3Class, bv3Class)
@@ -61,8 +61,8 @@ public class WorldGuardHook {
             java.util.Collection<?> regions = (java.util.Collection<?>) getRegions.invoke(result);
 
             return !regions.isEmpty();
-        } catch (Exception e) {
-            return false;
+        } catch (Exception e) { return true;
         }
     }
 }
+

@@ -118,6 +118,30 @@ public class MessageManager {
                     target.put(key, defConfig.getString(key));
                 }
             }
+            refreshPreviousDefaults(lang, target, defConfig);
+        }
+    }
+
+    /** Refresh only recognized shipped defaults; preserve server-customized messages. */
+    private void refreshPreviousDefaults(String lang, Map<String,String> target, YamlConfiguration defaults) {
+        boolean tr = lang.equals("tr");
+        for (String key : java.util.List.of("help-list","help-trust","help-tp","trust-usage","tp-usage","tp-invalid-number",
+                "list-named-entry","trustperm-usage","coowner-usage","transfer-usage","market-usage","ban-usage","purge-usage","warn-usage")) {
+            String current = defaults.getString(key);
+            if (current == null) continue;
+            String previous = switch (key) {
+                case "help-list" -> current.replace(tr ? " [sayfa]" : " [page]", "");
+                case "help-trust", "trust-usage" -> current.replace(tr ? " [süre]" : " [duration]", "");
+                case "help-tp" -> current.replace(tr ? "ışınlan <numara|isim>" : "tp <number|name>", tr ? "tp <numara>" : "tp <number>");
+                case "tp-usage" -> current.replace(tr ? "ışınlan <1-{max}|isim>" : "tp <1-{max}|name>", "tp <1-{max}>");
+                case "tp-invalid-number" -> tr ? current.replace("/claim liste", "/claim list") : current;
+                case "list-named-entry" -> "&7{number}. {name} | {chunk}";
+                case "coowner-usage" -> tr
+                        ? "&e/claim ortak ekle <oyuncu> | çıkar. Ortak sahip satış, devir, silme veya sahip değiştirme yapamaz."
+                        : "&e/claim coowner add <player> | remove. A coowner cannot sell, transfer, delete or replace owners.";
+                default -> current.replace(tr ? "&cKullanım: " : "&cUsage: ", "");
+            };
+            if (previous.equals(target.get(key))) target.put(key, current);
         }
     }
 
@@ -131,8 +155,10 @@ public class MessageManager {
 
     private String resolveLanguage(CommandSender sender) {
         String configured = plugin.getConfigManager().getLang().toLowerCase(Locale.ROOT);
-        if (configured.equals("tr") || configured.equals("en")) {
-            return configured;
+        if (configured.equals("tr") || configured.equals("en")) return configured;
+        if(sender instanceof Player player && plugin.getFeatureManager()!=null) {
+            String selected=plugin.getFeatureManager().language(player.getUniqueId());
+            if(selected!=null)return selected;
         }
         if (sender instanceof Player player) {
             String locale = player.getLocale();
@@ -160,3 +186,4 @@ public class MessageManager {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 }
+

@@ -1,1011 +1,115 @@
 package dev.dyclaim.command;
 
 import dev.dyclaim.DyClaim;
-import dev.dyclaim.hook.ClaimPluginHooks;
-import dev.dyclaim.hook.GriefPreventionHook;
-import dev.dyclaim.hook.WorldGuardHook;
-import dev.dyclaim.manager.ConfirmationManager;
 import dev.dyclaim.manager.MessageManager;
 import dev.dyclaim.model.ClaimData;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
+import org.bukkit.command.*;
 import org.bukkit.entity.Player;
-
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class ClaimCommand implements CommandExecutor, TabCompleter {
-
+/** Keeps the original roots and bilingual aliases; features share one command path. */
+public class ClaimCommand implements CommandExecutor,TabCompleter {
     private final DyClaim plugin;
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm");
-
-    public ClaimCommand(DyClaim plugin) {
-        this.plugin = plugin;
-    }
-
-    /**
-     * Retrieves the claim at the player's current chunk and validates ownership.
-     * Returns null and sends an error message if the chunk is not claimed or the
-     * player is not the owner.
-     */
-    private ClaimData requireOwnedClaim(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
-        if (claim == null) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "sell-not-claimed"));
-            return null;
-        }
-        if (!claim.getOwnerUUID().equals(player.getUniqueId()) && !player.hasPermission("dyclaim.admin")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "sell-not-owner"));
-            return null;
-        }
-        return claim;
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.getMessageManager().getPrefixed(sender, "player-only"));
-            return true;
-        }
-
-        if (args.length == 0) {
-            handleClaim(player);
-            return true;
-        }
-
-        String sub = args[0].toLowerCase(Locale.ROOT);
-        switch (sub) {
-            case "onayla", "confirm" -> handleConfirm(player);
-            case "reddet", "deny", "cancel" -> handleDeny(player);
-            case "sat", "sell" -> handleSell(player);
-            case "gor", "gör", "see" -> handleSee(player);
-            case "bilgi", "info" -> handleInfo(player);
-            case "liste", "list" -> handleList(player);
-            case "pvp" -> handleToggle(player, "pvp");
-            case "patlama", "explosion" -> handleToggle(player, "explosion");
-            case "mob" -> handleToggle(player, "mob");
-            case "güven", "guven", "trust" -> handleTrust(player, args);
-            case "güvensil", "guvensil", "untrust" -> handleUntrust(player, args);
-            case "güvenliste", "guvenliste", "trustlist" -> handleTrustList(player);
-            case "admin" -> handleAdmin(player, args);
-            case "tp", "isinlan", "ışınlan" -> handleTeleport(player, args);
-            case "yardim", "yardım", "help" -> handleHelp(player);
-            default -> {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "unknown-command"));
+    public ClaimCommand(DyClaim plugin){this.plugin=plugin;}
+    private void send(Player p,String key){p.sendMessage(plugin.getMessageManager().getPrefixed(p,key));}
+    public boolean onCommand(CommandSender sender,Command command,String label,String[] args) {
+        if(!(sender instanceof Player p)){sender.sendMessage(plugin.getMessageManager().getPrefixed(sender,"player-only"));return true;}
+        args=dev.dyclaim.util.CommandWords.normalize(args);
+        try {
+            if(plugin.getFeatureManager().handle(p,args))return true;
+            switch(args[0].toLowerCase(Locale.ROOT)) {
+                case "sell","sat" -> SellHelper.request(plugin,p,false);
+                case "confirm","onayla" -> {if(!plugin.getConfirmationManager().confirm(p.getUniqueId(),args.length<2?null:args[1]))send(p,"confirm-none");}
+                case "cancel","deny","reddet" -> {if(!plugin.getConfirmationManager().deny(p.getUniqueId(),args.length<2?null:args[1]))send(p,"confirm-none");}
+                case "see","gor","gör" -> {
+                    if(!p.hasPermission("dyclaim.see")){send(p,"no-permission");return true;}
+                    if(plugin.getChunkVisualizer().isViewing(p.getUniqueId())){send(p,"see-already");return true;}
+                    plugin.getChunkVisualizer().showChunkBorders(p);
+                    p.sendMessage(plugin.getMessageManager().getPrefixed(p,"see-showing",Map.of("{duration}",String.valueOf(plugin.getConfigManager().getVisualizationDuration()))));
+                }
+                case "admin" -> admin(p,args);
+                case "help","yardim","yardım" -> help(p,false);
+                default -> send(p,"unknown-command");
             }
-        }
-
+        }catch(IllegalArgumentException ex){send(p,"invalid-input");}
+        catch(RuntimeException ex){plugin.getLogger().severe("Claim action failed: "+ex.getMessage());send(p,"transaction-failed");}
         return true;
     }
-
-    private void handleClaim(Player player) {
-        if (!player.hasPermission("dyclaim.claim")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-
-        if (!plugin.getConfigManager().isAllowClaiming()) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claiming-disabled"));
-            return;
-        }
-
-        if (plugin.getConfigManager().isWorldBlacklisted(player.getWorld().getName())) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "world-blacklisted"));
-            return;
-        }
-
-        Chunk chunk = player.getLocation().getChunk();
-
-        if (WorldGuardHook.isRegionProtected(chunk) || GriefPreventionHook.isRegionProtected(chunk)
-                || ClaimPluginHooks.isRegionProtected(chunk)) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-region-protected"));
-            return;
-        }
-
-        ClaimData existing = plugin.getClaimManager().getClaimAt(chunk);
-        if (existing != null) {
-            if (existing.getOwnerUUID().equals(player.getUniqueId())) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-already-owned"));
-            } else {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-already-claimed",
-                        Map.of("{owner}", existing.getOwnerName())));
+    private void admin(Player p,String[] args) {
+        if(!p.hasPermission("dyclaim.admin")){send(p,"no-permission");return;}
+        if(args.length<2){help(p,true);return;}
+        var cfg=plugin.getConfigManager();
+        switch(args[1].toLowerCase(Locale.ROOT)) {
+            case "enable","ac","aç" -> {cfg.setAllowClaiming(true);send(p,"admin-claiming-enabled");}
+            case "disable","kapat" -> {cfg.setAllowClaiming(false);send(p,"admin-claiming-disabled");}
+            case "price","fiyat" -> {
+                if(args.length!=3){send(p,"admin-usage-price");return;}
+                double previous=cfg.getClaimPrice(),price=dev.dyclaim.util.Rules.money(Double.parseDouble(args[2]));cfg.setClaimPrice(price);
+                if(cfg.isAutoRefundPriceDifference()&&previous>price)plugin.getClaimManager().refundPriceDifference(previous-price);
+                p.sendMessage(plugin.getMessageManager().getPrefixed(p,"admin-price-set",Map.of("{price}",plugin.getEconomyManager().formatMoney(price))));
             }
-            return;
-        }
-
-        int count = plugin.getClaimManager().getPlayerClaimCount(player.getUniqueId());
-        int max = plugin.getConfigManager().getMaxClaimsPerPlayer();
-        if (count >= max) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-max-reached",
-                    Map.of("{max}", String.valueOf(max))));
-            return;
-        }
-
-        if (plugin.getCooldownManager().hasCooldown(player.getUniqueId())) {
-            int remaining = plugin.getCooldownManager().getRemainingSeconds(player.getUniqueId());
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-cooldown",
-                    Map.of("{remaining}", String.valueOf(remaining))));
-            return;
-        }
-
-        if (plugin.getEconomyManager().isEnabled()) {
-            double price = plugin.getConfigManager().getClaimPrice();
-            if (!plugin.getEconomyManager().hasEnough(player, price)) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-no-money",
-                        Map.of("{price}", plugin.getEconomyManager().formatMoney(price))));
-                return;
+            case "pricediff","farkver" -> {
+                double previous=args.length>=3?Double.parseDouble(args[2]):cfg.getPreviousClaimPrice();
+                if(!Double.isFinite(previous)||previous<=cfg.getClaimPrice()){send(p,"invalid-input");return;}
+                int owners=plugin.getClaimManager().refundPriceDifference(previous-cfg.getClaimPrice());
+                p.sendMessage(plugin.getMessageManager().getPrefixed(p,"admin-price-diff-success",Map.of("{count}",String.valueOf(owners),"{refund}",plugin.getEconomyManager().formatMoney(previous-cfg.getClaimPrice()))));
             }
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-confirmation",
-                    Map.of("{price}", plugin.getEconomyManager().formatMoney(price))));
-        } else {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-free"));
-        }
-
-        sendConfirmationButtons(player);
-
-        plugin.getConfirmationManager().addPending(
-                player.getUniqueId(),
-                ConfirmationManager.ActionType.CLAIM,
-                uuid -> executeClaim(player),
-                uuid -> player.sendMessage(plugin.getMessageManager().getPrefixed(player, "confirm-deny")));
-    }
-
-    private void executeClaim(Player player) {
-        Chunk chunk = player.getLocation().getChunk();
-        if (plugin.getClaimManager().isChunkClaimed(chunk)) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-already-claimed",
-                    Map.of("{owner}", plugin.getClaimManager().getClaimAt(chunk).getOwnerName())));
-            return;
-        }
-
-        if (plugin.getEconomyManager().isEnabled()) {
-            double price = plugin.getConfigManager().getClaimPrice();
-            if (!plugin.getEconomyManager().withdraw(player, price)) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-no-money",
-                        Map.of("{price}", plugin.getEconomyManager().formatMoney(price))));
-                return;
+            case "cooldown" -> {if(args.length!=3){send(p,"admin-usage-cooldown");return;}cfg.setCooldownSeconds(Integer.parseInt(args[2]));send(p,"operation-success");}
+            case "prefix" -> {cfg.setPrefix(args.length<3?"&7[&dDyClaim&7]":String.join(" ",Arrays.copyOfRange(args,2,args.length)));send(p,"admin-prefix-set");}
+            case "economy","ekonomi" -> {if(args.length!=3){send(p,"invalid-input");return;}boolean value=toggle(args[2]);cfg.setEconomyEnabled(value);send(p,value?"admin-economy-enabled":"admin-economy-disabled");}
+            case "lang","dil" -> {if(args.length!=3||!Set.of("auto","en","tr").contains(args[2])){send(p,"invalid-input");return;}cfg.setLang(args[2]);plugin.getMessageManager().reload();send(p,"operation-success");}
+            case "blacklist","karaliste" -> {
+                if(args.length!=4){send(p,"admin-usage-blacklist");return;}String world=args[3];if(Bukkit.getWorld(world)==null){p.sendMessage(plugin.getMessageManager().getPrefixed(p,"admin-world-not-found",Map.of("{world}",world)));return;}
+                switch(args[2]){case "add","ekle"->cfg.addBlacklistedWorld(world);case "remove","cikar","çıkar"->cfg.removeBlacklistedWorld(world);default->throw new IllegalArgumentException("blacklist");}send(p,"operation-success");
             }
-        }
-
-        plugin.getClaimManager().claimChunk(player, chunk);
-        plugin.getCooldownManager().setCooldown(player.getUniqueId());
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "claim-success",
-                Map.of("{chunk}", chunk.getX() + ", " + chunk.getZ())));
-    }
-
-    private void handleSell(Player player) {
-        if (!player.hasPermission("dyclaim.sell")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-
-        ClaimData claim = requireOwnedClaim(player);
-        if (claim == null)
-            return;
-
-        double refund = 0;
-        if (plugin.getEconomyManager().isEnabled()) {
-            double price = plugin.getConfigManager().getClaimPrice();
-            int percent = plugin.getConfigManager().getSellRefundPercent();
-            refund = price * percent / 100.0;
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "sell-confirmation",
-                    Map.of("{refund}", plugin.getEconomyManager().formatMoney(refund))));
-        } else {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "sell-confirmation",
-                    Map.of("{refund}", "0")));
-        }
-
-        sendConfirmationButtons(player);
-        final double finalRefund = refund;
-        plugin.getConfirmationManager().addPending(
-                player.getUniqueId(),
-                ConfirmationManager.ActionType.SELL,
-                uuid -> SellHelper.executeSell(plugin, player, finalRefund),
-                uuid -> player.sendMessage(plugin.getMessageManager().getPrefixed(player, "confirm-deny")));
-    }
-
-    private void handleToggle(Player player, String type) {
-        ClaimData claim = requireOwnedClaim(player);
-        if (claim == null)
-            return;
-
-        switch (type) {
-            case "pvp" -> {
-                boolean newVal = !claim.isPvpDisabled();
-                claim.setPvpDisabled(newVal);
-                plugin.getClaimManager().saveAll();
-                String msgKey = newVal ? "toggle-pvp-disabled" : "toggle-pvp-enabled";
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, msgKey,
-                        Map.of("{chunk}", claim.getChunkDisplay())));
+            case "pvp","explosion","patlama","mob" -> {
+                if(args.length<3||args.length>4){send(p,"invalid-input");return;}String key=switch(args[1]){case "pvp"->"pvp";case "mob"->"mob-spawning";default->"explosions";};boolean value=toggle(args[2]);
+                List<ClaimData> claims;
+                if(args.length==4){if(!Set.of("all","tumu","tümü").contains(args[3])){send(p,"invalid-input");return;}claims=new ArrayList<>(plugin.getClaimManager().getAllClaims().values());}
+                else{ClaimData claim=plugin.getClaimManager().getClaimAt(p.getLocation().getChunk());if(claim==null){send(p,"sell-not-claimed");return;}claims=List.of(claim);}
+                for(ClaimData claim:claims)if(!plugin.getAccessManager().policy(claim,key).locked()&&!plugin.getTransactionManager().isLocked(claim.getChunkKey()))claim.setChoice(key,value);
+                plugin.getClaimManager().saveAll();send(p,"operation-success");
             }
-            case "explosion" -> {
-                boolean newVal = !claim.isExplosionDisabled();
-                claim.setExplosionDisabled(newVal);
-                plugin.getClaimManager().saveAll();
-                String msgKey = newVal ? "toggle-explosion-disabled" : "toggle-explosion-enabled";
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, msgKey,
-                        Map.of("{chunk}", claim.getChunkDisplay())));
-            }
-            case "mob" -> {
-                boolean newVal = !claim.isMobSpawnDisabled();
-                claim.setMobSpawnDisabled(newVal);
-                plugin.getClaimManager().saveAll();
-                String msgKey = newVal ? "toggle-mob-disabled" : "toggle-mob-enabled";
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, msgKey,
-                        Map.of("{chunk}", claim.getChunkDisplay())));
-            }
+            case "reload","yenile" -> {try{plugin.reload();send(p,"reload-success");}catch(IllegalArgumentException ex){send(p,"reload-invalid");plugin.getLogger().warning(ex.getMessage());}}
+            default -> help(p,true);
         }
     }
-
-    private void handleTrust(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-usage"));
-            return;
-        }
-
-        ClaimData claim = requireOwnedClaim(player);
-        if (claim == null)
-            return;
-
-        String targetName = args[1];
-        @SuppressWarnings("deprecation")
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-        UUID targetUUID = target.getUniqueId();
-
-        if (targetUUID.equals(player.getUniqueId())) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-self"));
-            return;
-        }
-
-        if (claim.isTrusted(targetUUID)) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-already",
-                    Map.of("{player}", targetName)));
-            return;
-        }
-
-        claim.addTrusted(targetUUID);
-        plugin.getClaimManager().saveAll();
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-added",
-                Map.of("{player}", targetName)));
+    private boolean toggle(String text){return switch(text.toLowerCase(Locale.ROOT)){case "on","enable","ac","aç"->true;case "off","disable","kapat"->false;default->throw new IllegalArgumentException("toggle");};}
+    private void help(Player p,boolean admin) {
+        MessageManager msg=plugin.getMessageManager();String root=admin?"admin-help-":"help-";
+        p.sendMessage(msg.getMessage(p,root+"header",Map.of("{prefix}",msg.getPrefix())));
+        for(String suffix:admin?List.of("toggle","delete","give","price","cooldown","prefix","economy","pvp","explosion","mob","bulksell","pricediff","lang","blacklist","reload","bypass","ban","unban","purge","transactions"):List.of("claim","sell","unclaim","see","info","list","pvp","explosion","mob","mobexplosion","villager","doors","trapdoors","trust","untrust","trustlist","trustperm","coowner-add","coowner-remove","transfer","market-list","market-cancel","market-buy","auto","name","setspawn","tp","warn","lang","confirm","cancel"))p.sendMessage(msg.getMessage(p,root+suffix));
+        if(!admin&&p.hasPermission("dyclaim.admin"))p.sendMessage(msg.getMessage(p,"help-admin"));
+        p.sendMessage(msg.getMessage(p,root+"footer"));
     }
-
-    private void handleUntrust(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "untrust-usage"));
-            return;
+    private record Suggestion(String en,String tr,String permission) {}
+    private static final List<Suggestion> SUBS=List.of(
+            new Suggestion("sell","sat","sell"),new Suggestion("see","gör","see"),new Suggestion("info","bilgi","info"),new Suggestion("list","liste","list"),
+            new Suggestion("pvp","pvp","settings"),new Suggestion("explosion","patlama","settings"),new Suggestion("mob","mob","settings"),new Suggestion("villager","köylü","settings"),new Suggestion("doors","kapı","settings"),new Suggestion("trapdoors","tuzakkapısı","settings"),
+            new Suggestion("mobexplosion","mobpatlama","settings"),new Suggestion("trust","güven","trust"),new Suggestion("untrust","güvensil","trust"),new Suggestion("trustlist","güvenliste","trust"),new Suggestion("trustperm","güvenizin","trust"),
+            new Suggestion("coowner","ortak","coowner"),new Suggestion("transfer","devret","transfer"),new Suggestion("market","pazar","market"),new Suggestion("auto","otomatik","auto"),new Suggestion("name","isim","name"),new Suggestion("setspawn","spawnayarla","setspawn"),new Suggestion("tp","ışınlan","teleport"),new Suggestion("warn","uyar","warn"),new Suggestion("admin","admin","admin"),new Suggestion("lang","dil",""),new Suggestion("help","yardım",""));
+    public List<String> onTabComplete(CommandSender sender,Command command,String alias,String[] args) {
+        String input=args.length==0?"":args[args.length-1].toLowerCase(Locale.ROOT);
+        args=dev.dyclaim.util.CommandWords.normalize(args);
+        boolean tr="tr".equals(plugin.getMessageManager().getPreferredLanguage(sender));List<String> options=new ArrayList<>();
+        if(args.length==1){for(Suggestion s:SUBS)if(s.permission.isEmpty()||sender.hasPermission("dyclaim."+s.permission))options.add(tr?s.tr:s.en);}
+        else if(args.length>=2) {
+            String sub=args[0].toLowerCase(Locale.ROOT);Suggestion selected=SUBS.stream().filter(s->dev.dyclaim.util.CommandWords.matches(s.en,sub)||dev.dyclaim.util.CommandWords.matches(s.tr,sub)).findFirst().orElse(null);
+            if(selected==null||(!selected.permission.isEmpty()&&!sender.hasPermission("dyclaim."+selected.permission)))return List.of();
+            String en=selected.en;
+            if(en.equals("admin")) {
+                if(args.length==2)options.addAll(tr?List.of("aç","kapat","sil","ver","fiyat","bekleme","önek","ekonomi","pvp","patlama","mob","toplusat","farkver","dil","karaliste","yenile","koruma-atla","yasakla","yasakkaldir","temizle","islemler"):List.of("enable","disable","delete","give","price","cooldown","prefix","economy","pvp","explosion","mob","bulksell","pricediff","lang","blacklist","reload","bypass","ban","unban","purge","transactions"));
+                else if(args.length==3){switch(args[1]){case "give","ver","delete","sil","ban","yasakla","unban","yasakkaldir","bulksell","toplusat"->Bukkit.getOnlinePlayers().forEach(p->options.add(p.getName()));case "lang","dil"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"auto","en","tr"));case "blacklist","karaliste"->options.addAll(tr?List.of("ekle","çıkar"):dev.dyclaim.util.CommandWords.choices(tr,"add","remove"));case "pvp","explosion","patlama","mob","economy","ekonomi","bypass","koruma-atla"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"on","off"));default->{}}}
+                else if(args.length==4){if(Set.of("delete","sil","pvp","explosion","patlama","mob").contains(args[1]))options.add(tr?"tümü":"all");if(Set.of("blacklist","karaliste").contains(args[1]))Bukkit.getWorlds().forEach(w->options.add(w.getName()));if(Set.of("ban","yasakla").contains(args[1]))options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"30m","2h","7d","permanent"));}
+            }else if(args.length==2){switch(en){case "trust","untrust","transfer","warn","trustperm"->Bukkit.getOnlinePlayers().forEach(p->options.add(p.getName()));case "market"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"list","cancel","buy"));case "coowner"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"add","remove"));case "auto"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"on","off"));case "lang"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"auto","en","tr"));case "tp"->{if(sender instanceof Player p){List<ClaimData> claims=plugin.getClaimManager().getPlayerClaims(p.getUniqueId());for(int i=0;i<claims.size();i++){options.add(String.valueOf(i+1));if(claims.get(i).getName()!=null)options.add(claims.get(i).getName());}}}default->{}}}
+            else if(args.length==3){if(en.equals("coowner")&&args[1].equals("add"))Bukkit.getOnlinePlayers().forEach(p->options.add(p.getName()));if(en.equals("trust"))options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"30m","2h","7d","permanent"));if(en.equals("trustperm"))options.addAll(dev.dyclaim.model.TrustGrant.RIGHTS.stream().map(word->dev.dyclaim.util.CommandWords.display(word,tr)).toList());}
+            else if(args.length==4&&en.equals("trustperm"))options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"allow","deny"));
         }
 
-        ClaimData claim = requireOwnedClaim(player);
-        if (claim == null)
-            return;
-
-        String targetName = args[1];
-        @SuppressWarnings("deprecation")
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-
-        if (!claim.removeTrusted(target.getUniqueId())) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-not-found",
-                    Map.of("{player}", targetName)));
-            return;
-        }
-
-        plugin.getClaimManager().saveAll();
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-removed",
-                Map.of("{player}", targetName)));
-    }
-
-    private void handleTrustList(Player player) {
-        ClaimData claim = requireOwnedClaim(player);
-        if (claim == null)
-            return;
-
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "trust-list-header"));
-        List<UUID> trusted = claim.getTrustedPlayers();
-        if (trusted.isEmpty()) {
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "trust-list-empty"));
-        } else {
-            for (UUID uuid : trusted) {
-                OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
-                String name = op.getName() != null ? op.getName() : uuid.toString();
-                player.sendMessage(plugin.getMessageManager().getMessage(player, "trust-list-entry",
-                        Map.of("{player}", name)));
-            }
-        }
-    }
-
-    private void handleConfirm(Player player) {
-        if (!plugin.getConfirmationManager().hasPending(player.getUniqueId())) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "confirm-none"));
-            return;
-        }
-        plugin.getConfirmationManager().confirm(player.getUniqueId());
-    }
-
-    private void handleDeny(Player player) {
-        if (!plugin.getConfirmationManager().hasPending(player.getUniqueId())) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "confirm-none"));
-            return;
-        }
-        plugin.getConfirmationManager().deny(player.getUniqueId());
-    }
-
-    private void handleSee(Player player) {
-        if (!player.hasPermission("dyclaim.see")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-        if (plugin.getChunkVisualizer().isViewing(player.getUniqueId())) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "see-already"));
-            return;
-        }
-        plugin.getChunkVisualizer().showChunkBorders(player);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "see-showing",
-                Map.of("{duration}", String.valueOf(plugin.getConfigManager().getVisualizationDuration()))));
-    }
-
-    private void handleInfo(Player player) {
-        if (!player.hasPermission("dyclaim.info")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-
-        Chunk chunk = player.getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
-
-        player.sendMessage(plugin.getMessageManager().getMessage(player, "info-header",
-                Map.of("{prefix}", plugin.getMessageManager().getPrefix())));
-
-        if (claim == null) {
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-not-claimed"));
-        } else {
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-owner",
-                    Map.of("{owner}", claim.getOwnerName())));
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-chunk",
-                    Map.of("{chunk}", claim.getChunkDisplay())));
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-world",
-                    Map.of("{world}", claim.getWorld())));
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-date",
-                    Map.of("{date}", dateFormat.format(new Date(claim.getClaimedAt())))));
-
-            String pvpStatus = claim.isPvpDisabled() ? "§cOFF" : "§aON";
-            String expStatus = claim.isExplosionDisabled() ? "§cOFF" : "§aON";
-            String mobStatus = claim.isMobSpawnDisabled() ? "§cOFF" : "§aON";
-
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-pvp",
-                    Map.of("{status}", pvpStatus)));
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-explosion",
-                    Map.of("{status}", expStatus)));
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "info-mob",
-                    Map.of("{status}", mobStatus)));
-
-            List<UUID> trusted = claim.getTrustedPlayers();
-            if (trusted.isEmpty()) {
-                player.sendMessage(plugin.getMessageManager().getMessage(player, "info-trusted",
-                        Map.of("{trusted}", "-")));
-            } else {
-                String names = trusted.stream()
-                        .map(uuid -> {
-                            OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
-                            return op.getName() != null ? op.getName() : uuid.toString().substring(0, 8);
-                        })
-                        .collect(Collectors.joining(", "));
-                player.sendMessage(plugin.getMessageManager().getMessage(player, "info-trusted",
-                        Map.of("{trusted}", names)));
-            }
-        }
-
-        player.sendMessage(plugin.getMessageManager().getMessage(player, "info-footer"));
-    }
-
-    private void handleList(Player player) {
-        if (!player.hasPermission("dyclaim.list")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-
-        List<ClaimData> claims = plugin.getClaimManager().getPlayerClaims(player.getUniqueId());
-        player.sendMessage(plugin.getMessageManager().getMessage(player, "list-header",
-                Map.of("{prefix}", plugin.getMessageManager().getPrefix())));
-
-        if (claims.isEmpty()) {
-            player.sendMessage(plugin.getMessageManager().getMessage(player, "list-empty"));
-        } else {
-            for (int i = 0; i < claims.size(); i++) {
-                ClaimData claim = claims.get(i);
-                int blockX = claim.getChunkX() * 16 + 8;
-                int blockZ = claim.getChunkZ() * 16 + 8;
-                player.sendMessage(plugin.getMessageManager().getMessage(player, "list-entry",
-                        Map.of("{number}", String.valueOf(i + 1),
-                                "{world}", claim.getWorld(),
-                                "{x}", String.valueOf(blockX),
-                                "{z}", String.valueOf(blockZ),
-                                "{date}", dateFormat.format(new Date(claim.getClaimedAt())))));
-            }
-        }
-
-        player.sendMessage(plugin.getMessageManager().getMessage(player, "list-footer",
-                Map.of("{count}", String.valueOf(claims.size()),
-                        "{max}", String.valueOf(plugin.getConfigManager().getMaxClaimsPerPlayer()))));
-    }
-
-    private void handleTeleport(Player player, String[] args) {
-        if (!player.hasPermission("dyclaim.teleport")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-
-        List<ClaimData> claims = plugin.getClaimManager().getPlayerClaims(player.getUniqueId());
-        if (claims.isEmpty()) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "tp-no-claims"));
-            return;
-        }
-
-        if (args.length < 2) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "tp-usage",
-                    Map.of("{max}", String.valueOf(claims.size()))));
-            return;
-        }
-
-        int index;
-        try {
-            index = Integer.parseInt(args[1]) - 1;
-        } catch (NumberFormatException e) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "tp-invalid-number"));
-            return;
-        }
-
-        if (index < 0 || index >= claims.size()) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "tp-invalid-number"));
-            return;
-        }
-
-        ClaimData claim = claims.get(index);
-        org.bukkit.World world = Bukkit.getWorld(claim.getWorld());
-        if (world == null) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "tp-world-not-found"));
-            return;
-        }
-
-        int blockX = claim.getChunkX() * 16 + 8;
-        int blockZ = claim.getChunkZ() * 16 + 8;
-        int blockY = world.getHighestBlockYAt(blockX, blockZ) + 1;
-        Location destination = new Location(world, blockX + 0.5, blockY, blockZ + 0.5);
-
-        plugin.getTeleportManager().startTeleport(player, destination);
-    }
-
-    private void handleHelp(Player player) {
-        MessageManager msg = plugin.getMessageManager();
-        String prefix = msg.getPrefix();
-        player.sendMessage(msg.getMessage(player, "help-header", Map.of("{prefix}", prefix)));
-        player.sendMessage(msg.getMessage(player, "help-claim"));
-        player.sendMessage(msg.getMessage(player, "help-sell"));
-        player.sendMessage(msg.getMessage(player, "help-see"));
-        player.sendMessage(msg.getMessage(player, "help-info"));
-        player.sendMessage(msg.getMessage(player, "help-list"));
-        player.sendMessage(msg.getMessage(player, "help-pvp"));
-        player.sendMessage(msg.getMessage(player, "help-explosion"));
-        player.sendMessage(msg.getMessage(player, "help-mob"));
-        player.sendMessage(msg.getMessage(player, "help-trust"));
-        player.sendMessage(msg.getMessage(player, "help-untrust"));
-        player.sendMessage(msg.getMessage(player, "help-trustlist"));
-        if (player.hasPermission("dyclaim.admin")) {
-            player.sendMessage(msg.getMessage(player, "help-admin"));
-        }
-        player.sendMessage(msg.getMessage(player, "help-tp"));
-        player.sendMessage(msg.getMessage(player, "help-footer"));
-    }
-
-    @SuppressWarnings("deprecation")
-    private void handleAdmin(Player player, String[] args) {
-        if (!player.hasPermission("dyclaim.admin")) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "no-permission"));
-            return;
-        }
-        if (args.length < 2) {
-            showAdminHelp(player);
-            return;
-        }
-
-        String adminSub = args[1].toLowerCase(Locale.ROOT);
-        switch (adminSub) {
-            case "ac", "aç", "enable" -> {
-                plugin.getConfigManager().setAllowClaiming(true);
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-claiming-enabled"));
-            }
-            case "kapat", "disable" -> {
-                plugin.getConfigManager().setAllowClaiming(false);
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-claiming-disabled"));
-            }
-            case "sil", "delete" -> handleAdminDelete(player, args);
-            case "ver", "give" -> handleAdminGive(player, args);
-            case "fiyat", "price" -> handleAdminPrice(player, args);
-            case "cooldown" -> handleAdminCooldown(player, args);
-            case "prefix" -> handleAdminPrefix(player, args);
-            case "ekonomi", "economy" -> handleAdminEconomy(player, args);
-            case "pvp" -> handleAdminToggleFeature(player, args, "pvp");
-            case "patlama", "explosion" -> handleAdminToggleFeature(player, args, "explosion");
-            case "mob" -> handleAdminToggleFeature(player, args, "mob");
-            case "toplusat", "bulksell" -> handleAdminBulkSell(player, args);
-            case "farkver", "pricediff" -> handleAdminPriceDiff(player, args);
-            case "dil", "lang" -> handleAdminLang(player, args);
-            case "karaliste", "blacklist" -> handleAdminBlacklist(player, args);
-            case "reload", "yenile" -> {
-                plugin.reload();
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "reload-success"));
-            }
-            default -> showAdminHelp(player);
-        }
-    }
-
-    private void handleAdminBulkSell(Player player, String[] args) {
-        double refund = 0;
-        if (plugin.getEconomyManager().isEnabled()) {
-            double price = plugin.getConfigManager().getClaimPrice();
-            int percent = plugin.getConfigManager().getSellRefundPercent();
-            refund = price * percent / 100.0;
-        }
-
-        if (args.length >= 3) {
-            String targetName = args[2];
-            UUID targetUUID = resolvePlayerUUID(player, targetName);
-            if (targetUUID == null)
-                return;
-
-            final double finalRefund = refund;
-            sendConfirmationButtons(player);
-            plugin.getConfirmationManager().addPending(
-                    player.getUniqueId(),
-                    ConfirmationManager.ActionType.SELL,
-                    uuid -> {
-                        int removed = plugin.getClaimManager().removeAllPlayerClaimsWithRefund(targetUUID, finalRefund);
-                        if (removed == 0) {
-                            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-no-claims"));
-                        } else {
-                            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-bulk-sell-player",
-                                    Map.of("{owner}", targetName,
-                                            "{count}", String.valueOf(removed),
-                                            "{refund}",
-                                            plugin.getEconomyManager().formatMoney(finalRefund * removed))));
-                        }
-                    },
-                    uuid -> player.sendMessage(plugin.getMessageManager().getPrefixed(player, "confirm-deny")));
-        } else {
-            final double finalRefund = refund;
-            sendConfirmationButtons(player);
-            plugin.getConfirmationManager().addPending(
-                    player.getUniqueId(),
-                    ConfirmationManager.ActionType.SELL,
-                    uuid -> {
-                        int removed = plugin.getClaimManager().removeAllClaimsWithRefund(finalRefund);
-                        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-bulk-sell-all",
-                                Map.of("{count}", String.valueOf(removed))));
-                    },
-                    uuid -> player.sendMessage(plugin.getMessageManager().getPrefixed(player, "confirm-deny")));
-        }
-    }
-
-    private void handleAdminToggleFeature(Player player, String[] args, String feature) {
-        if (args.length < 3) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-usage-toggle",
-                    Map.of("{feature}", feature)));
-            return;
-        }
-
-        String toggle = args[2].toLowerCase(Locale.ROOT);
-        boolean disable;
-        switch (toggle) {
-            case "ac", "aç", "enable" -> disable = false;
-            case "kapat", "disable" -> disable = true;
-            default -> {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-usage-toggle",
-                        Map.of("{feature}", feature)));
-                return;
-            }
-        }
-
-        String status = disable ? "§cOFF" : "§aON";
-
-        if (args.length >= 4 && (args[3].equalsIgnoreCase("tumu") || args[3].equalsIgnoreCase("tümü")
-                || args[3].equalsIgnoreCase("all"))) {
-            switch (feature) {
-                case "pvp" -> plugin.getClaimManager().setAllClaimsPvp(disable);
-                case "explosion" -> plugin.getClaimManager().setAllClaimsExplosion(disable);
-                case "mob" -> plugin.getClaimManager().setAllClaimsMobSpawn(disable);
-            }
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-toggle-all",
-                    Map.of("{feature}", feature.toUpperCase(), "{status}", status)));
-        } else {
-            Chunk chunk = player.getLocation().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
-            if (claim == null) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "sell-not-claimed"));
-                return;
-            }
-            switch (feature) {
-                case "pvp" -> claim.setPvpDisabled(disable);
-                case "explosion" -> claim.setExplosionDisabled(disable);
-                case "mob" -> claim.setMobSpawnDisabled(disable);
-            }
-            plugin.getClaimManager().saveAll();
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-toggle-single",
-                    Map.of("{feature}", feature.toUpperCase(), "{status}", status)));
-        }
-    }
-
-    private void handleAdminDelete(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§c/claim admin delete <player> [all]");
-            return;
-        }
-        String targetName = args[2];
-        if (args.length >= 4 && args[3].equalsIgnoreCase("all")) {
-            UUID targetUUID = resolvePlayerUUID(player, targetName);
-            if (targetUUID == null)
-                return;
-            int removed = plugin.getClaimManager().removeAllPlayerClaims(targetUUID);
-            if (removed == 0) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-no-claims"));
-            } else {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-claim-deleted-all",
-                        Map.of("{owner}", targetName, "{count}", String.valueOf(removed))));
-            }
-        } else {
-            Chunk chunk = player.getLocation().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
-            if (claim == null) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "sell-not-claimed"));
-                return;
-            }
-            plugin.getClaimManager().unclaimChunk(chunk);
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-claim-deleted",
-                    Map.of("{owner}", claim.getOwnerName(), "{chunk}", claim.getChunkDisplay())));
-        }
-    }
-
-    private void handleAdminGive(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§c/claim admin give <player>");
-            return;
-        }
-        Player target = Bukkit.getPlayerExact(args[2]);
-        if (target == null) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-player-not-found"));
-            return;
-        }
-        Chunk chunk = player.getLocation().getChunk();
-        plugin.getClaimManager().giveChunk(target, chunk);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-claim-given",
-                Map.of("{player}", target.getName(), "{chunk}", chunk.getX() + ", " + chunk.getZ())));
-    }
-
-    private void handleAdminPrice(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§c/claim admin price <amount>");
-            return;
-        }
-        try {
-            double oldPrice = plugin.getConfigManager().getClaimPrice();
-            double newPrice = Double.parseDouble(args[2]);
-            plugin.getConfigManager().setClaimPrice(newPrice);
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-price-set",
-                    Map.of("{price}", plugin.getEconomyManager().formatMoney(newPrice))));
-
-            if (plugin.getConfigManager().isAutoRefundPriceDifference() && oldPrice > newPrice) {
-                double diff = oldPrice - newPrice;
-                int refunded = plugin.getClaimManager().refundPriceDifference(diff);
-                if (refunded > 0) {
-                    player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-price-diff-success",
-                            Map.of("{refund}", plugin.getEconomyManager().formatMoney(diff),
-                                    "{count}", String.valueOf(refunded))));
-                }
-            }
-        } catch (NumberFormatException e) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§cInvalid number.");
-        }
-    }
-
-    private void handleAdminCooldown(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§c/claim admin cooldown <seconds>");
-            return;
-        }
-        try {
-            int seconds = Integer.parseInt(args[2]);
-            plugin.getConfigManager().setCooldownSeconds(seconds);
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-cooldown-set",
-                    Map.of("{seconds}", String.valueOf(seconds))));
-        } catch (NumberFormatException e) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§cInvalid number.");
-        }
-    }
-
-    private void handleAdminPrefix(Player player, String[] args) {
-        String defaultPrefix = "&7[&dDyClaim&7]";
-        String newPrefix;
-        if (args.length < 3) {
-            newPrefix = defaultPrefix;
-        } else {
-            StringBuilder prefixBuilder = new StringBuilder();
-            for (int i = 2; i < args.length; i++) {
-                if (i > 2)
-                    prefixBuilder.append(" ");
-                prefixBuilder.append(args[i]);
-            }
-            newPrefix = prefixBuilder.toString().trim();
-            if (newPrefix.isEmpty()) {
-                newPrefix = defaultPrefix;
-            }
-        }
-        plugin.getConfigManager().setPrefix(newPrefix);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-prefix-set"));
-    }
-
-    private void handleAdminEconomy(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + "§c/claim admin economy enable/disable");
-            return;
-        }
-        String toggle = args[2].toLowerCase(Locale.ROOT);
-        switch (toggle) {
-            case "ac", "aç", "enable" -> {
-                plugin.getConfigManager().setEconomyEnabled(true);
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-economy-enabled"));
-            }
-            case "kapat", "disable" -> {
-                plugin.getConfigManager().setEconomyEnabled(false);
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-economy-disabled"));
-            }
-            default -> player.sendMessage(plugin.getMessageManager().getPrefix() +
-                    "§c/claim admin economy enable/disable");
-        }
-    }
-
-    private void showAdminHelp(Player player) {
-        MessageManager msg = plugin.getMessageManager();
-        String prefix = msg.getPrefix();
-        player.sendMessage(msg.getMessage(player, "admin-help-header", Map.of("{prefix}", prefix)));
-        player.sendMessage(msg.getMessage(player, "admin-help-toggle"));
-        player.sendMessage(msg.getMessage(player, "admin-help-delete"));
-        player.sendMessage(msg.getMessage(player, "admin-help-give"));
-        player.sendMessage(msg.getMessage(player, "admin-help-price"));
-        player.sendMessage(msg.getMessage(player, "admin-help-cooldown"));
-        player.sendMessage(msg.getMessage(player, "admin-help-prefix"));
-        player.sendMessage(msg.getMessage(player, "admin-help-economy"));
-        player.sendMessage(msg.getMessage(player, "admin-help-pvp"));
-        player.sendMessage(msg.getMessage(player, "admin-help-explosion"));
-        player.sendMessage(msg.getMessage(player, "admin-help-mob"));
-        player.sendMessage(msg.getMessage(player, "admin-help-bulksell"));
-        player.sendMessage(msg.getMessage(player, "admin-help-pricediff"));
-        player.sendMessage(msg.getMessage(player, "admin-help-lang"));
-        player.sendMessage(msg.getMessage(player, "admin-help-blacklist"));
-        player.sendMessage(msg.getMessage(player, "admin-help-reload"));
-        player.sendMessage(msg.getMessage(player, "admin-help-footer"));
-    }
-
-    private void handleAdminLang(Player player, String[] args) {
-        if (args.length < 3) {
-            String current = plugin.getConfigManager().getLang();
-            player.sendMessage(plugin.getMessageManager().getPrefix() +
-                    " §eCurrent: §f" + current + " §7| §e/claim admin lang <auto/en/tr>");
-            return;
-        }
-        String lang = args[2].toLowerCase(Locale.ROOT);
-        if (!lang.equals("auto") && !lang.equals("en") && !lang.equals("tr")) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() + " §cAvailable: auto, en, tr");
-            return;
-        }
-        plugin.getConfigManager().setLang(lang);
-        plugin.getMessageManager().reload();
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "reload-success"));
-    }
-
-    private void handleAdminBlacklist(Player player, String[] args) {
-        if (args.length < 3) {
-            var list = plugin.getConfigManager().getBlacklistedWorlds();
-            player.sendMessage(plugin.getMessageManager().getPrefix() +
-                    " §eBlacklist: §f" + (list.isEmpty() ? "-" : String.join(", ", list)));
-            player.sendMessage(plugin.getMessageManager().getPrefix() +
-                    " §7/claim admin blacklist add/remove <world>");
-            return;
-        }
-        String action = args[2].toLowerCase(Locale.ROOT);
-        if (args.length < 4) {
-            player.sendMessage(plugin.getMessageManager().getPrefix() +
-                    " §c/claim admin blacklist " + action + " <world>");
-            return;
-        }
-        String worldName = args[3];
-
-        if (Bukkit.getWorld(worldName) == null) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-world-not-found",
-                    Map.of("{world}", worldName)));
-            return;
-        }
-
-        switch (action) {
-            case "ekle", "add" -> {
-                if (plugin.getConfigManager().addBlacklistedWorld(worldName)) {
-                    player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-blacklist-added",
-                            Map.of("{world}", worldName)));
-                } else {
-                    player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-blacklist-already",
-                            Map.of("{world}", worldName)));
-                }
-            }
-            case "cikar", "çıkar", "remove" -> {
-                if (plugin.getConfigManager().removeBlacklistedWorld(worldName)) {
-                    player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-blacklist-removed",
-                            Map.of("{world}", worldName)));
-                } else {
-                    player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-blacklist-not-found",
-                            Map.of("{world}", worldName)));
-                }
-            }
-            default -> player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-usage-blacklist"));
-        }
-    }
-
-    private void handleAdminPriceDiff(Player player, String[] args) {
-        try {
-            double oldPrice = args.length >= 3 ? Double.parseDouble(args[2])
-                    : plugin.getConfigManager().getPreviousClaimPrice();
-            double currentPrice = plugin.getConfigManager().getClaimPrice();
-            double diff = oldPrice - currentPrice;
-
-            if (diff <= 0) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-pricediff-error",
-                        Map.of("{price}", plugin.getEconomyManager().formatMoney(currentPrice))));
-                return;
-            }
-
-            int refunded = plugin.getClaimManager().refundPriceDifference(diff);
-            if (refunded == 0) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-no-claims"));
-            } else {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-price-diff-success",
-                        Map.of("{refund}", plugin.getEconomyManager().formatMoney(diff),
-                                "{count}", String.valueOf(refunded))));
-            }
-        } catch (NumberFormatException e) {
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "admin-invalid-number"));
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private UUID resolvePlayerUUID(Player sender, String targetName) {
-        Player target = Bukkit.getPlayerExact(targetName);
-        if (target != null)
-            return target.getUniqueId();
-        var offlinePlayer = Bukkit.getOfflinePlayer(targetName);
-        if (offlinePlayer.hasPlayedBefore())
-            return offlinePlayer.getUniqueId();
-        sender.sendMessage(plugin.getMessageManager().getPrefixed(sender, "admin-player-not-found"));
-        return null;
-    }
-
-    @SuppressWarnings("deprecation")
-    private void sendConfirmationButtons(Player player) {
-        TextComponent accept = new TextComponent("  ");
-        TextComponent acceptBtn = new TextComponent(plugin.getMessageManager().getMessage(player, "confirm-accept"));
-        acceptBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/claim confirm"));
-        acceptBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new Text("§aClick to confirm")));
-        TextComponent space = new TextComponent("  ");
-        TextComponent denyBtn = new TextComponent(plugin.getMessageManager().getMessage(player, "confirm-deny"));
-        denyBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/claim deny"));
-        denyBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new Text("§cClick to cancel")));
-        accept.addExtra(acceptBtn);
-        accept.addExtra(space);
-        accept.addExtra(denyBtn);
-        player.spigot().sendMessage(accept);
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> completions = new ArrayList<>();
-        String lang = plugin.getMessageManager().getPreferredLanguage(sender);
-        boolean turkish = "tr".equals(lang);
-
-        if (args.length == 1) {
-            List<String> subs = new ArrayList<>(turkish
-                    ? List.of("sat", "gör", "bilgi", "liste", "pvp", "patlama", "mob", "güven", "güvensil",
-                            "güvenliste", "yardım")
-                    : List.of("sell", "see", "info", "list", "pvp", "explosion", "mob", "trust", "untrust", "trustlist",
-                            "help"));
-            if (sender.hasPermission("dyclaim.admin")) {
-                subs.add("admin");
-            }
-            String input = args[0].toLowerCase(Locale.ROOT);
-            for (String sub : subs) {
-                if (sub.startsWith(input)) {
-                    completions.add(sub);
-                }
-            }
-        } else if (args.length == 2) {
-            String sub = args[0].toLowerCase(Locale.ROOT);
-            if (sub.equals("admin") && sender.hasPermission("dyclaim.admin")) {
-                List<String> adminSubs = new ArrayList<>(turkish
-                        ? List.of("aç", "kapat", "sil", "ver", "fiyat", "cooldown", "prefix", "ekonomi", "pvp",
-                                "patlama", "mob", "toplusat", "farkver", "dil", "karaliste", "yenile")
-                        : List.of("enable", "disable", "delete", "give", "price", "cooldown", "prefix", "economy",
-                                "pvp", "explosion", "mob", "bulksell", "pricediff", "lang", "blacklist", "reload"));
-                String input = args[1].toLowerCase(Locale.ROOT);
-                for (String s : adminSubs) {
-                    if (s.startsWith(input)) {
-                        completions.add(s);
-                    }
-                }
-            } else if (sub.equals("trust") || sub.equals("untrust") || sub.equals("guven") || sub.equals("güven")
-                    || sub.equals("guvensil") || sub.equals("güvensil")) {
-                String input = args[1].toLowerCase(Locale.ROOT);
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.getName().toLowerCase(Locale.ROOT).startsWith(input)) {
-                        completions.add(p.getName());
-                    }
-                }
-            }
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("admin") && sender.hasPermission("dyclaim.admin")) {
-            String adminSub = args[1].toLowerCase(Locale.ROOT);
-            if (adminSub.equals("delete") || adminSub.equals("give") || adminSub.equals("bulksell")
-                    || adminSub.equals("sil") || adminSub.equals("ver") || adminSub.equals("toplusat")) {
-                String input = args[2].toLowerCase(Locale.ROOT);
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.getName().toLowerCase(Locale.ROOT).startsWith(input)) {
-                        completions.add(p.getName());
-                    }
-                }
-            } else if (adminSub.equals("economy") || adminSub.equals("ekonomi")
-                    || adminSub.equals("pvp") || adminSub.equals("explosion") || adminSub.equals("patlama")
-                    || adminSub.equals("mob")) {
-                List<String> toggles = turkish ? List.of("aç", "kapat") : List.of("enable", "disable");
-                String input = args[2].toLowerCase(Locale.ROOT);
-                for (String t : toggles) {
-                    if (t.startsWith(input)) {
-                        completions.add(t);
-                    }
-                }
-            } else if (adminSub.equals("lang") || adminSub.equals("dil")) {
-                List<String> langs = List.of("auto", "en", "tr");
-                String input = args[2].toLowerCase(Locale.ROOT);
-                for (String l : langs) {
-                    if (l.startsWith(input)) {
-                        completions.add(l);
-                    }
-                }
-            } else if (adminSub.equals("blacklist") || adminSub.equals("karaliste")) {
-                List<String> actions = turkish ? List.of("ekle", "çıkar") : List.of("add", "remove");
-                String input = args[2].toLowerCase(Locale.ROOT);
-                for (String a : actions) {
-                    if (a.startsWith(input)) {
-                        completions.add(a);
-                    }
-                }
-            }
-        } else if (args.length == 4 && args[0].equalsIgnoreCase("admin")) {
-            String adminSub = args[1].toLowerCase(Locale.ROOT);
-            if (adminSub.equals("delete") || adminSub.equals("sil") || adminSub.equals("pvp")
-                    || adminSub.equals("explosion")
-                    || adminSub.equals("patlama") || adminSub.equals("mob")) {
-                if ("all".startsWith(args[3].toLowerCase(Locale.ROOT))) {
-                    completions.add("all");
-                }
-            }
-        }
-
-        return completions;
+        return options.stream().filter(s->s.toLowerCase(Locale.ROOT).startsWith(input)).sorted().toList();
     }
 }
+
+
+

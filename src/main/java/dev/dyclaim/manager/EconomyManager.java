@@ -1,115 +1,48 @@
 package dev.dyclaim.manager;
 
 import dev.dyclaim.DyClaim;
-import org.bukkit.entity.Player;
-
-import java.lang.reflect.Method;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
+import java.util.UUID;
 
 public class EconomyManager {
-
     private final DyClaim plugin;
-    private Object economy;
-    private boolean vaultAvailable;
-
-    public EconomyManager(DyClaim plugin) {
-        this.plugin = plugin;
-        setupEconomy();
+    private boolean uncertain;
+    public EconomyManager(DyClaim plugin) { this.plugin=plugin; }
+    private Economy provider() {
+        if(Bukkit.getPluginManager().getPlugin("Vault")==null)return null;
+        var registration=Bukkit.getServicesManager().getRegistration(Economy.class);
+        return registration==null ? null : registration.getProvider();
     }
-
-    private void setupEconomy() {
-        if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
-            plugin.getLogger().info("Vault not found. Economy features disabled.");
-            vaultAvailable = false;
-            return;
-        }
-
+    public boolean isAvailable() { try{return provider()!=null;}catch(LinkageError ex){return false;} }
+    public boolean isEnabled() { return plugin.getConfigManager().isEconomyEnabled()&&isAvailable(); }
+    public double getBalance(OfflinePlayer player) { try{Economy e=provider();return e==null?0:e.getBalance(player);}catch(Exception|LinkageError ex){return 0;} }
+    public boolean hasEnough(OfflinePlayer player,double amount) {
+        if(!Double.isFinite(amount)||amount<0)return false;
+        try{Economy e=provider();return e!=null&&e.has(player,amount);}catch(Exception|LinkageError ex){return false;}
+    }
+    public boolean withdraw(OfflinePlayer player,double amount) {return transaction(player,amount,true);}
+    public boolean deposit(OfflinePlayer player,double amount) {return transaction(player,amount,false);}
+    public boolean withdraw(UUID uuid,double amount) {return withdraw(Bukkit.getOfflinePlayer(uuid),amount);}
+    public boolean deposit(UUID uuid,double amount) {return deposit(Bukkit.getOfflinePlayer(uuid),amount);}
+    public boolean wasUncertain() {return uncertain;}
+    private boolean transaction(OfflinePlayer player,double amount,boolean withdraw) {
+        uncertain=false;
+        if(!Double.isFinite(amount)||amount<0)return false;
+        if(amount==0)return true;
         try {
-            Class<?> economyClass = Class.forName("net.milkbowl.vault.economy.Economy");
-            Object rsp = plugin.getServer().getServicesManager().getRegistration(economyClass);
-            if (rsp == null) {
-                plugin.getLogger()
-                        .warning("No economy provider found! Vault is installed but no economy plugin is available.");
-                vaultAvailable = false;
-                return;
-            }
-
-            Method getProvider = rsp.getClass().getMethod("getProvider");
-            economy = getProvider.invoke(rsp);
-            vaultAvailable = true;
-
-            Method getName = economy.getClass().getMethod("getName");
-            plugin.getLogger().info("Vault economy hooked: " + getName.invoke(economy));
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to hook Vault economy: " + e.getMessage());
-            vaultAvailable = false;
+            Economy e=provider();if(e==null)return false;
+            EconomyResponse response=withdraw?e.withdrawPlayer(player,amount):e.depositPlayer(player,amount);
+            if(response==null){uncertain=true;return false;}
+            return response.transactionSuccess();
+        } catch(Exception|LinkageError ex) {
+            uncertain=true;plugin.getLogger().severe("Economy response uncertain: "+ex.getMessage());return false;
         }
     }
-
-    public boolean isAvailable() {
-        return vaultAvailable && economy != null;
-    }
-
-    public boolean isEnabled() {
-        return plugin.getConfigManager().isEconomyEnabled() && isAvailable();
-    }
-
-    public double getBalance(Player player) {
-        if (!isAvailable())
-            return 0;
-        try {
-            Method m = economy.getClass().getMethod("getBalance", org.bukkit.OfflinePlayer.class);
-            return (double) m.invoke(economy, player);
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    public boolean hasEnough(Player player, double amount) {
-        if (!isAvailable())
-            return true;
-        try {
-            Method m = economy.getClass().getMethod("has", org.bukkit.OfflinePlayer.class, double.class);
-            return (boolean) m.invoke(economy, player, amount);
-        } catch (Exception e) {
-            return true;
-        }
-    }
-
-    public boolean withdraw(Player player, double amount) {
-        if (!isAvailable())
-            return true;
-        try {
-            Method m = economy.getClass().getMethod("withdrawPlayer", org.bukkit.OfflinePlayer.class, double.class);
-            Object response = m.invoke(economy, player, amount);
-            Method success = response.getClass().getMethod("transactionSuccess");
-            return (boolean) success.invoke(response);
-        } catch (Exception e) {
-            return true;
-        }
-    }
-
-    public boolean deposit(Player player, double amount) {
-        if (!isAvailable())
-            return true;
-        try {
-            Method m = economy.getClass().getMethod("depositPlayer", org.bukkit.OfflinePlayer.class, double.class);
-            Object response = m.invoke(economy, player, amount);
-            Method success = response.getClass().getMethod("transactionSuccess");
-            return (boolean) success.invoke(response);
-        } catch (Exception e) {
-            return true;
-        }
-    }
-
     public String formatMoney(double amount) {
-        if (isAvailable()) {
-            try {
-                Method m = economy.getClass().getMethod("format", double.class);
-                return (String) m.invoke(economy, amount);
-            } catch (Exception e) {
-                return String.format("%.2f", amount);
-            }
-        }
-        return String.format("%.2f", amount);
+        try{Economy e=provider();if(e!=null)return e.format(amount);}catch(Exception|LinkageError ignored){}
+        return String.format(java.util.Locale.ROOT,"%.2f",amount);
     }
 }

@@ -14,6 +14,7 @@ softdepend:
   - Lands
   - Residence
   - GriefDefender
+  - SimpleClans
 
 commands:
   claim:
@@ -47,6 +48,14 @@ permissions:
       dyclaim.list: true
       dyclaim.trust: true
       dyclaim.teleport: true
+      dyclaim.settings: true
+      dyclaim.coowner: true
+      dyclaim.transfer: true
+      dyclaim.market: true
+      dyclaim.auto: true
+      dyclaim.name: true
+      dyclaim.setspawn: true
+      dyclaim.warn: true
   dyclaim.admin:
     description: All admin permissions
     default: op
@@ -77,3 +86,36 @@ permissions:
   dyclaim.admin.bypass:
     description: Bypass claim protection
     default: op
+  dyclaim.settings:
+    default: true
+    description: Change unlocked claim settings
+  dyclaim.coowner:
+    default: true
+    description: Invite or remove one coowner
+  dyclaim.transfer:
+    default: true
+    description: Offer ownership transfer
+  dyclaim.market:
+    default: true
+    description: List or buy claims when the market is enabled
+  dyclaim.auto:
+    default: true
+    description: Toggle automatic claiming
+  dyclaim.name:
+    default: true
+    description: Name owned claims
+  dyclaim.setspawn:
+    default: true
+    description: Set a safe claim spawn
+  dyclaim.warn:
+    default: true
+    description: Warn unauthorized visitors when warnings are enabled
+  dyclaim.warn.exempt:
+    default: op
+    description: Exemption from claim warning sanctions
+  dyclaim.admin.purge:
+    default: op
+    description: Preview and confirm inactive claim cleanup
+  dyclaim.admin.purge.exempt:
+    default: op
+    description: Exemption from inactive claim cleanup

@@ -23,14 +23,19 @@ public class DyClaim extends JavaPlugin {
     private ChunkVisualizer chunkVisualizer;
     private TeleportManager teleportManager;
     private UpdateChecker updateChecker;
+    private AccessManager accessManager;
+    private AcquisitionRules acquisitionRules;
+    private FeatureManager featureManager;
+    private TransactionManager transactionManager;
+    private ClanTrustManager clanTrustManager;
 
     @Override
     public void onEnable() {
         instance = this;
 
         saveDefaultConfig();
-        saveResource("messages_en.yml", false);
-        saveResource("messages_tr.yml", false);
+        if (!new java.io.File(getDataFolder(),"messages_en.yml").exists()) saveResource("messages_en.yml", false);
+        if (!new java.io.File(getDataFolder(),"messages_tr.yml").exists()) saveResource("messages_tr.yml", false);
 
         this.configManager = new ConfigManager(this);
         this.messageManager = new MessageManager(this);
@@ -40,6 +45,11 @@ public class DyClaim extends JavaPlugin {
         this.confirmationManager = new ConfirmationManager(this);
         this.chunkVisualizer = new ChunkVisualizer(this);
         this.teleportManager = new TeleportManager(this);
+        this.accessManager = new AccessManager(this);
+        this.acquisitionRules = new AcquisitionRules(this);
+        this.transactionManager = new TransactionManager(this);
+        this.clanTrustManager = new ClanTrustManager(this);
+        this.featureManager = new FeatureManager(this);
 
         try {
             WorldGuardHook.init();
@@ -60,7 +70,7 @@ public class DyClaim extends JavaPlugin {
 
         getCommand("onayla").setExecutor((sender, cmd, lbl, a) -> {
             if (sender instanceof org.bukkit.entity.Player p) {
-                if (!confirmationManager.confirm(p.getUniqueId())) {
+                if (!confirmationManager.confirm(p.getUniqueId(),a.length==0?null:a[0])) {
                     p.sendMessage(messageManager.getPrefixed(p, "confirm-none"));
                 }
             }
@@ -69,7 +79,7 @@ public class DyClaim extends JavaPlugin {
 
         getCommand("reddet").setExecutor((sender, cmd, lbl, a) -> {
             if (sender instanceof org.bukkit.entity.Player p) {
-                if (!confirmationManager.deny(p.getUniqueId())) {
+                if (!confirmationManager.deny(p.getUniqueId(),a.length==0?null:a[0])) {
                     p.sendMessage(messageManager.getPrefixed(p, "confirm-none"));
                 }
             }
@@ -79,6 +89,8 @@ public class DyClaim extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ClaimProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(teleportManager, this);
+        getServer().getPluginManager().registerEvents(featureManager, this);
+        featureManager.reloadTasks();
 
         if (getConfig().getBoolean("update-checker.enabled", true)) {
             this.updateChecker = new UpdateChecker(this);
@@ -91,6 +103,9 @@ public class DyClaim extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if(confirmationManager!=null) confirmationManager.clear();
+        if(teleportManager!=null) teleportManager.close();
+        if(featureManager!=null) featureManager.close();
         if (claimManager != null) {
             claimManager.saveAllSync();
         }
@@ -137,8 +152,15 @@ public class DyClaim extends JavaPlugin {
     }
 
     public void reload() {
-        reloadConfig();
         configManager.reload();
         messageManager.reload();
+        confirmationManager.clear();
+        chunkVisualizer.cleanupAll();
+        featureManager.reloadTasks();
     }
+    public AccessManager getAccessManager(){return accessManager;}
+    public AcquisitionRules getAcquisitionRules(){return acquisitionRules;}
+    public FeatureManager getFeatureManager(){return featureManager;}
+    public TransactionManager getTransactionManager(){return transactionManager;}
+    public ClanTrustManager getClanTrustManager(){return clanTrustManager;}
 }

@@ -24,6 +24,53 @@ protection:
   pvp-disabled: true
   explosion-disabled: true
   mob-griefing-disabled: true
+  villager-player-damage:
+    default: false
+    forced-value: null
+    player-toggle: true
+  visitor-doors:
+    default: false
+    forced-value: null
+    player-toggle: true
+  visitor-trapdoors:
+    default: false
+    forced-value: null
+    player-toggle: true
+  # pvp, explosions and mob-spawning inherit the existing beta defaults.
+  pvp:
+    forced-value: null
+    player-toggle: true
+  explosions:
+    forced-value: null
+    player-toggle: true
+  # Inherits the explosions setting unless explicitly overridden.
+  mob-explosions:
+    forced-value: null
+    player-toggle: true
+  mob-spawning:
+    forced-value: null
+    player-toggle: true
+  farmland:
+    protect-from-visitors: true
+    protect-from-mobs: true
+  boundaries:
+    block-external-fire: true
+    block-external-fluid: true
+    block-cross-owner-pistons: true
+    block-cross-owner-hoppers: true
+    # Local neighboring power sources only; all redstone circuits are not covered.
+    block-external-redstone-effects: true
+  mobs:
+    remove-on-entry:
+      enabled: false
+      only-when-spawning-disabled: true
+      entity-scope: hostile
+      included-types: []
+      excluded-types: []
+      protect-named: true
+      protect-tamed: true
+      interval-ticks: 20
+      batch-size: 100
 
 notification:
   use-actionbar: true
@@ -34,6 +81,9 @@ visualization:
   duration-seconds: 10
   particle: "FLAME"
   bedrock-block: "ORANGE_STAINED_GLASS"
+  show-after-claim: true
+  max-particles-per-run: 160
+  max-distance: 64
 
 confirmation-timeout: 30
 
@@ -41,3 +91,72 @@ blacklisted-worlds: []
 
 update-checker:
   enabled: true
+
+# Versioned additions. Existing beta keys above remain valid.
+config-version: 2
+confirmations:
+  clickable-buttons: true
+  # The existing confirmation-timeout is used when this key is absent in old configs.
+  timeout-seconds: 30
+  required:
+    claim: true
+    unclaim: true
+    refund-sale: true
+    transfer: true
+    market-purchase: true
+    purge: true
+trust:
+  temporary-enabled: true
+  granular-permissions-enabled: true
+  maximum-duration-days: 365
+ownership:
+  coowner-enabled: true
+  max-coowners: 1
+  transfer-enabled: true
+market:
+  enabled: false
+  minimum-price: 1.0
+  maximum-price: 1000000.0
+  tax-percent: 5.0
+  tax-destination: sink
+auto-claim:
+  enabled: false
+  require-economy: true
+  allow-zero-price: false
+  show-borders: true
+claim-rules:
+  spacing:
+    enabled: false
+    minimum-empty-chunks: 1
+  worlds: {}
+admin:
+  bypass:
+    enabled-by-default: true
+  claim-bans:
+    enabled: true
+  purge:
+    scheduled-enabled: false
+    inactive-days: 30
+    check-interval-minutes: 1440
+    batch-size: 100
+    protect-active-coowners: true
+    refund: false
+warnings:
+  enabled: false
+  cooldown-seconds: 60
+  window-seconds: 180
+  required-count: 3
+  reset-on-exit: true
+  sound-enabled: true
+  sound: ENTITY_ENDER_DRAGON_GROWL
+  sound-volume: 1.0
+  sound-pitch: 1.0
+  punishment:
+    type: server-ban
+    duration: 2d
+names:
+  maximum-length: 32
+integrations:
+  clans:
+    enabled: false
+    provider: SimpleClans

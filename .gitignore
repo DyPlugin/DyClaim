@@ -1,9 +1,42 @@
-build/
-target/
-.gradle/
-.vscode/
-.idea/
-*.iml
+# Build outputs and local dependencies
+/build/
+/target/
+/.gradle/
+node_modules/
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local servers, runtime downloads, backups and working notes
+/.local/
+/GELISTIRME-ASAMALARI.md
+/GELISTRIME-ASAMALARI.md
+/docs/current-architecture.md
+/docs/v1.0.0-progress.md
+/docs/release-1.0.0.md
+/docs/verification/
 *.log
+*.log.*
+*.tmp
+*.bak
+*.zip
+*.7z
+scripts/integration/*-result.json
+scripts/integration/*-failed.json
+
+# IDE and operating system files
+/.vscode/
+/.idea/
+*.iml
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local environment settings
+.env
+.env.*
+!.env.example
+
+# Local publishing notes
+/CHANGELOG.md
+/MODRINTH-DESCRIPTION.md

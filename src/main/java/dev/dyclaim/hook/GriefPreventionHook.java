@@ -29,8 +29,7 @@ public class GriefPreventionHook {
             Class<?> gpClass = Class.forName("me.ryanhamshire.GriefPrevention.GriefPrevention");
             Field instanceField = gpClass.getField("instance");
             Object gp = instanceField.get(null);
-            if (gp == null)
-                return false;
+            if (gp == null) return true;
 
             Field dataStoreField = gpClass.getField("dataStore");
             Object dataStore = dataStoreField.get(gp);
@@ -38,13 +37,8 @@ public class GriefPreventionHook {
             int minX = chunk.getX() << 4;
             int minZ = chunk.getZ() << 4;
 
-            Location[] corners = {
-                    new Location(chunk.getWorld(), minX, 64, minZ),
-                    new Location(chunk.getWorld(), minX + 15, 64, minZ),
-                    new Location(chunk.getWorld(), minX, 64, minZ + 15),
-                    new Location(chunk.getWorld(), minX + 15, 64, minZ + 15),
-                    new Location(chunk.getWorld(), minX + 8, 64, minZ + 8)
-            };
+            java.util.List<Location> corners = new java.util.ArrayList<>();
+            for(int x=0;x<16;x++) for(int z=0;z<16;z++) corners.add(new Location(chunk.getWorld(),minX+x,64,minZ+z));
 
             Method getClaimAt = null;
             for (Method m : dataStore.getClass().getMethods()) {
@@ -54,18 +48,17 @@ public class GriefPreventionHook {
                 }
             }
 
-            if (getClaimAt == null)
-                return false;
+            if (getClaimAt == null) return true;
 
             for (Location loc : corners) {
-                Object claim = getClaimAt.invoke(dataStore, loc, false, null);
+                Object claim = getClaimAt.invoke(dataStore, loc, true, null);
                 if (claim != null)
                     return true;
             }
 
             return false;
-        } catch (Exception e) {
-            return false;
+        } catch (Exception e) { return true;
         }
     }
 }
+

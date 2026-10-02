@@ -1,140 +1,206 @@
 # DyClaim — Chunk Claiming Made Simple
 
-Protect your builds. Claim your land. Control your world.
+Protect your builds. Share your land. Manage your claims.
 
-DyClaim is a lightweight yet powerful chunk claiming plugin that gives players full control over their land. Whether you run a survival, SMP, or economy server — DyClaim has you covered.
+DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
----
+**Version 1.0.0** adds temporary trust, shared ownership, player trading, automatic claiming and expanded administration while preserving the original Beta commands.
 
-## Why DyClaim?
+[Modrinth](https://modrinth.com/plugin/dyclaim) · [GitHub](https://github.com/DyPlugin/DyClaim) · [Release notes](CHANGELOG.md)
 
-**Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works.
+## Features
 
-**Per-claim settings.** Each claim has its own PvP, explosion, and mob spawning toggles. Your players decide how their land works.
+### Claiming and economy
 
-**Automatic language.** DyClaim detects each player's Minecraft language and shows commands and messages in their language. Currently supports **English** and **Turkish** out of the box.
+- Claim the chunk you are standing in with `/claim`.
+- Configure prices, cooldowns, total limits, world limits and spacing between different owners.
+- Use Vault and an economy provider for purchases and server refunds.
+- Sell claims back with `/claim sell`; refunds use the claim's recorded refund basis.
+- Adjust prices with safeguards against repeated price-difference refunds.
+- Enable automatic claiming while walking into eligible chunks. Balance, limit and acquisition checks still apply.
+- Core claiming works without Vault. The player marketplace requires an active economy provider; free automatic claiming requires explicit configuration.
 
-**Works with everything.** Hooks into WorldGuard, GriefPrevention, Towny, Lands, Residence, GriefDefender, Vault, and Floodgate — all optional, all automatic.
+### Protection you can configure
 
----
+Protect building, containers and supported entity interactions, with separate settings for PvP, explosions, mob explosions, hostile mob spawning, villager damage, visitor doors and trapdoors.
 
-## Core Features
+Villager damage by players is blocked by default, including owner attacks and player projectiles. Trading remains available. Farmland has separate visitor and mob trampling policies.
 
-**Claiming & Economy**
-- Claim chunks with `/claim` — simple as that
-- Vault economy integration with configurable prices
-- Sell claims back for a refund percentage
-- Automatic price difference refunds when admins adjust prices
-- Configurable claim limits and cooldowns
-- Works without Vault — economy features disabled automatically
+Boundary checks cover piston movement, fluid flow and hopper transfers between different owners or claimed land and wilderness. Automation between claims with the same primary owner remains available. Double-chest access checks both halves.
 
-**Protection**
-- Full block protection (break, place, interact, pistons, fire, water/lava flow)
-- Entity protection (item frames, armor stands, paintings, vehicles)
-- PvP toggle per claim
-- Explosion toggle per claim
-- Hostile mob spawning toggle per claim
+Server owners can define global and world defaults, force protection values and lock player toggles. External redstone checks cover nearby power effects; they do not isolate every possible circuit.
 
-**Trust System**
-- `/claim trust <player>` — let friends build in your claim
-- Per-claim trust management
-- Easy untrust and trust list commands
+Optional mob cleanup checks loaded claim chunks with a bounded workload. Scope, excluded mob types and named/tamed exceptions are configurable. It may also remove eligible mobs already inside a claim.
 
-**Teleportation**
-- `/claim tp <number>` — teleport to any of your claims
-- Configurable warmup timer (default: 3 seconds)
-- Blindness effect during warmup
-- Cancelled on movement — prevents abuse
-- Separate permission for fine-grained control
+### Trust and ownership
 
-**Smart Action Bar**
-- Towny-style action bar when entering claims
-- Shows owner name and PvP status
-- Only appears when settings actually change — no spam
-- Fully configurable (action bar or chat, enable/disable)
+- Permanent trust using the original `/claim trust <player>` command.
+- Temporary trust with durations such as `30m`, `2h` and `7d`.
+- Separate access rights for building, containers, doors, trapdoors, redstone, entities and teleportation.
+- One coowner per claim, added only after accepting an invitation. Coowned claims count toward acquisition limits.
+- Ownership transfers that require the recipient's acceptance and renewed acquisition checks.
+- Optional, experimental SimpleClans trust.
 
-**Chunk Visualization**
-- Particle borders for Java players
-- Block borders for Bedrock players (via Floodgate)
-- Configurable particle type and display duration
+Trust does not grant ownership or selling rights. A coowner can manage trust and claim settings but cannot sell, transfer or replace the primary owner. Successful transfers clear previous trust, coownership, clan grants and market listings.
 
-**Admin Toolkit**
-- Enable/disable claiming server-wide
-- Delete, give, and manage claims for any player
-- Set prices with automatic refunds to existing claim owners
-- Toggle settings for single claims or all claims at once
-- Bulk sell with owner refunds
-- World blacklist
-- Hot reload — no restart needed
+### Player marketplace
 
----
+Enable `/claim market` to let players list and purchase claims. Configure minimum/maximum prices and a tax deducted from the seller's proceeds; tax is removed from circulation.
 
-## Commands
+Purchases recheck ownership, price, permissions, bans and limits when confirmed. A persistent transaction journal records payment stages. Uncertain provider outcomes lock the affected claim for reconciliation rather than repeating payments automatically.
 
-| Command | What it does |
-|---------|-------------|
-| `/claim` | Claim the chunk you're in |
-| `/claim sell` | Sell your claim back |
-| `/unclaim` | Remove your claim |
-| `/claim see` | Visualize chunk borders |
-| `/claim info` | View claim details |
-| `/claim list` | See all your claims with coordinates |
-| `/claim tp <number>` | Teleport to a claim |
-| `/claim pvp` | Toggle PvP |
-| `/claim explosion` | Toggle explosions |
-| `/claim mob` | Toggle mob spawning |
-| `/claim trust <player>` | Trust a player |
-| `/claim untrust <player>` | Untrust a player |
-| `/confirm` | Confirm an action |
-| `/cancel` | Cancel an action |
+### Names, teleportation and borders
 
-Admin commands available under `/claim admin` — run `/claim admin help` for the full list.
+Give claims names, set safe spawn points and teleport by list number or name. Destinations are checked again when the teleport executes; warmup and movement cancellation remain available.
 
----
+Paginated lists show claim names and locations. Claim information shows owners, effective settings and market status; management details require appropriate access.
+
+Claim-entry action bars show the owner and PvP status. Java players get particle borders; an optional Floodgate path provides client-side block borders for Bedrock players. Visualization tasks have duration, distance and particle limits and are cleaned up on exit or shutdown.
+
+### Administration and warnings
+
+Enable or disable claiming, manage player claims, adjust prices, maintain a world blacklist and reload configuration. Additional tools include:
+
+- Session protection bypass, separate from command permissions.
+- Temporary or permanent bans on acquiring claims.
+- Preview-and-confirm inactive claim cleanup with backups and bounded batches.
+- Optional scheduled cleanup, with protections for online owners, active coowners and exemptions.
+- Owner/coowner warnings for unauthorized visitors, with a shared cooldown and persistent sanctions.
+
+Warnings are disabled by default. Their default rules are three valid warnings within 180 seconds, a 60-second cooldown and a two-day sanction. Server-ban and claim-entry-ban modes are configurable.
+
+## English and Turkish
+
+With `lang: auto`, DyClaim uses a player's saved language preference or their Minecraft language. Turkish clients receive Turkish messages and TAB suggestions; other client languages fall back to English.
+
+TAB shows only the effective language. Both languages remain accepted when typed, including operation words and trust permissions.
+
+Players can select `/claim lang en`, `/claim lang tr` or `/claim lang auto`. An administrator's `/claim admin lang en|tr` applies to everyone and takes priority over individual preferences. `/claim admin lang auto` restores automatic selection. Localized aliases are accepted without changing the active suggestion language.
+
+## Player commands
+
+Arguments in `<angle brackets>` are required; `[square brackets]` are optional. Use TAB for suggestions permitted by your permissions.
+
+| Command | Purpose |
+|---|---|
+| `/claim` | Claim your current chunk |
+| `/claim sell` | Sell the current claim back to the server |
+| `/unclaim` | Remove the current claim through the confirmation/refund flow |
+| `/claim trust <player> [duration]` | Grant permanent or temporary trust |
+| `/claim trustperm <player> <right> <allow\|deny>` | Change a trusted player's access rights |
+| `/claim untrust <player>` | Remove player trust |
+| `/claim trustlist` | View current trust |
+| `/claim coowner add <player>` | Invite one online coowner |
+| `/claim coowner remove` | Remove the coowner |
+| `/claim transfer <player>` | Offer ownership to an online recipient |
+| `/claim market list <price>` | List the current claim for sale |
+| `/claim market cancel` | Remove the listing |
+| `/claim market buy` | Purchase the listed claim you are standing in |
+| `/claim auto [on\|off]` | Toggle automatic claiming while walking |
+| `/claim name <name>` | Name the current claim |
+| `/claim setspawn` | Save a safe spawn inside the claim |
+| `/claim tp <number\|name>` | Teleport to a claim from your list |
+| `/claim list [page]` | View a paginated claim list |
+| `/claim info` | Inspect the current claim |
+| `/claim see` | Display chunk borders |
+| `/claim pvp`, `/claim explosion`, `/claim mob` | Toggle the corresponding unlocked setting |
+| `/claim mobexplosion`, `/claim villager` | Toggle mob explosions or player villager damage |
+| `/claim doors`, `/claim trapdoors` | Toggle visitor access |
+| `/claim warn <player>` | Warn an unauthorized visitor inside your claim |
+| `/claim lang <auto\|en\|tr>` | Select your language |
+| `/claim help` | Show player help |
+| `/confirm`, `/cancel` | Accept or reject a pending action |
+
+Trust rights: `build`, `containers`, `doors`, `trapdoors`, `redstone`, `entities`, `teleport`. The original trust command grants all these rights. Durations use `m` for minutes, `h` for hours and `d` for days; permanent access uses `permanent` or its localized equivalent.
+
+## Admin commands
+
+Use `/claim admin` for help. Administration commands are player commands and require the relevant permissions.
+
+Common tools include `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist`, `reload`, `give`, `delete`, `bulksell`, `bypass`, `ban`, `unban`, `purge` and `transactions`.
+
+Examples:
+
+```text
+/claim admin bypass off
+/claim admin ban Alex 7d
+/claim admin unban Alex
+/claim admin purge 30
+/claim admin transactions
+/claim admin lang tr
+/claim admin reload
+```
+
+Inactive cleanup removes claim records, not world blocks. Deletion and bulk operations use previews, confirmation and backups. Bypass does not exempt a player from acquisition bans, prices or limits.
 
 ## Permissions
 
-| Permission | Default | Description |
+| Permission | Default | Purpose |
 |---|---|---|
-| `dyclaim.player` | Everyone | All player commands |
-| `dyclaim.teleport` | Everyone | Teleport to claims |
-| `dyclaim.admin` | OP | All admin commands + protection bypass |
+| `dyclaim.player` | Everyone | Player command permission group |
+| `dyclaim.admin` | OP | Core administration and player permissions; includes bypass permission |
+| `dyclaim.admin.bypass` | OP | Permission to use protection bypass |
+| `dyclaim.admin.purge` | OP | Additional permission for inactive cleanup |
+| `dyclaim.admin.purge.exempt` | OP | Exemption from inactive cleanup |
+| `dyclaim.warn.exempt` | OP | Exemption from visitor-warning sanctions |
 
-Individual permissions (`dyclaim.claim`, `dyclaim.sell`, `dyclaim.see`, `dyclaim.info`, `dyclaim.list`, `dyclaim.trust`, `dyclaim.teleport`) are also available for fine-grained control.
-
----
+Individual player permissions are available for `claim`, `sell`, `see`, `info`, `list`, `trust`, `teleport`, `settings`, `coowner`, `transfer`, `market`, `auto`, `name`, `setspawn` and `warn`, prefixed with `dyclaim.`. They default to everyone; configuration can still disable a feature. See [plugin.yml](src/main/resources/plugin.yml) for the complete permission definition.
 
 ## Compatibility
 
-| | |
-|--------|------------|
-| **Server** | Paper, Purpur, Spigot, Bukkit **1.20.x — 1.21.x** |
-| **Java** | Java 17+ |
+The plugin compiles to **Java 17 bytecode**. Run the Java version required by your server; Java 17 is not the runtime requirement for every Minecraft version.
+
+| Tested server | Tested Java |
+|---|---|
+| Purpur 1.20.4, build 2176 | Java 21 |
+| Paper 26.2, build 129 | Java 25 |
+| Purpur 26.2, build 2633 | Java 25 |
+| Spigot 26.2, BuildTools revision 4648 | Java 25 |
+
+These runtimes passed live claim, ownership, language and protection scenarios. The clean build passed 83 automated tests. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
+
+### Optional integrations
 
 | Plugin | Integration |
-|--------|------------|
-| Vault | Economy (prices, refunds) |
-| WorldGuard | Prevents claiming in WG regions |
-| GriefPrevention | Prevents overlap with GP claims |
-| Towny | Prevents claiming in towns |
-| Lands | Prevents claiming in Lands areas |
-| Residence | Prevents claiming in residences |
-| GriefDefender | Prevents claiming in GD claims |
-| Floodgate | Bedrock player visualization |
+|---|---|
+| Vault + economy provider | Claim payments, refunds and player marketplace |
+| WorldGuard | Region overlap checks |
+| GriefPrevention | Claim overlap checks |
+| Towny | Town overlap checks |
+| Lands | Land overlap checks |
+| Residence | Residence area overlap checks |
+| GriefDefender | Claim overlap checks |
+| Floodgate | Bedrock detection and block-border visualization path |
+| SimpleClans | Experimental clan trust, enabled separately |
 
-All integrations are **optional** and detected automatically. The plugin works perfectly without any of them.
+No integration is required for core claiming. Installed protection hooks are detected automatically; an unavailable or failing detected hook blocks acquisition rather than allowing an unchecked overlap. Actual provider-version compatibility and Bedrock visualization require testing with your chosen integrations; they are not covered by the completed core-server matrix.
 
----
+## Installation and configuration
 
-## Setup
+1. Stop the server and place `DyClaim-v1.0.0.jar` in `plugins/`.
+2. Start the server to generate `plugins/DyClaim/`.
+3. Edit `config.yml` and, if desired, the English/Turkish message files.
+4. Run `/claim admin reload` as a permitted player.
 
-1. Drop the `.jar` into your `plugins/` folder
-2. Start the server
-3. Edit `plugins/DyClaim/config.yml` to your liking
-4. `/claim admin reload` — done!
+Marketplace, auto claim, warnings, mob cleanup, scheduled purge and clan integration are **disabled by default**. Enable the features you want and choose their policies before use. Invalid configuration reloads retain the previous valid settings.
 
----
+### Upgrading from Beta
 
-## Open Source
+Back up the old JAR and the entire DyClaim data folder together before upgrading. Beta claims migrate automatically with a preserved old-format backup. Existing ownership and trust are retained, and claims receive stable IDs in the versioned format.
 
-DyClaim is fully open source. Contributions, issues, and feature requests are welcome on GitHub.
+Rolling back requires a matching old-format data backup; replacing only the JAR is insufficient. External economy balances are not rolled back by restoring plugin files. Read the [upgrade and recovery guide](docs/upgrade-and-rollback.md).
+
+## Build and contribute
+
+Build from source with the bundled Gradle wrapper:
+
+```text
+Windows:      gradlew.bat clean build
+Linux/macOS:  ./gradlew clean build
+```
+
+The output is `build/libs/DyClaim-v1.0.0.jar`. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+
+Licensed under [GNU GPL v3](LICENSE).
+
+

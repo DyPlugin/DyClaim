@@ -3,7 +3,8 @@ package dev.dyclaim.listener;
 import dev.dyclaim.DyClaim;
 import dev.dyclaim.manager.MessageManager;
 import dev.dyclaim.model.ClaimData;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -50,7 +51,7 @@ public class PlayerListener implements Listener {
                 shouldShow = true;
             } else if (!fromClaim.getOwnerUUID().equals(toClaim.getOwnerUUID())) {
                 shouldShow = true;
-            } else if (fromClaim.isPvpDisabled() != toClaim.isPvpDisabled()) {
+            } else if (plugin.getAccessManager().enabled(fromClaim,"pvp") != plugin.getAccessManager().enabled(toClaim,"pvp")) {
                 shouldShow = true;
             }
 
@@ -62,8 +63,7 @@ public class PlayerListener implements Listener {
         if (fromClaim != null && toClaim == null && plugin.getConfigManager().isShowLeave()) {
             String leaveMsg = plugin.getMessageManager().getMessage(player, "actionbar-leave");
             if (plugin.getConfigManager().isUseActionbar()) {
-                player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
-                        MessageManager.colorize(leaveMsg)));
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(MessageManager.colorize(leaveMsg)));
             } else {
                 player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-leave"));
             }
@@ -74,18 +74,18 @@ public class PlayerListener implements Listener {
         String lang = plugin.getMessageManager().getPreferredLanguage(player);
         boolean isTurkish = "tr".equals(lang);
 
-        String pvpStatus = claim.isPvpDisabled()
+        String pvpStatus = !plugin.getAccessManager().enabled(claim,"pvp")
                 ? (isTurkish ? "\u00a7aKapal\u0131" : "\u00a7aOFF")
                 : (isTurkish ? "\u00a7cA\u00e7\u0131k" : "\u00a7cON");
 
         if (plugin.getConfigManager().isUseActionbar()) {
             String msg = plugin.getMessageManager().getMessage(player, "actionbar-enter",
                     Map.of("{owner}", claim.getOwnerName(), "{pvp}", pvpStatus));
-            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(
-                    MessageManager.colorize(msg)));
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(MessageManager.colorize(msg)));
         } else {
             player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-enter",
                     Map.of("{owner}", claim.getOwnerName())));
         }
     }
 }
+

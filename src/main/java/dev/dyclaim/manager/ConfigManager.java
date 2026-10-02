@@ -5,10 +5,19 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Sound;
+import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.entity.EntityType;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 public class ConfigManager {
 
     private final DyClaim plugin;
+    private FileConfiguration effective;
 
     private String prefix;
     private String lang;
@@ -49,8 +58,8 @@ public class ConfigManager {
     }
 
     public void reload() {
-        plugin.reloadConfig();
-        FileConfiguration config = plugin.getConfig();
+        FileConfiguration config = loadValidated();
+        this.effective = config;
 
         this.prefix = config.getString("prefix", "&7[&eDy&6Claim&7]");
         this.lang = config.getString("lang", "auto");
@@ -88,6 +97,71 @@ public class ConfigManager {
             this.blacklistedWorlds = new ArrayList<>();
     }
 
+    public FileConfiguration values() { return effective; }
+
+    private FileConfiguration loadValidated() {
+        try {
+            File file = new File(plugin.getDataFolder(), "config.yml");
+            YamlConfiguration candidate = new YamlConfiguration();
+            candidate.load(file);
+            if(!candidate.contains("confirmations.timeout-seconds"))candidate.set("confirmations.timeout-seconds",candidate.getLong("confirmation-timeout",30));
+            try (var input = plugin.getResource("config.yml")) {
+                if (input != null) {
+                    YamlConfiguration defaults = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(input, java.nio.charset.StandardCharsets.UTF_8));
+                    candidate.setDefaults(defaults); candidate.options().copyDefaults(true);
+                }
+            }
+            validate(candidate);
+            File temp = new File(plugin.getDataFolder(), "config.yml.tmp");
+            candidate.save(temp);
+            try { Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
+            catch (java.nio.file.AtomicMoveNotSupportedException ex) { Files.move(temp.toPath(),file.toPath(),StandardCopyOption.REPLACE_EXISTING); }
+            plugin.reloadConfig();
+            return candidate;
+        } catch (Exception ex) { throw new IllegalArgumentException("Invalid configuration; previous valid configuration retained: " + ex.getMessage(), ex); }
+    }
+
+    public static void validate(FileConfiguration config) {
+        if(config.getDefaults()!=null)for(String key:config.getDefaults().getKeys(true)) {
+            Object expected=config.getDefaults().get(key),actual=config.get(key);
+            if(expected instanceof Boolean && !(actual instanceof Boolean))throw new IllegalArgumentException(key+" must be boolean");
+            if(expected instanceof Number && !(actual instanceof Number))throw new IllegalArgumentException(key+" must be numeric");
+        }
+        for (String key : List.of("economy.claim-price","economy.previous-claim-price","market.minimum-price","market.maximum-price")) {
+            double value=config.getDouble(key); if(!Double.isFinite(value)||value<0)throw new IllegalArgumentException(key);
+        }
+        if(config.getInt("economy.sell-refund-percent")<0 || config.getInt("economy.sell-refund-percent")>100)throw new IllegalArgumentException("economy.sell-refund-percent");
+        double tax=config.getDouble("market.tax-percent"); if(!Double.isFinite(tax)||tax<0||tax>100)throw new IllegalArgumentException("market.tax-percent");
+        if(config.getDouble("market.minimum-price")<=0 || config.getDouble("market.maximum-price")<config.getDouble("market.minimum-price"))throw new IllegalArgumentException("market limits");
+        for(String key:List.of("confirmation-timeout","confirmations.timeout-seconds","claim.max-claims-per-player","visualization.duration-seconds","visualization.max-particles-per-run",
+                "visualization.max-distance","trust.maximum-duration-days","admin.purge.batch-size","admin.purge.inactive-days","admin.purge.check-interval-minutes","warnings.cooldown-seconds","warnings.window-seconds","warnings.required-count","protection.mobs.remove-on-entry.interval-ticks","protection.mobs.remove-on-entry.batch-size")) {
+            long value=config.getLong(key); if(value<=0||value>Integer.MAX_VALUE/20)throw new IllegalArgumentException(key);
+        }
+        for(String key:List.of("cooldown.seconds","teleport.warmup-seconds","claim-rules.spacing.minimum-empty-chunks")) if(config.getLong(key)<0||config.getLong(key)>Integer.MAX_VALUE/20)throw new IllegalArgumentException(key);
+        if(!List.of("auto","en","tr").contains(config.getString("lang")))throw new IllegalArgumentException("lang");
+        if(!"sink".equals(config.getString("market.tax-destination")))throw new IllegalArgumentException("Only tax-destination: sink is supported");
+        if(config.getInt("ownership.max-coowners")!=1)throw new IllegalArgumentException("max-coowners must be 1");
+        if(config.getInt("names.maximum-length")<1||config.getInt("names.maximum-length")>64)throw new IllegalArgumentException("names.maximum-length");
+        Particle.valueOf(config.getString("visualization.particle"));
+        if(!Material.valueOf(config.getString("visualization.bedrock-block")).isBlock())throw new IllegalArgumentException("visualization.bedrock-block");
+        Sound.valueOf(config.getString("warnings.sound"));
+        for(String key:List.of("warnings.sound-volume","warnings.sound-pitch")) {
+            double value=config.getDouble(key);if(!Double.isFinite(value)||value<0||value>4)throw new IllegalArgumentException(key);
+        }
+        if(!List.of("hostile","all-mobs","list").contains(config.getString("protection.mobs.remove-on-entry.entity-scope")))throw new IllegalArgumentException("entity-scope");
+        for(String key:List.of("excluded-types","included-types")) for(String type:config.getStringList("protection.mobs.remove-on-entry."+key))EntityType.valueOf(type);
+        if(!List.of("server-ban","claim-entry-ban").contains(config.getString("warnings.punishment.type")))throw new IllegalArgumentException("punishment.type");
+        dev.dyclaim.util.Rules.expiry(config.getString("warnings.punishment.duration"),0,Long.MAX_VALUE,false);
+        for(String key:config.getKeys(true)) {
+            if(key.endsWith("forced-value")&&config.get(key)!=null&&!(config.get(key) instanceof Boolean))throw new IllegalArgumentException(key);
+            if(key.endsWith("player-toggle")&&!(config.get(key) instanceof Boolean))throw new IllegalArgumentException(key);
+            if(key.startsWith("claim-rules.worlds.")&&key.endsWith("chunk-price")) {
+                double price=config.getDouble(key);if(!Double.isFinite(price)||price<0)throw new IllegalArgumentException(key);
+            }
+            if(key.startsWith("claim-rules.worlds.")&&key.endsWith("claim-limit")&&config.getInt(key)<=0)throw new IllegalArgumentException(key);
+        }
+    }
+
     public void saveConfig() {
         FileConfiguration config = plugin.getConfig();
         config.set("prefix", prefix);
@@ -109,6 +183,7 @@ public class ConfigManager {
         config.set("notification.show-enter", showEnter);
         config.set("notification.show-leave", showLeave);
         plugin.saveConfig();
+        effective = config;
     }
 
     public String getPrefix() {
@@ -218,6 +293,7 @@ public class ConfigManager {
     }
 
     public void setClaimPrice(double claimPrice) {
+        if(!Double.isFinite(claimPrice)||claimPrice<0)throw new IllegalArgumentException("Invalid price");
         this.previousClaimPrice = this.claimPrice;
         this.claimPrice = claimPrice;
         saveConfig();
@@ -234,6 +310,7 @@ public class ConfigManager {
     }
 
     public void setCooldownSeconds(int cooldownSeconds) {
+        if(cooldownSeconds<0||cooldownSeconds>Integer.MAX_VALUE/20)throw new IllegalArgumentException("Invalid cooldown");
         this.cooldownSeconds = cooldownSeconds;
         this.cooldownEnabled = cooldownSeconds > 0;
         saveConfig();

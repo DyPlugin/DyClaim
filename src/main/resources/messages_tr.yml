@@ -65,7 +65,7 @@ trust-self: "&cKendinizi güvenilen olarak ekleyemezsiniz!"
 trust-list-header: "&eBu claim'deki güvenilen oyuncular:"
 trust-list-entry: "&7- &f{player}"
 trust-list-empty: "&eGüvenilen oyuncu yok."
-trust-usage: "&cKullanım: &e/claim güven <oyuncu>"
+trust-usage: "&cKullanım: &e/claim güven <oyuncu> [süre]"
 untrust-usage: "&cKullanım: &e/claim güvensil <oyuncu>"
 
 admin-claiming-enabled: "&aClaim alma açıldı!"
@@ -89,8 +89,8 @@ admin-invalid-number: "&cGeçersiz sayı!"
 admin-usage-delete: "&cKullanım: &e/claim admin sil <oyuncu> [tümü]"
 admin-usage-give: "&cKullanım: &e/claim admin ver <oyuncu>"
 admin-usage-price: "&cKullanım: &e/claim admin fiyat <miktar>"
-admin-usage-cooldown: "&cKullanım: &e/claim admin cooldown <saniye>"
-admin-usage-prefix: "&cKullanım: &e/claim admin prefix <önek>"
+admin-usage-cooldown: "&cKullanım: &e/claim admin bekleme <saniye>"
+admin-usage-prefix: "&cKullanım: &e/claim admin önek <önek>"
 admin-usage-toggle: "&cKullanım: &e/claim admin {feature} aç/kapat [tümü]"
 admin-usage-blacklist: "&cKullanım: &e/claim admin karaliste ekle/çıkar <dünya>"
 admin-toggle-single: "&eClaim ayarı: &f{feature} {status}"
@@ -119,15 +119,15 @@ help-sell: "&6/claim sat &7- Claim'inizi satın"
 help-unclaim: "&6/unclaim &7- Claim'inizi kaldırın"
 help-see: "&6/claim gör &7- Chunk sınırlarını görün"
 help-info: "&6/claim bilgi &7- Chunk bilgilerini görün"
-help-list: "&6/claim liste &7- Claim listesini görün"
+help-list: "&6/claim liste [sayfa] &7- Claim listesini görün"
 help-pvp: "&6/claim pvp &7- PvP aç/kapat (claim'inizde)"
 help-explosion: "&6/claim patlama &7- Patlama aç/kapat (claim'inizde)"
 help-mob: "&6/claim mob &7- Mob doğması aç/kapat (claim'inizde)"
-help-trust: "&6/claim güven <oyuncu> &7- Oyuncuyu güvenilenlere ekleyin"
+help-trust: "&6/claim güven <oyuncu> [süre] &7- Oyuncuyu güvenilenlere ekleyin"
 help-untrust: "&6/claim güvensil <oyuncu> &7- Güvenilenlerden çıkarın"
 help-trustlist: "&6/claim güvenliste &7- Güvenilen oyuncuları görün"
 help-admin: "&6/claim admin &7- Yönetici komutları"
-help-tp: "&6/claim tp <numara> &7- Claim'inize ışınlanın"
+help-tp: "&6/claim ışınlan <numara|isim> &7- Claim'inize ışınlanın"
 help-footer: "&7&m---------------------------------"
 
 admin-help-header: "&7&m----------&r {prefix} &eYönetici Yardım &7&m----------"
@@ -135,15 +135,15 @@ admin-help-toggle: "&6/claim admin aç/kapat &7- Claim almayı aç/kapat"
 admin-help-delete: "&6/claim admin sil <oyuncu> [tümü] &7- Claim sil"
 admin-help-give: "&6/claim admin ver <oyuncu> &7- Chunk ver"
 admin-help-price: "&6/claim admin fiyat <miktar> &7- Fiyat ayarla"
-admin-help-cooldown: "&6/claim admin cooldown <saniye> &7- Bekleme süresi ayarla"
-admin-help-prefix: "&6/claim admin prefix <önek> &7- Önek ayarla"
+admin-help-cooldown: "&6/claim admin bekleme <saniye> &7- Bekleme süresi ayarla"
+admin-help-prefix: "&6/claim admin önek <önek> &7- Önek ayarla"
 admin-help-economy: "&6/claim admin ekonomi aç/kapat &7- Ekonomiyi aç/kapat"
 admin-help-pvp: "&6/claim admin pvp aç/kapat [tümü] &7- PvP ayarla"
 admin-help-explosion: "&6/claim admin patlama aç/kapat [tümü] &7- Patlama ayarla"
 admin-help-mob: "&6/claim admin mob aç/kapat [tümü] &7- Mob doğması ayarla"
 admin-help-bulksell: "&6/claim admin toplusat [oyuncu] &7- Toplu satış + iade"
 admin-help-pricediff: "&6/claim admin farkver [eski fiyat] &7- Fiyat farkı iadesi"
-admin-help-lang: "&6/claim admin dil <auto/en/tr> &7- Dil değiştir"
+admin-help-lang: "&6/claim admin dil <otomatik/en/tr> &7- Dil değiştir"
 admin-help-blacklist: "&6/claim admin karaliste ekle/çıkar <dünya> &7- Dünya karalistesi"
 admin-help-reload: "&6/claim admin yenile &7- Yapılandırmayı yeniden yükle"
 admin-help-footer: "&7&m---------------------------------"
@@ -153,6 +153,109 @@ tp-success: "&aClaim'inize ışınlandınız!"
 tp-cancelled: "&cIşınlanma iptal edildi! Hareket ettiniz."
 tp-already-pending: "&cZaten bekleyen bir ışınlanma var!"
 tp-no-claims: "&cIşınlanacak claim'iniz yok!"
-tp-usage: "&cKullanım: &e/claim tp <1-{max}>"
-tp-invalid-number: "&cGeçersiz claim numarası! &e/claim list &ckontrol edin."
+tp-usage: "&cKullanım: &e/claim ışınlan <1-{max}|isim>"
+tp-invalid-number: "&cGeçersiz claim numarası! &e/claim liste &ckontrol edin."
 tp-world-not-found: "&cBu claim'in dünyası bulunamadı!"
+
+confirm-replaced: '&eÖnceki bekleyen işlemin yenisiyle değiştirildi.'
+confirm-text: '&eOnaylamak için /confirm, iptal etmek için /cancel yaz.'
+operation-changed: '&cİşlemin koşulları değişti. İşlemi yeniden başlat.'
+operation-success: '&aİşlem tamamlandı.'
+transaction-locked: '&cBu claim için sonucu belirsiz bir ödeme var. Bir yöneticinin işlemi incelemesi gerekiyor.'
+transaction-failed: '&cİşlem tamamlanamadı. Yeniden denemeden önce işlem günlüğünü kontrol edin.'
+invalid-input: '&cGeçersiz giriş. /claim yardım komutunu kullan.'
+reload-invalid: '&cYapılandırma geçersiz; önceki geçerli ayarlar kullanılmaya devam ediyor.'
+feature-disabled: '&cBu özellik kapalı.'
+economy-required: '&cEtkin bir ekonomi sağlayıcısı gerekiyor.'
+claim-banned: '&cClaim edinmen yasaklanmış.'
+acquire-occupied: '&cBu chunk zaten claim edilmiş.'
+acquire-limit: '&cToplam veya bu dünyadaki sahiplik limitine ulaştın.'
+acquire-spacing: '&cBaşka bir sahibin claim alanına çok yakınsın.'
+acquire-cooldown: '&cYeniden denemeden önce claim bekleme sürenin dolmasını bekle.'
+setting-locked: '&cBu ayar sunucu tarafından kilitlenmiş.'
+setting-updated: '&a{setting}: {value}'
+trustperm-usage: '&cKullanım: &e/claim güvenizin <oyuncu> <inşa|sandıklar|kapılar|tuzakkapıları|kızıltaş|varlıklar|ışınlanma> <izinver|reddet>'
+clan-unavailable: '&cKlan sağlayıcısına ulaşılamıyor veya klan kimliği tek bir klana çözümlenemiyor.'
+coowner-usage: '&cKullanım: &e/claim ortak ekle <oyuncu> &cveya &e/claim ortak çıkar'
+coowner-full: '&cBu claim alanının zaten bir ortak sahibi var.'
+transfer-usage: '&cKullanım: &e/claim devret <çevrimiçi-oyuncu>'
+ownership-offer: '&e{owner}, {chunk} için {kind} teklif ediyor. Devir eski trust, klan erişimi, ortak sahiplik ve ilanı temizler. Kabul etmek için /confirm yaz.'
+offer-sent: '&aTeklif gönderildi; alıcı kabul etmeden sahiplik değişmez.'
+cancel-market-first: '&cÖnce pazar ilanını iptal et.'
+market-usage: '&cKullanım: &e/claim pazar listele <fiyat> | iptal | satınal'
+market-unavailable: '&cBu claim satın alınamıyor.'
+market-confirm: '&e{chunk} alanını {price} karşılığında alacak mısın? Satıcıya {income} ödenir; kalanı vergidir. Eski erişim hakları temizlenir.'
+auto-unavailable: '&cMevcut ekonomi ve özellik ayarlarıyla otomatik claim açılamıyor.'
+auto-enabled: '&aUygun chunk alanlarına yürüyerek girdiğinde otomatik claim alınacak.'
+auto-disabled: '&eOtomatik claim kapatıldı.'
+bypass-enabled: '&eKoruma atlama açıldı.'
+bypass-disabled: '&aKoruma atlama kapatıldı.'
+name-duplicate: '&cSahip olduğun başka bir claim bu adı kullanıyor.'
+tp-unsafe: '&cBu claim içinde güvenli bir ışınlanma konumu bulunamadı.'
+claim-summary: '&e{name} | {chunk} | Sahip: {owner} | Kimlik: {id}'
+claim-coowner: '&eOrtak sahip: {player}'
+claim-setting: '&7{setting}: {value} | kilitli: {locked}'
+claim-market: '&ePazar fiyatı: {price}'
+claim-private: '&7Trust kayıtları: {trust} | Özel spawn: {spawn}'
+list-page: '&eClaim listesi — sayfa {page}/{pages}'
+list-named-entry: '&7{number}. &e{name} &7| &e{world} &7| &fX:{x} Z:{z} &7| &f{date}'
+trust-list-details: "&7  İzinler: &f{rights} &7| Bitiş: &f{expiry}"
+trust-list-clan: "&7- &eKlan: &f{clan}"
+info-name: "&eİsim: &f{name}"
+info-setting: "&e{setting}: {status}"
+info-setting-locked: "&7{setting} sunucu tarafından kilitlenmiş."
+info-custom-spawn: "&eÖzel ışınlanma noktası: &aAyarlı"
+transactions-empty: "&eÇözümlenmemiş işlem yok."
+transactions-header: "&eÇözümlenmemiş işlemler:"
+transactions-entry: "&7- &f{id} &7| &e{chunk} &7| &f{stage}"
+ban-usage: '&cKullanım: &e/claim admin yasakla <oyuncu> <30m|2h|7d|kalıcı> | yasakkaldir <oyuncu>'
+purge-usage: '&cKullanım: &e/claim admin temizle <hareketsiz-gün>'
+purge-preview: '&eÖnizleme: {players} sahibin {count} claim alanı. Henüz hiçbir claim silinmedi.'
+purge-complete: '&aKoşulları karşılayan {count} claim silindi. Yedek kaydedildi.'
+warn-usage: '&cKullanım: &e/claim uyar <ziyaretçi>'
+warn-ineligible: '&cHedef bu claim içinde bulunan yetkisiz bir ziyaretçi olmalı.'
+warn-already-applied: '&eBu uyarı zinciri yaptırım uygulamış veya yönetici incelemesi bekliyor.'
+warn-cooldown: '&eBu ziyaretçiyi yeniden uyarmadan önce bekle.'
+warning-received: '&cClaim sahibinden uyarı aldın ({count}/{max}). Lütfen alandan çık. Son uyarıda {duration} süreyle {type} uygulanır.'
+warning-ban-reason: '&cClaim alanında tekrarlanan taciz.'
+entry-exit-unavailable: '&cYüklü alanlarda güvenli çıkış bulunamadı. Bir yöneticiye haber ver.'
+protection-villager: '&cBu claim içinde köylülere vuramazsın.'
+help-mobexplosion: "&6/claim mobpatlama &7- Claiminde mob patlamalarını aç/kapat"
+help-villager: "&6/claim köylü &7- Oyuncuların köylülere hasar vermesini aç/kapat"
+help-doors: "&6/claim kapı &7- Ziyaretçilerin kapı erişimini aç/kapat"
+help-trapdoors: "&6/claim tuzakkapısı &7- Ziyaretçilerin tuzak kapısı erişimini aç/kapat"
+help-trustperm: "&6/claim güvenizin <oyuncu> <izin> <izinver|reddet> &7- Güvenilen oyuncunun erişim izinlerini ayarla"
+help-coowner-add: "&6/claim ortak ekle <oyuncu> &7- Ortak sahip davet et"
+help-coowner-remove: "&6/claim ortak çıkar &7- Ortak sahibi kaldır"
+help-transfer: "&6/claim devret <oyuncu> &7- Çevrimiçi oyuncuya sahiplik devri teklif et"
+help-market-list: "&6/claim pazar listele <fiyat> &7- Claimini satışa çıkar"
+help-market-cancel: "&6/claim pazar iptal &7- Claiminin satış ilanını kaldır"
+help-market-buy: "&6/claim pazar satınal &7- Satıştaki claimi satın al"
+help-auto: "&6/claim otomatik [aç|kapat] &7- Yürürken otomatik claim almayı aç/kapat"
+help-name: "&6/claim isim <isim> &7- Claimine isim ver"
+help-setspawn: "&6/claim spawnayarla &7- Claiminin ışınlanma noktasını ayarla"
+help-warn: "&6/claim uyar <oyuncu> &7- Claimindeki ziyaretçiyi uyar"
+help-lang: "&6/claim dil <otomatik|en|tr> &7- Tercih ettiğin dili ayarla"
+help-confirm: "&6/onayla &7- Bekleyen işlemi onayla"
+help-cancel: "&6/reddet &7- Bekleyen işlemi iptal et"
+admin-help-bypass: "&6/claim admin koruma-atla [aç|kapat] &7- Kendi koruma atlamanı aç/kapat"
+admin-help-ban: "&6/claim admin yasakla <oyuncu> <süre> &7- Oyuncunun claim almasını yasakla"
+admin-help-unban: "&6/claim admin yasakkaldir <oyuncu> &7- Claim alma yasağını kaldır"
+admin-help-purge: "&6/claim admin temizle <gün> &7- Etkin olmayan claimler için temizleme önizlemesi"
+admin-help-transactions: "&6/claim admin islemler &7- Çözümlenmemiş ekonomi işlemlerini göster"
+state-enabled: '&aAçık'
+state-disabled: '&cKapalı'
+state-yes: 'evet'
+state-no: 'hayır'
+setting-pvp: 'PvP'
+setting-explosions: 'Patlamalar'
+setting-mob-spawning: 'Düşman mob doğması'
+setting-villager-player-damage: 'Oyuncuların köylülere hasar vermesi'
+setting-visitor-doors: 'Ziyaretçilerin kapı ve çit kapısı erişimi'
+setting-visitor-trapdoors: 'Ziyaretçilerin tuzak kapısı erişimi'
+coowner-offer: '&e{owner}, {chunk} için ortak sahiplik teklif ediyor. İnşa, trust ve ayarları yönetebilirsin; satış, silme, devir veya sahip değiştirme yapamazsın. Kabul için /confirm yaz.'
+transfer-offer: '&e{owner}, {chunk} alanının sahipliğini teklif ediyor. Eski trust, klan erişimi, ortak sahiplik ve ilan temizlenir. Kabul için /confirm yaz.'
+punishment-server-ban: 'sunucu yasağı'
+punishment-claim-entry-ban: 'bu claim alanına giriş yasağı'
+setting-mob-explosions: 'Mob patlamaları'
+

@@ -1,400 +1,133 @@
 package dev.dyclaim.manager;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 import dev.dyclaim.DyClaim;
 import dev.dyclaim.model.ClaimData;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.entity.Player;
-
-import java.io.*;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
+import org.bukkit.scheduler.BukkitTask;
+import java.io.IOException;
+import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
+/** All mutations and snapshots occur on the server thread. */
 public class ClaimManager {
-
     private final DyClaim plugin;
-    private final Map<String, ClaimData> claims = new ConcurrentHashMap<>();
+    private final Map<String, ClaimData> claims = new HashMap<>();
     private final Map<UUID, Set<String>> playerIndex = new HashMap<>();
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private final File dataFile;
-    private final File backupFile;
-
-    private volatile boolean dirty = false;
-
+    private final ClaimStore store;
+    private boolean writable;
+    private BukkitTask pendingSave;
     public ClaimManager(DyClaim plugin) {
         this.plugin = plugin;
-        this.dataFile = new File(plugin.getDataFolder(), "claims.json");
-        this.backupFile = new File(plugin.getDataFolder(), "claims.json.bak");
+        store = new ClaimStore(plugin.getDataFolder().toPath().resolve("claims.json"));
         loadAll();
     }
-
     public void loadAll() {
-        claims.clear();
-        playerIndex.clear();
-        if (!dataFile.exists()) {
-            return;
-        }
-
-        try (Reader reader = new InputStreamReader(new FileInputStream(dataFile), StandardCharsets.UTF_8)) {
-            Type type = new TypeToken<Map<String, ClaimData>>() {
-            }.getType();
-            Map<String, ClaimData> loaded = gson.fromJson(reader, type);
-            if (loaded != null) {
-                claims.putAll(loaded);
-                rebuildPlayerIndex();
-            }
-            plugin.getLogger().info("Loaded " + claims.size() + " claims.");
-        } catch (Exception e) {
-            plugin.getLogger().severe("Error loading claim data: " + e.getMessage());
-            if (backupFile.exists()) {
-                plugin.getLogger().info("Attempting to load from backup...");
-                try (Reader reader = new InputStreamReader(new FileInputStream(backupFile), StandardCharsets.UTF_8)) {
-                    Type type = new TypeToken<Map<String, ClaimData>>() {
-                    }.getType();
-                    Map<String, ClaimData> loaded = gson.fromJson(reader, type);
-                    if (loaded != null) {
-                        claims.putAll(loaded);
-                        rebuildPlayerIndex();
-                        plugin.getLogger().info("Loaded " + claims.size() + " claims from backup.");
-                    }
-                } catch (Exception ex) {
-                    plugin.getLogger().severe("Backup also failed: " + ex.getMessage());
-                }
-            }
-        }
-    }
-
-    private void rebuildPlayerIndex() {
-        playerIndex.clear();
-        for (Map.Entry<String, ClaimData> entry : claims.entrySet()) {
-            playerIndex.computeIfAbsent(entry.getValue().getOwnerUUID(), k -> new HashSet<>())
-                    .add(entry.getKey());
-        }
-    }
-
-    /**
-     * Marks data as dirty and schedules an async save after 1 second (20 ticks).
-     * Multiple rapid mutations coalesce into a single write.
-     */
-    public void saveAll() {
-        if (!dirty) {
-            dirty = true;
-            plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, () -> {
-                if (dirty) {
-                    saveAllInternal();
-                    dirty = false;
-                }
-            }, 20L);
-        }
-    }
-
-    /**
-     * Synchronous save for use during server shutdown (onDisable).
-     * Ensures all pending changes are flushed before the plugin is disabled.
-     */
-    public void saveAllSync() {
-        dirty = false;
-        saveAllInternal();
-    }
-
-    private synchronized void saveAllInternal() {
+        writable = false;
         try {
-            if (!dataFile.getParentFile().exists()) {
-                dataFile.getParentFile().mkdirs();
-            }
-
-            if (dataFile.exists()) {
-                Files.copy(dataFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }
-
-            Map<String, ClaimData> snapshot = new HashMap<>(claims);
-
-            File tempFile = new File(plugin.getDataFolder(), "claims.json.tmp");
-            try (Writer writer = new OutputStreamWriter(new FileOutputStream(tempFile), StandardCharsets.UTF_8)) {
-                gson.toJson(snapshot, writer);
-            }
-
-            Files.move(tempFile.toPath(), dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Error saving claim data: " + e.getMessage());
-            e.printStackTrace();
+            Map<String, ClaimData> loaded = store.load(plugin.getConfigManager().getClaimPrice());
+            claims.clear(); claims.putAll(loaded); rebuildPlayerIndex(); writable = true;
+            plugin.getLogger().info("Loaded " + claims.size() + " claims (schema 2).");
+        } catch (IOException ex) {
+            throw new IllegalStateException("Claim data cannot be loaded. Writes disabled; restore a verified backup. " + ex.getMessage(), ex);
         }
     }
-
-    public String getChunkKey(String world, int chunkX, int chunkZ) {
-        return world + ":" + chunkX + ":" + chunkZ;
+    public void rebuildPlayerIndex() {
+        playerIndex.clear();
+        claims.forEach((key, claim) -> {
+            playerIndex.computeIfAbsent(claim.getOwnerUUID(), uuid -> new HashSet<>()).add(key);
+            if (claim.getCoowner() != null) playerIndex.computeIfAbsent(claim.getCoowner(), uuid -> new HashSet<>()).add(key);
+        });
     }
-
-    public String getChunkKey(Chunk chunk) {
-        return getChunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+    public void saveAll() {
+        if (!writable) throw new IllegalStateException("Claim writes disabled");
+        if (pendingSave == null) pendingSave = plugin.getServer().getScheduler().runTaskLater(plugin, () -> { pendingSave = null; saveAllSync(); }, 20L);
     }
-
-    public boolean isChunkClaimed(Chunk chunk) {
-        return claims.containsKey(getChunkKey(chunk));
+    public void saveAllSync() {
+        if (!writable) return;
+        if (pendingSave != null) { pendingSave.cancel(); pendingSave = null; }
+        try { store.save(claims); }
+        catch (IOException ex) {
+            writable = false;
+            plugin.getLogger().severe("Claim write failed; plugin disabled to prevent further mutations: " + ex.getMessage());
+            plugin.getServer().getPluginManager().disablePlugin(plugin);
+            throw new IllegalStateException("Claim write failed", ex);
+        }
     }
-
-    public boolean isChunkClaimed(String world, int chunkX, int chunkZ) {
-        return claims.containsKey(getChunkKey(world, chunkX, chunkZ));
+    public void backup(String reason) {
+        saveAllSync();
+        try {
+            Path dir = plugin.getDataFolder().toPath().resolve("backups"); Files.createDirectories(dir);
+            Files.copy(plugin.getDataFolder().toPath().resolve("claims.json"), dir.resolve(reason + "-" + UUID.randomUUID() + ".json"));
+        } catch (IOException ex) { throw new IllegalStateException("Backup failed", ex); }
     }
-
-    public ClaimData getClaimAt(Chunk chunk) {
-        return claims.get(getChunkKey(chunk));
-    }
-
-    public ClaimData getClaimAt(String world, int chunkX, int chunkZ) {
-        return claims.get(getChunkKey(world, chunkX, chunkZ));
-    }
-
-    public boolean isOwner(Player player, Chunk chunk) {
-        ClaimData claim = getClaimAt(chunk);
-        return claim != null && claim.getOwnerUUID().equals(player.getUniqueId());
-    }
-
-    public boolean isAllowed(Player player, Chunk chunk) {
-        ClaimData claim = getClaimAt(chunk);
-        if (claim == null)
-            return true;
-        return claim.isAllowed(player.getUniqueId()) || player.hasPermission("dyclaim.admin.bypass");
-    }
-
+    public String getChunkKey(String world, int x, int z) { return world + ":" + x + ":" + z; }
+    public String getChunkKey(Chunk chunk) { return getChunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()); }
+    public boolean isChunkClaimed(Chunk chunk) { return claims.containsKey(getChunkKey(chunk)); }
+    public boolean isChunkClaimed(String world, int x, int z) { return claims.containsKey(getChunkKey(world,x,z)); }
+    public ClaimData getClaimAt(Chunk chunk) { return claims.get(getChunkKey(chunk)); }
+    public ClaimData getClaimAt(String world, int x, int z) { return claims.get(getChunkKey(world,x,z)); }
+    public ClaimData getByKey(String key) { return claims.get(key); }
+    public boolean isOwner(Player player, Chunk chunk) { ClaimData c=getClaimAt(chunk); return c != null && c.getOwnerUUID().equals(player.getUniqueId()); }
+    public boolean isAllowed(Player player, Chunk chunk) { return plugin.getAccessManager().allows(player,getClaimAt(chunk),"build"); }
     public boolean claimChunk(Player player, Chunk chunk) {
-        String key = getChunkKey(chunk);
-        if (claims.containsKey(key)) {
-            return false;
-        }
-
-        ClaimData claim = new ClaimData(
-                player.getUniqueId(),
-                player.getName(),
-                chunk.getWorld().getName(),
-                chunk.getX(),
-                chunk.getZ());
-
-        claim.setPvpDisabled(plugin.getConfigManager().isPvpDisabled());
-        claim.setExplosionDisabled(plugin.getConfigManager().isExplosionDisabled());
-        claim.setMobSpawnDisabled(plugin.getConfigManager().isMobGriefingDisabled());
-
-        claims.put(key, claim);
-        playerIndex.computeIfAbsent(player.getUniqueId(), k -> new HashSet<>()).add(key);
-        saveAll();
-        return true;
+        String key=getChunkKey(chunk); if (claims.containsKey(key)) return false;
+        ClaimData claim=new ClaimData(player.getUniqueId(),player.getName(),chunk.getWorld().getName(),chunk.getX(),chunk.getZ());
+        claim.inheritChoices();
+        claim.recordPrice(plugin.getEconomyManager().isEnabled() ? plugin.getAcquisitionRules().price(chunk.getWorld().getName()) : 0);
+        claims.put(key,claim); playerIndex.computeIfAbsent(player.getUniqueId(),uuid->new HashSet<>()).add(key); saveAll(); return true;
     }
-
-    public boolean unclaimChunk(Chunk chunk) {
-        String key = getChunkKey(chunk);
-        ClaimData removed = claims.remove(key);
-        if (removed == null) {
-            return false;
-        }
-        removeFromIndex(removed.getOwnerUUID(), key);
-        saveAll();
-        return true;
+    public boolean unclaimChunk(Chunk chunk) { return remove(getChunkKey(chunk)); }
+    public boolean unclaimChunk(String world,int x,int z) { return remove(getChunkKey(world,x,z)); }
+    public boolean remove(String key) {
+        ClaimData removed=claims.remove(key); if (removed==null) return false;
+        removeIndex(removed.getOwnerUUID(),key);if(removed.getCoowner()!=null)removeIndex(removed.getCoowner(),key);
+        if (plugin.getFeatureManager()!=null) plugin.getFeatureManager().invalidate(removed);
+        saveAll(); return true;
     }
-
-    public boolean unclaimChunk(String world, int chunkX, int chunkZ) {
-        String key = getChunkKey(world, chunkX, chunkZ);
-        ClaimData removed = claims.remove(key);
-        if (removed == null) {
-            return false;
-        }
-        removeFromIndex(removed.getOwnerUUID(), key);
-        saveAll();
-        return true;
+    public List<ClaimData> getPlayerClaims(UUID uuid) {
+        Set<String> keys=playerIndex.getOrDefault(uuid,Set.of());
+        return keys.stream().map(claims::get).filter(Objects::nonNull)
+                .sorted(Comparator.comparing(ClaimData::getWorld).thenComparingInt(ClaimData::getChunkX).thenComparingInt(ClaimData::getChunkZ)).toList();
     }
-
-    public List<ClaimData> getPlayerClaims(UUID playerUUID) {
-        Set<String> keys = playerIndex.get(playerUUID);
-        if (keys == null || keys.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<ClaimData> result = new ArrayList<>(keys.size());
-        for (String key : keys) {
-            ClaimData claim = claims.get(key);
-            if (claim != null) {
-                result.add(claim);
-            }
-        }
-        return result;
-    }
-
-    public int getPlayerClaimCount(UUID playerUUID) {
-        Set<String> keys = playerIndex.get(playerUUID);
-        return keys != null ? keys.size() : 0;
-    }
-
-    public int removeAllPlayerClaims(UUID playerUUID) {
-        Set<String> keys = playerIndex.remove(playerUUID);
-        if (keys == null || keys.isEmpty()) {
-            return 0;
-        }
-        for (String key : keys) {
-            claims.remove(key);
-        }
-        saveAll();
-        return keys.size();
-    }
-
-    public int removeAllPlayerClaimsWithRefund(UUID playerUUID, double refundPerClaim) {
-        Set<String> keys = playerIndex.remove(playerUUID);
-        if (keys == null || keys.isEmpty()) {
-            return 0;
-        }
-
-        int count = keys.size();
-        for (String key : keys) {
-            claims.remove(key);
-        }
-
-        if (count > 0 && refundPerClaim > 0 && plugin.getEconomyManager().isAvailable()) {
-            Player target = Bukkit.getPlayer(playerUUID);
-            if (target != null && target.isOnline()) {
-                plugin.getEconomyManager().deposit(target, refundPerClaim * count);
-            } else {
-                depositOffline(playerUUID, refundPerClaim * count);
-            }
-        }
-
-        saveAll();
+    public int getPlayerClaimCount(UUID uuid) { return playerIndex.getOrDefault(uuid,Set.of()).size(); }
+    public int removeAllPlayerClaims(UUID uuid) {
+        List<ClaimData> owned=getPlayerClaims(uuid).stream().filter(c->c.getOwnerUUID().equals(uuid)).toList();
+        int count=0; for(ClaimData c:owned) if(!plugin.getTransactionManager().isLocked(c.getChunkKey()) && remove(c.getChunkKey())) count++;
         return count;
     }
-
-    public int removeAllClaimsWithRefund(double refundPerClaim) {
-        Map<UUID, Integer> playerClaimCounts = new HashMap<>();
-        for (ClaimData claim : claims.values()) {
-            playerClaimCounts.merge(claim.getOwnerUUID(), 1, Integer::sum);
+    public int removeAllPlayerClaimsWithRefund(UUID uuid,double ignoredLegacyRefund) {
+        int count=0;
+        for(ClaimData c:new ArrayList<>(getPlayerClaims(uuid))) if(c.getOwnerUUID().equals(uuid) && refundAndRemove(c)) count++;
+        return count;
+    }
+    public int removeAllClaimsWithRefund(double ignoredLegacyRefund) { int count=0; for(ClaimData c:new ArrayList<>(claims.values())) if(refundAndRemove(c))count++; return count; }
+    public double refund(ClaimData claim) {
+        if(!plugin.getEconomyManager().isEnabled())return 0;
+        return dev.dyclaim.util.Rules.money(claim.getRefundBasis(plugin.getConfigManager().getClaimPrice()) * plugin.getConfigManager().getSellRefundPercent()/100.0);
+    }
+    public boolean refundAndRemove(ClaimData claim) {
+        return plugin.getTransactionManager().execute("refund",claim.getChunkKey(),null,claim.getOwnerUUID(),0,refund(claim),()->remove(claim.getChunkKey()));
+    }
+    public void transfer(ClaimData c,Player target) {
+        removeIndex(c.getOwnerUUID(),c.getChunkKey());if(c.getCoowner()!=null)removeIndex(c.getCoowner(),c.getChunkKey());
+        c.setOwnerUUID(target.getUniqueId()); c.setOwnerName(target.getName()); c.clearAccess();
+        if(c.getName()!=null && getPlayerClaims(target.getUniqueId()).stream().anyMatch(other->other!=c && c.getName().equalsIgnoreCase(other.getName()))) c.setName(null);
+        playerIndex.computeIfAbsent(target.getUniqueId(),uuid->new HashSet<>()).add(c.getChunkKey());plugin.getFeatureManager().invalidate(c); saveAll();
+    }
+    public void setAllClaimsPvp(boolean disabled) { claims.values().forEach(c->c.setChoice("pvp",!disabled)); saveAll(); }
+    public void setAllClaimsExplosion(boolean disabled) { claims.values().forEach(c->c.setChoice("explosions",!disabled)); saveAll(); }
+    public void setAllClaimsMobSpawn(boolean disabled) { claims.values().forEach(c->c.setChoice("mob-spawning",!disabled)); saveAll(); }
+    public void giveChunk(Player player,Chunk chunk) { ClaimData old=getClaimAt(chunk); if(old!=null)remove(old.getChunkKey()); claimChunk(player,chunk); }
+    public int refundPriceDifference(double difference) {
+        if(!Double.isFinite(difference)||difference<=0||!plugin.getEconomyManager().isEnabled())return 0;
+        double current=plugin.getConfigManager().getClaimPrice(); Set<UUID> owners=new HashSet<>();
+        for(ClaimData c:new ArrayList<>(claims.values())) {
+            double basis=c.getRefundBasis(current), amount=dev.dyclaim.util.Rules.money(Math.min(difference,Math.max(0,basis-current)));
+            if(amount>0 && plugin.getTransactionManager().execute("price-difference",c.getChunkKey(),null,c.getOwnerUUID(),0,amount,()->{c.setRefundBasis(basis-amount);saveAll();})) owners.add(c.getOwnerUUID());
         }
-
-        int totalRemoved = claims.size();
-        claims.clear();
-        playerIndex.clear();
-
-        if (refundPerClaim > 0 && plugin.getEconomyManager().isAvailable()) {
-            for (Map.Entry<UUID, Integer> entry : playerClaimCounts.entrySet()) {
-                UUID uuid = entry.getKey();
-                int count = entry.getValue();
-                double totalRefund = refundPerClaim * count;
-
-                Player target = Bukkit.getPlayer(uuid);
-                if (target != null && target.isOnline()) {
-                    plugin.getEconomyManager().deposit(target, totalRefund);
-                    target.sendMessage(plugin.getMessageManager().getPrefixed(target, "admin-refund-received",
-                            Map.of("{refund}", plugin.getEconomyManager().formatMoney(totalRefund),
-                                    "{count}", String.valueOf(count))));
-                } else {
-                    depositOffline(uuid, totalRefund);
-                }
-            }
-        }
-
-        saveAll();
-        return totalRemoved;
+        return owners.size();
     }
-
-    public void setAllClaimsPvp(boolean disabled) {
-        for (ClaimData claim : claims.values())
-            claim.setPvpDisabled(disabled);
-        saveAll();
-    }
-
-    public void setAllClaimsExplosion(boolean disabled) {
-        for (ClaimData claim : claims.values())
-            claim.setExplosionDisabled(disabled);
-        saveAll();
-    }
-
-    public void setAllClaimsMobSpawn(boolean disabled) {
-        for (ClaimData claim : claims.values())
-            claim.setMobSpawnDisabled(disabled);
-        saveAll();
-    }
-
-    public void giveChunk(Player target, Chunk chunk) {
-        String key = getChunkKey(chunk);
-        ClaimData oldClaim = claims.remove(key);
-        if (oldClaim != null) {
-            removeFromIndex(oldClaim.getOwnerUUID(), key);
-        }
-        ClaimData claim = new ClaimData(
-                target.getUniqueId(),
-                target.getName(),
-                chunk.getWorld().getName(),
-                chunk.getX(),
-                chunk.getZ());
-
-        claim.setPvpDisabled(plugin.getConfigManager().isPvpDisabled());
-        claim.setExplosionDisabled(plugin.getConfigManager().isExplosionDisabled());
-        claim.setMobSpawnDisabled(plugin.getConfigManager().isMobGriefingDisabled());
-
-        claims.put(key, claim);
-        playerIndex.computeIfAbsent(target.getUniqueId(), k -> new HashSet<>()).add(key);
-        saveAll();
-    }
-
-    public int refundPriceDifference(double diffPerClaim) {
-        if (diffPerClaim <= 0 || !plugin.getEconomyManager().isAvailable())
-            return 0;
-
-        Map<UUID, Integer> playerClaimCounts = new HashMap<>();
-        for (ClaimData claim : claims.values()) {
-            playerClaimCounts.merge(claim.getOwnerUUID(), 1, Integer::sum);
-        }
-
-        int ownersRefunded = 0;
-        for (Map.Entry<UUID, Integer> entry : playerClaimCounts.entrySet()) {
-            UUID uuid = entry.getKey();
-            int count = entry.getValue();
-            double totalRefund = diffPerClaim * count;
-
-            Player target = Bukkit.getPlayer(uuid);
-            if (target != null && target.isOnline()) {
-                plugin.getEconomyManager().deposit(target, totalRefund);
-                target.sendMessage(plugin.getMessageManager().getPrefixed(target, "admin-price-diff-received",
-                        Map.of("{refund}", plugin.getEconomyManager().formatMoney(totalRefund),
-                                "{count}", String.valueOf(count))));
-            } else {
-                depositOffline(uuid, totalRefund);
-            }
-            ownersRefunded++;
-        }
-
-        return ownersRefunded;
-    }
-
-    public Map<String, ClaimData> getAllClaims() {
-        return Collections.unmodifiableMap(claims);
-    }
-
-    private void removeFromIndex(UUID playerUUID, String key) {
-        Set<String> keys = playerIndex.get(playerUUID);
-        if (keys != null) {
-            keys.remove(key);
-            if (keys.isEmpty()) {
-                playerIndex.remove(playerUUID);
-            }
-        }
-    }
-
-    private void depositOffline(UUID playerUUID, double amount) {
-        try {
-            var offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
-            net.milkbowl.vault.economy.Economy econ = getEconomy();
-            if (econ != null) {
-                econ.depositPlayer(offlinePlayer, amount);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to refund offline player: " + e.getMessage());
-        }
-    }
-
-    private net.milkbowl.vault.economy.Economy getEconomy() {
-        var rsp = plugin.getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
-        return rsp != null ? rsp.getProvider() : null;
-    }
+    public Map<String,ClaimData> getAllClaims() { return Collections.unmodifiableMap(claims); }
+    private void removeIndex(UUID uuid,String key){Set<String> keys=playerIndex.get(uuid);if(keys!=null){keys.remove(key);if(keys.isEmpty())playerIndex.remove(uuid);}}
 }
