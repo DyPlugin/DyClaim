@@ -6,9 +6,11 @@ Stop the server and back up the existing plugin JAR together with the entire `pl
 
 ## Upgrading from Beta
 
-Install the 1.0.0 JAR and start the server. Beta's flat `claims.json` map migrates to schema 2. The first migration preserves the old format in `claims.beta-backup.json`; subsequent starts do not overwrite that migration backup.
+Install the chosen stable JAR (1.0.0 or later) and start the server. Beta's flat `claims.json` map migrates to schema 2. The first migration preserves the old format in `claims.beta-backup.json`; subsequent starts do not overwrite that migration backup.
 
 Existing ownership, coordinates and trust remain available. Legacy trusted players receive permanent access to the supported player rights. Claims receive stable IDs, and new fields receive defaults. `state.json` stores language preferences, acquisition bans, activity and warning state.
+
+Version 1.0.1 retains schema 2. Existing 1.0.0 claim, trust, transaction and state files do not require a new format migration. Missing update-check intervals and boundary protection options are merged into the existing configuration. See [update checking](update-checking.md) for the notification fix and older-JAR limitations.
 
 Invalid claim data prevents startup and writes instead of being replaced with an empty claim collection. Restore a verified backup before restarting. Invalid configuration reloads retain the previous valid settings. A successful reload clears pending confirmations and stops temporary automatic-claim sessions.
 

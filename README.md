@@ -4,9 +4,11 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-**Version 1.0.0** adds temporary trust, shared ownership, player trading, automatic claiming and expanded administration while preserving the original Beta commands.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.1** improves claim protection and fixes update notifications.
 
-[Modrinth](https://modrinth.com/plugin/dyclaim) · [GitHub](https://github.com/DyPlugin/DyClaim) · [Release notes](CHANGELOG.md)
+**Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
+
+[Modrinth](https://modrinth.com/plugin/dyclaim) · [GitHub](https://github.com/DyPlugin/DyClaim)
 
 ## Features
 
@@ -157,7 +159,7 @@ The plugin compiles to **Java 17 bytecode**. Run the Java version required by yo
 | Purpur 26.2, build 2633 | Java 25 |
 | Spigot 26.2, BuildTools revision 4648 | Java 25 |
 
-These runtimes passed live claim, ownership, language and protection scenarios. The clean build passed 83 automated tests. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
+The v1.0.0 release passed live claim, ownership, language and protection scenarios across these runtimes. Version 1.0.1 passes 108 automated tests, with additional startup, reload, data persistence and update-notification checks on Purpur 1.20.4 and Paper 26.2. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
 
 ### Optional integrations
 
@@ -177,12 +179,20 @@ No integration is required for core claiming. Installed protection hooks are det
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-v1.0.0.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-v1.0.1.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
 3. Edit `config.yml` and, if desired, the English/Turkish message files.
 4. Run `/claim admin reload` as a permitted player.
 
 Marketplace, auto claim, warnings, mob cleanup, scheduled purge and clan integration are **disabled by default**. Enable the features you want and choose their policies before use. Invalid configuration reloads retain the previous valid settings.
+
+### Update notifications and upgrading from v1.0.0
+
+DyClaim periodically checks Modrinth for the newest compatible public stable release and notifies administrators with a direct version link. Checks run every six hours by default, failed requests retry after ten minutes, and repeated notices are avoided within a login session. Settings apply on reload. See [update checking](docs/update-checking.md).
+
+Existing v1.0.0 claim data remains compatible. Missing configuration options are added without overwriting existing settings. Back up your JAR and complete DyClaim data folder before upgrading.
+
+**Beta and original v1.0.0 users must update manually once.** Their installed update-checker defect cannot be repaired remotely. The checker uses Modrinth releases; publishing a GitHub release alone does not trigger Modrinth notifications. No automatic JAR replacement is performed.
 
 ### Upgrading from Beta
 
@@ -199,7 +209,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-The output is `build/libs/DyClaim-v1.0.0.jar`. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The build output is `build/libs/DyClaim-v1.0.1.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under [GNU GPL v3](LICENSE).
 

@@ -92,17 +92,16 @@ public class DyClaim extends JavaPlugin {
         getServer().getPluginManager().registerEvents(featureManager, this);
         featureManager.reloadTasks();
 
-        if (getConfig().getBoolean("update-checker.enabled", true)) {
-            this.updateChecker = new UpdateChecker(this);
-            getServer().getPluginManager().registerEvents(updateChecker, this);
-            updateChecker.check();
-        }
+        this.updateChecker = new UpdateChecker(this);
+        getServer().getPluginManager().registerEvents(updateChecker, this);
+        updateChecker.check();
 
         getLogger().info("DyClaim v" + getDescription().getVersion() + " enabled!");
     }
 
     @Override
     public void onDisable() {
+        if(updateChecker!=null) updateChecker.close();
         if(confirmationManager!=null) confirmationManager.clear();
         if(teleportManager!=null) teleportManager.close();
         if(featureManager!=null) featureManager.close();
@@ -157,6 +156,7 @@ public class DyClaim extends JavaPlugin {
         confirmationManager.clear();
         chunkVisualizer.cleanupAll();
         featureManager.reloadTasks();
+        if(updateChecker!=null) updateChecker.reload();
     }
     public AccessManager getAccessManager(){return accessManager;}
     public AcquisitionRules getAcquisitionRules(){return acquisitionRules;}

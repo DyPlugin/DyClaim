@@ -122,6 +122,10 @@ public class ConfigManager {
     }
 
     public static void validate(FileConfiguration config) {
+        for(String key:List.of("update-checker.check-interval-hours","update-checker.retry-minutes")) {
+            long value=config.getLong(key,key.endsWith("hours")?6:10);
+            if(value<1||value>168)throw new IllegalArgumentException(key);
+        }
         if(config.getDefaults()!=null)for(String key:config.getDefaults().getKeys(true)) {
             Object expected=config.getDefaults().get(key),actual=config.get(key);
             if(expected instanceof Boolean && !(actual instanceof Boolean))throw new IllegalArgumentException(key+" must be boolean");

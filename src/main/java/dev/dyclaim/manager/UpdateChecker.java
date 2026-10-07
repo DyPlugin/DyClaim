@@ -1,126 +1,98 @@
 package dev.dyclaim.manager;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import dev.dyclaim.DyClaim;
-import org.bukkit.Bukkit;
+import dev.dyclaim.util.UpdateFeed;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Map;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scheduler.BukkitTask;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class UpdateChecker implements Listener {
-
     private final DyClaim plugin;
-    private final Gson gson = new Gson();
-    private String latestVersion = null;
-    private String downloadUrl = null;
-    private static final String MODRINTH_PROJECT_ID = "dyclaim";
-    private boolean updateAvailable = false;
+    private volatile UpdateFeed.Release latest;
+    private final AtomicBoolean checking = new AtomicBoolean();
+    private final Map<UUID, String> notified = new HashMap<>();
+    private BukkitTask nextCheck;
+    private long generation;
+    private boolean closed;
+    public UpdateChecker(DyClaim plugin) { this.plugin = plugin; }
 
-    public UpdateChecker(DyClaim plugin) {
-        this.plugin = plugin;
-    }
-
+    /** Called on the server thread; HTTP and parsing run asynchronously. */
     public void check() {
+        if (closed || !plugin.getConfigManager().values().getBoolean("update-checker.enabled", true)
+                || !checking.compareAndSet(false, true)) return;
+        if (nextCheck != null) { nextCheck.cancel(); nextCheck = null; }
+        long requestedGeneration = generation;
+        String installed = plugin.getDescription().getVersion();
+        String bukkitVersion = plugin.getServer().getBukkitVersion();
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            UpdateFeed.Release result = null;
+            String failure = null;
             try {
-                String projectId = MODRINTH_PROJECT_ID;
-                if (projectId.isBlank()) {
-                    return;
-                }
-
-                String serverVersion = Bukkit.getBukkitVersion().split("-")[0];
-
-                String apiUrl = "https://api.modrinth.com/v2/project/" + projectId
-                        + "/version?loaders=[\"purpur\",\"paper\",\"spigot\",\"bukkit\"]"
-                        + "&game_versions=[\"" + serverVersion + "\"]"
-                        + "&limit=1";
-
-                HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent", "DyClaim/" + plugin.getDescription().getVersion());
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-
-                if (conn.getResponseCode() == 200) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
+                String game = UpdateFeed.gameVersion(bukkitVersion);
+                result = UpdateFeed.select(UpdateFeed.fetch(UpdateFeed.requestUrl(game), installed), game, installed);
+            } catch (Exception ex) { failure = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage(); }
+            UpdateFeed.Release found = result;
+            String error = failure;
+            if (!plugin.isEnabled()) { checking.set(false); return; }
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                checking.set(false);
+                if (closed) return;
+                if (requestedGeneration != generation) { check(); return; }
+                if (error == null) {
+                    boolean changed = !Objects.equals(latest, found);
+                    latest = found;
+                    if (changed) notified.clear();
+                    if (found != null) {
+                        if (changed) {
+                            plugin.getLogger().info("New version available: " + displayVersion(found.version()));
+                            plugin.getLogger().info("Download: " + found.url());
+                        }
+                        plugin.getServer().getOnlinePlayers().forEach(this::notifyAdmin);
                     }
-                    reader.close();
-
-                    String json = response.toString();
-                    parseResponse(json, projectId);
-                }
-                conn.disconnect();
-            } catch (Exception e) {
-                plugin.getLogger().fine("Update check failed: " + e.getMessage());
-            }
+                } else plugin.getLogger().warning("Update check failed; will retry: " + error);
+                long minutes = error == null
+                        ? plugin.getConfigManager().values().getLong("update-checker.check-interval-hours", 6) * 60
+                        : plugin.getConfigManager().values().getLong("update-checker.retry-minutes", 10);
+                nextCheck = plugin.getServer().getScheduler().runTaskLater(plugin, this::check, Math.max(1, minutes) * 1200);
+            });
         });
     }
-
-    private void parseResponse(String json, String projectId) {
-        try {
-            JsonArray array = gson.fromJson(json, JsonArray.class);
-            if (array != null && !array.isEmpty()) {
-                JsonObject latest = array.get(0).getAsJsonObject();
-                String versionNumber = latest.get("version_number").getAsString();
-                String currentVersion = plugin.getDescription().getVersion();
-                if (dev.dyclaim.util.ReleaseVersion.newer(versionNumber, currentVersion)) {
-                    latestVersion = versionNumber;
-                    downloadUrl = "https://modrinth.com/plugin/" + projectId;
-                    updateAvailable = true;
-
-                    plugin.getServer().getScheduler().runTask(plugin, () -> {
-                        plugin.getLogger().info("New version available: DyClaim-" + latestVersion);
-                        plugin.getLogger().info("Download: " + downloadUrl);
-                    });
-                }
-            }
-        } catch (Exception e) {
-            plugin.getLogger().fine("Failed to parse update response: " + e.getMessage());
-        }
+    public void reload() {
+        generation++;
+        latest = null;
+        notified.clear();
+        if (nextCheck != null) { nextCheck.cancel(); nextCheck = null; }
+        check();
     }
-
-    @EventHandler
-    public void onAdminJoin(PlayerJoinEvent event) {
-        if (!updateAvailable)
-            return;
+    public void close() {
+        closed = true;
+        generation++;
+        latest = null;
+        notified.clear();
+        if (nextCheck != null) nextCheck.cancel();
+    }
+    @EventHandler public void onAdminJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        if (!player.hasPermission("dyclaim.admin"))
-            return;
-
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            if (player.isOnline()) {
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player, "update-available",
-                        Map.of("{version}", "DyClaim-v" + latestVersion)));
-                player.sendMessage(plugin.getMessageManager().getMessage(player, "update-download",
-                        Map.of("{link}", downloadUrl)));
-            }
-        }, 60L);
+        if (!player.hasPermission("dyclaim.admin")) return;
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> notifyAdmin(player), 60L);
     }
-
-    public boolean isUpdateAvailable() {
-        return updateAvailable;
+    @EventHandler public void onQuit(PlayerQuitEvent event) { notified.remove(event.getPlayer().getUniqueId()); }
+    private void notifyAdmin(Player player) {
+        UpdateFeed.Release release = latest;
+        if (closed || release == null || !player.isOnline() || !player.hasPermission("dyclaim.admin")
+                || release.version().equals(notified.get(player.getUniqueId()))) return;
+        notified.put(player.getUniqueId(), release.version());
+        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "update-available",
+                Map.of("{version}", displayVersion(release.version()))));
+        player.sendMessage(plugin.getMessageManager().getMessage(player, "update-download", Map.of("{link}", release.url())));
     }
-
-    public String getLatestVersion() {
-        return latestVersion;
-    }
-
-    public String getDownloadUrl() {
-        return downloadUrl;
-    }
+    public static String displayVersion(String version) { return "DyClaim-v" + version.replaceFirst("(?i)^v", ""); }
+    public boolean isUpdateAvailable() { return latest != null; }
+    public String getLatestVersion() { return latest == null ? null : latest.version(); }
+    public String getDownloadUrl() { return latest == null ? null : latest.url(); }
 }
-
-

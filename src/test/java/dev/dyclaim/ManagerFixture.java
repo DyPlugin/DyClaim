@@ -32,6 +32,7 @@ abstract class ManagerFixture {
     List<Runnable> timers;
     @BeforeEach void setup() throws Exception {
         bukkit=mockStatic(Bukkit.class);bukkit.when(Bukkit::getOnlinePlayers).thenReturn(List.of());bukkit.when(Bukkit::getOfflinePlayers).thenReturn(new OfflinePlayer[0]);
+        bukkit.when(()->Bukkit.getRegistry(any())).thenAnswer(i->PotionTestSupport.registry(i.getArgument(0)));
         plugin=mock(DyClaim.class);when(plugin.getDataFolder()).thenReturn(dir.toFile());when(plugin.getLogger()).thenReturn(Logger.getLogger("test"));
         Server server=mock(Server.class);when(plugin.getServer()).thenReturn(server);when(server.getPluginManager()).thenReturn(mock(PluginManager.class));
         PluginManager pluginManager=server.getPluginManager();bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);

@@ -3,7 +3,7 @@ version: ${version}
 main: dev.dyclaim.DyClaim
 api-version: '1.20'
 description: Lightweight chunk-based land claiming plugin with per-claim settings, trust system, and multi-language support.
-author: DyClaim
+author: Claww
 website: https://modrinth.com/plugin/dyclaim
 softdepend:
   - Vault

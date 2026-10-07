@@ -58,6 +58,8 @@ protection:
     block-external-fluid: true
     block-cross-owner-pistons: true
     block-cross-owner-hoppers: true
+    block-cross-owner-dispensers: true
+    block-external-growth: true
     # Local neighboring power sources only; all redstone circuits are not covered.
     block-external-redstone-effects: true
   mobs:
@@ -91,6 +93,9 @@ blacklisted-worlds: []
 
 update-checker:
   enabled: true
+  # Check again without requiring a server restart. Failed requests retry sooner.
+  check-interval-hours: 6
+  retry-minutes: 10
 
 # Versioned additions. Existing beta keys above remain valid.
 config-version: 2

@@ -9,6 +9,8 @@ node_modules/
 
 # Local servers, runtime downloads, backups and working notes
 /.local/
+/CHANGELOG.md
+/MODRINTH-DESCRIPTION.md
 /GELISTIRME-ASAMALARI.md
 /GELISTRIME-ASAMALARI.md
 /docs/current-architecture.md
@@ -36,7 +38,3 @@ Desktop.ini
 .env
 .env.*
 !.env.example
-
-# Local publishing notes
-/CHANGELOG.md
-/MODRINTH-DESCRIPTION.md
