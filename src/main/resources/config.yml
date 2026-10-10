@@ -1,29 +1,41 @@
 prefix: "&7[&dDyClaim&7]"
 
+# auto uses each player's preference or client language; en/tr overrides everyone.
 lang: auto
 
+# Prices and refunds require both Vault and a working economy provider.
 economy:
   enabled: true
   claim-price: 1500
+  # Previous global price used by the price-difference refund command.
   previous-claim-price: 1500
   auto-refund-price-difference: false
+  # 0-100 percent of the claim's remaining refundable purchase amount.
   sell-refund-percent: 60
 
+# Claim acquisition delay; seconds is ignored while disabled.
 cooldown:
   enabled: false
   seconds: 0
 
 claim:
+  # Positive ownership limit; coowned claims also count toward this total.
   max-claims-per-player: 10
   allow-claiming: true
 
 teleport:
+  # Seconds before teleporting; 0 disables the warmup, movement cancels it.
   warmup-seconds: 3
 
+# Legacy defaults: true disables the corresponding action in new claims.
 protection:
   pvp-disabled: true
   explosion-disabled: true
+  # Legacy name: controls the default for natural hostile mob spawning.
   mob-griefing-disabled: true
+  # Below, default/forced-value true permits the named action.
+  # forced-value: null leaves the choice open; true/false locks it server-wide.
+  # player-toggle: false blocks player changes without replacing an existing choice.
   villager-player-damage:
     default: false
     forced-value: null
@@ -53,6 +65,8 @@ protection:
   farmland:
     protect-from-visitors: true
     protect-from-mobs: true
+    # Controls for effects crossing claim boundaries.
+    # The fire option also blocks burning, spread and lava/lightning ignition inside claims.
   boundaries:
     block-external-fire: true
     block-external-fluid: true
@@ -63,18 +77,22 @@ protection:
     # Local neighboring power sources only; all redstone circuits are not covered.
     block-external-redstone-effects: true
   mobs:
+    # Periodic cleanup of loaded claim chunks; does not load distant chunks.
     remove-on-entry:
       enabled: false
       only-when-spawning-disabled: true
+      # hostile, all-mobs, or list (uses included-types); excluded-types always wins.
       entity-scope: hostile
       included-types: []
       excluded-types: []
       protect-named: true
       protect-tamed: true
+      # 20 ticks is about 1 second at normal TPS; batch-size limits work per scan.
       interval-ticks: 20
       batch-size: 100
 
 notification:
+  # false sends entry/exit notices in chat instead of the action bar.
   use-actionbar: true
   show-enter: true
   show-leave: true
@@ -84,11 +102,14 @@ visualization:
   particle: "FLAME"
   bedrock-block: "ORANGE_STAINED_GLASS"
   show-after-claim: true
+  # Particle budget per run and viewing distance in blocks.
   max-particles-per-run: 160
   max-distance: 64
 
+# Legacy timeout in seconds; confirmations.timeout-seconds takes precedence.
 confirmation-timeout: 30
 
+# Exact world names where acquiring claims is blocked.
 blacklisted-worlds: []
 
 update-checker:
@@ -98,11 +119,14 @@ update-checker:
   retry-minutes: 10
 
 # Versioned additions. Existing beta keys above remain valid.
+# Configuration schema marker; leave this unchanged.
 config-version: 2
 confirmations:
   clickable-buttons: true
   # The existing confirmation-timeout is used when this key is absent in old configs.
   timeout-seconds: 30
+  # false skips claim, unclaim, refund-sale or market-purchase confirmation.
+  # Ownership offers and admin cleanup always require confirmation.
   required:
     claim: true
     unclaim: true
@@ -110,44 +134,57 @@ confirmations:
     transfer: true
     market-purchase: true
     purge: true
+# These switches control new temporary grants and granular permission edits.
 trust:
   temporary-enabled: true
   granular-permissions-enabled: true
   maximum-duration-days: 365
 ownership:
   coowner-enabled: true
+  # This version supports exactly one coowner per claim.
   max-coowners: 1
   transfer-enabled: true
+# Player-to-player listings require an active economy; /claim sell remains separate.
 market:
   enabled: false
   minimum-price: 1.0
   maximum-price: 1000000.0
   tax-percent: 5.0
+  # Only sink is supported: tax is removed, not deposited into another account.
   tax-destination: sink
 auto-claim:
   enabled: false
+  # Free automatic claims require require-economy: false and allow-zero-price: true.
   require-economy: true
   allow-zero-price: false
   show-borders: true
 claim-rules:
   spacing:
     enabled: false
+    # Empty chunk gap between different primary owners, including diagonal neighbors.
     minimum-empty-chunks: 1
+  # Per-world overrides: <world>: {chunk-price: 1500, claim-limit: 10, protection: {...}}.
   worlds: {}
 admin:
   bypass:
+    # Initial session state for players with dyclaim.admin.bypass permission.
     enabled-by-default: true
   claim-bans:
     enabled: true
   purge:
+    # Scheduled cleanup is off by default; manual cleanup requires confirmation.
     scheduled-enabled: false
+    # Owners need recorded inactivity; unknown activity records are not purged.
     inactive-days: 30
     check-interval-minutes: 1440
+    # Maximum claims processed per tick; also used by admin delete/bulk sell.
     batch-size: 100
     protect-active-coowners: true
+    # Pay the normal sale refund when purging; otherwise remove without payment.
     refund: false
 warnings:
   enabled: false
+  # Per-claim visitor warning cooldown and counting window, in seconds.
   cooldown-seconds: 60
   window-seconds: 180
   required-count: 3
@@ -156,12 +193,14 @@ warnings:
   sound: ENTITY_ENDER_DRAGON_GROWL
   sound-volume: 1.0
   sound-pitch: 1.0
+  # server-ban or claim-entry-ban; duration accepts units such as 30m, 2h or 2d.
   punishment:
     type: server-ban
     duration: 2d
 names:
   maximum-length: 32
 integrations:
+  # Optional experimental SimpleClans trust; requires that plugin to be available.
   clans:
     enabled: false
     provider: SimpleClans

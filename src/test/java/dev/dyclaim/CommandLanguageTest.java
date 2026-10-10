@@ -8,6 +8,25 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CommandLanguageTest extends ManagerFixture {
+    @Test void asciiTurkishPrefixesCompleteLocalizedGrammar() {
+        var p=setupPlayer("tr","tr_tr",null);var command=new ClaimCommand(plugin);
+        assertTrue(command.onTabComplete(p,null,"claim",new String[]{"guv"}).contains("güven"));
+        assertEquals(List.of("sandıklar"),command.onTabComplete(p,null,"claim",new String[]{"trustperm","Friend","sandi"}));
+        assertEquals(List.of("satınal"),command.onTabComplete(p,null,"claim",new String[]{"pazar","satin"}));
+        assertFalse(command.onTabComplete(p,null,"claim",new String[]{"guv"}).contains("trust"));
+    }
+    @Test void adminTabRespectsAdditionalLeafPermissionsInBothLanguages() {
+        var p=setupPlayer("en","en_us",null);when(p.hasPermission("dyclaim.admin")).thenReturn(true);
+        when(p.hasPermission("dyclaim.admin.purge")).thenReturn(false);when(p.hasPermission("dyclaim.admin.bypass")).thenReturn(false);
+        var command=new ClaimCommand(plugin);var suggestions=command.onTabComplete(p,null,"claim",new String[]{"admin",""});
+        assertTrue(suggestions.contains("delete"));assertFalse(suggestions.contains("purge"));assertFalse(suggestions.contains("bypass"));
+        assertTrue(command.onTabComplete(p,null,"claim",new String[]{"admin","bypass",""}).isEmpty());
+        when(config.getLang()).thenReturn("tr");suggestions=command.onTabComplete(p,null,"claim",new String[]{"admin",""});
+        assertFalse(suggestions.contains("temizle"));assertFalse(suggestions.contains("koruma-atla"));
+        assertTrue(command.onTabComplete(p,null,"claim",new String[]{"admin","koruma-atla",""}).isEmpty());
+        when(p.hasPermission("dyclaim.admin.bypass")).thenReturn(true);
+        assertEquals(List.of("aç","kapat"),command.onTabComplete(p,null,"claim",new String[]{"admin","bypass",""}));
+    }
     private org.bukkit.entity.Player setupPlayer(String configured,String locale,String manual){
         var player=player("Owner",chunk(0,0));when(config.getLang()).thenReturn(configured);when(player.getLocale()).thenReturn(locale);
         if(manual!=null)features.handle(player,new String[]{"dil",manual});

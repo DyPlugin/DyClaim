@@ -101,17 +101,22 @@ public class DyClaim extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if(updateChecker!=null) updateChecker.close();
-        if(confirmationManager!=null) confirmationManager.clear();
-        if(teleportManager!=null) teleportManager.close();
-        if(featureManager!=null) featureManager.close();
+        if(updateChecker!=null) shutdown("update checker",updateChecker::close);
+        if(confirmationManager!=null) shutdown("confirmations",confirmationManager::clear);
+        if(teleportManager!=null) shutdown("teleports",teleportManager::close);
+        if(featureManager!=null) shutdown("feature state",featureManager::close);
         if (claimManager != null) {
-            claimManager.saveAllSync();
+            shutdown("claims",claimManager::saveAllSync);
         }
         if (chunkVisualizer != null) {
-            chunkVisualizer.cleanupAll();
+            shutdown("visualization",chunkVisualizer::cleanupAll);
         }
         getLogger().info("DyClaim disabled!");
+    }
+
+    private void shutdown(String component,Runnable action) {
+        try{action.run();}
+        catch(RuntimeException ex){getLogger().log(java.util.logging.Level.SEVERE,"Failed to close "+component+"; continuing DyClaim shutdown",ex);}
     }
 
     public static DyClaim getInstance() {

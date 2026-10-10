@@ -33,9 +33,14 @@ public class TransactionManager {
     public boolean isLocked(String key){return locked.contains(key);}
     public List<Entry> unresolved(){return entries.values().stream().filter(e->!terminal(e.stage)).toList();}
     private void save(){try{AtomicJson.write(file,entries);}catch(IOException ex){throw new IllegalStateException("Cannot persist transaction journal",ex);}}
-    private void stage(Entry entry,String stage){entry.stage=stage;save();if(terminal(stage))locked.remove(entry.chunk);else locked.add(entry.chunk);}
+    private void stage(Entry entry,String stage){
+        String previous=entry.stage;entry.stage=stage;
+        try{save();}catch(RuntimeException ex){entry.stage=previous;throw ex;}
+        if(terminal(stage))locked.remove(entry.chunk);else locked.add(entry.chunk);
+    }
     public boolean execute(String kind,String key,UUID payer,UUID receiver,double debit,double credit,Runnable mutation) {
-        if(isLocked(key)||!Double.isFinite(debit)||!Double.isFinite(credit)||debit<0||credit<0)return false;
+        // A previous item in a batch may have disabled persistence synchronously.
+        if(!plugin.getClaimManager().isWritable()||isLocked(key)||!Double.isFinite(debit)||!Double.isFinite(credit)||debit<0||credit<0)return false;
         archiveCompleted();
         Entry entry=new Entry();entry.id=UUID.randomUUID().toString();entry.kind=kind;entry.chunk=key;entry.payer=payer;entry.receiver=receiver;
         entry.debit=debit;entry.credit=credit;entry.at=System.currentTimeMillis();entry.stage="prepared";

@@ -1,3 +1,5 @@
+# English messages. Keep keys and {placeholders} unchanged; & codes set colors.
+# Edit quoted text, then use /claim admin reload. Missing keys use bundled defaults.
 no-permission: "&cYou do not have permission to use this command!"
 player-only: "&cOnly players can use this command!"
 reload-success: "&aConfiguration reloaded successfully!"
@@ -113,6 +115,7 @@ toggle-explosion-disabled: "&aExplosions have been &cdisabled &ain the claim! &7
 toggle-mob-enabled: "&aMob spawning has been &aenabled &ain the claim! &7({chunk})"
 toggle-mob-disabled: "&aMob spawning has been &cdisabled &ain the claim! &7({chunk})"
 
+# Help text changes the display only; command aliases are defined by the plugin.
 help-header: "&7&m----------&r {prefix} &eHelp &7&m----------"
 help-claim: "&6/claim &7- Claim the chunk you're standing on"
 help-sell: "&6/claim sell &7- Sell your claim"
@@ -121,7 +124,7 @@ help-see: "&6/claim see &7- Show chunk borders"
 help-info: "&6/claim info &7- View chunk information"
 help-list: "&6/claim list [page] &7- View your claims"
 help-pvp: "&6/claim pvp &7- Toggle PvP (in your claim)"
-help-explosion: "&6/claim explosion &7- Toggle explosions (in your claim)"
+help-explosion: "&6/claim explosion [mob] &7- Toggle ordinary or mob explosions"
 help-mob: "&6/claim mob &7- Toggle mob spawning (in your claim)"
 help-trust: "&6/claim trust <player> [duration] &7- Trust a player"
 help-untrust: "&6/claim untrust <player> &7- Untrust a player"
@@ -174,7 +177,7 @@ acquire-spacing: '&cThis claim is too close to another owner.'
 acquire-cooldown: '&cWait for your claim cooldown before trying again.'
 setting-locked: '&cThe server has locked this setting.'
 setting-updated: '&a{setting}: {value}'
-trustperm-usage: '&cUsage: &e/claim trustperm <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
+trustperm-usage: '&cUsage: &e/claim trust <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
 clan-unavailable: '&cThe clan provider is unavailable, or the clan identity cannot be resolved uniquely.'
 coowner-usage: '&cUsage: &e/claim coowner add <player> &cor &e/claim coowner remove'
 coowner-full: '&cThis claim already has a coowner.'
@@ -220,11 +223,11 @@ warning-received: '&cClaim warning ({count}/{max}). Leave the area. The final wa
 warning-ban-reason: '&cRepeated claim harassment.'
 entry-exit-unavailable: '&cNo safe loaded exit was found. Contact an administrator.'
 protection-villager: '&cYou cannot damage villagers in this claim.'
-help-mobexplosion: "&6/claim mobexplosion &7- Toggle mob explosions in your claim"
+help-mobexplosion: "&6/claim explosion mob &7- Toggle mob explosions in your claim"
 help-villager: "&6/claim villager &7- Toggle player damage to villagers"
 help-doors: "&6/claim doors &7- Toggle visitor access to doors"
 help-trapdoors: "&6/claim trapdoors &7- Toggle visitor access to trapdoors"
-help-trustperm: "&6/claim trustperm <player> <right> <allow|deny> &7- Set a trusted player's access rights"
+help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Set a trusted player's access rights"
 help-coowner-add: "&6/claim coowner add <player> &7- Invite a coowner"
 help-coowner-remove: "&6/claim coowner remove &7- Remove the coowner"
 help-transfer: "&6/claim transfer <player> &7- Offer ownership to an online player"
@@ -243,6 +246,7 @@ admin-help-ban: "&6/claim admin ban <player> <duration> &7- Ban a player from ac
 admin-help-unban: "&6/claim admin unban <player> &7- Remove a claim acquisition ban"
 admin-help-purge: "&6/claim admin purge <days> &7- Preview cleanup of inactive claims"
 admin-help-transactions: "&6/claim admin transactions &7- View unresolved economy transactions"
+# Shared labels used in claim settings and status messages.
 state-enabled: '&aON'
 state-disabled: '&cOFF'
 state-yes: 'yes'

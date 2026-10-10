@@ -4,11 +4,19 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.1** improves claim protection and fixes update notifications.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.2** improves command organization, console administration, localized TAB suggestions, protection and failure recovery while preserving existing command aliases and claim data.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
 [Modrinth](https://modrinth.com/plugin/dyclaim) · [GitHub](https://github.com/DyPlugin/DyClaim)
+
+## A measured look at protection
+
+![Processing time for 1,000 block-break checks across four plugins](docs/images/DyClaim-4-plugins-en.png)
+
+On Purpur 1.20.4 with 50 claim areas, DyClaim had the lowest observed median in this synthetic workload: 50% owner-allowed and 50% visitor-blocked block-break checks, including default denial feedback. GriefPrevention was faster in the owner-only checks. These are event-processing durations, not CPU or RAM usage, and do not establish superiority across all workloads.
+
+[Method, results and limitations](docs/benchmark-50-claims.md)
 
 ## Features
 
@@ -89,7 +97,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim sell` | Sell the current claim back to the server |
 | `/unclaim` | Remove the current claim through the confirmation/refund flow |
 | `/claim trust <player> [duration]` | Grant permanent or temporary trust |
-| `/claim trustperm <player> <right> <allow\|deny>` | Change a trusted player's access rights |
+| `/claim trust <player> <right> <allow\|deny>` | Change a trusted player's access rights |
 | `/claim untrust <player>` | Remove player trust |
 | `/claim trustlist` | View current trust |
 | `/claim coowner add <player>` | Invite one online coowner |
@@ -105,8 +113,8 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim list [page]` | View a paginated claim list |
 | `/claim info` | Inspect the current claim |
 | `/claim see` | Display chunk borders |
-| `/claim pvp`, `/claim explosion`, `/claim mob` | Toggle the corresponding unlocked setting |
-| `/claim mobexplosion`, `/claim villager` | Toggle mob explosions or player villager damage |
+| `/claim pvp`, `/claim mob`, `/claim villager` | Toggle the corresponding unlocked setting |
+| `/claim explosion [mob]` | Toggle ordinary explosions, or select `mob` for mob explosions |
 | `/claim doors`, `/claim trapdoors` | Toggle visitor access |
 | `/claim warn <player>` | Warn an unauthorized visitor inside your claim |
 | `/claim lang <auto\|en\|tr>` | Select your language |
@@ -115,9 +123,11 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 
 Trust rights: `build`, `containers`, `doors`, `trapdoors`, `redstone`, `entities`, `teleport`. The original trust command grants all these rights. Durations use `m` for minutes, `h` for hours and `d` for days; permanent access uses `permanent` or its localized equivalent.
 
+The old `trustperm` / `güvenizin` and `mobexplosion` / `mobpatlama` commands remain accepted aliases. Help and root TAB suggestions use the grouped forms above. Turkish examples: `/claim güven Alex sandıklar reddet` and `/claim patlama mob`.
+
 ## Admin commands
 
-Use `/claim admin` for help. Administration commands are player commands and require the relevant permissions.
+Use `/claim admin` for help. Console senders can use `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist` and `reload`, with the `dyclaim.admin` permission. Console help and TAB show this supported scope; player-specific administration and confirmation flows remain player-only. In the server console, omit the leading slash: `claim admin reload` (Turkish: `claim admin yenile`).
 
 Common tools include `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist`, `reload`, `give`, `delete`, `bulksell`, `bypass`, `ban`, `unban`, `purge` and `transactions`.
 
@@ -159,7 +169,7 @@ The plugin compiles to **Java 17 bytecode**. Run the Java version required by yo
 | Purpur 26.2, build 2633 | Java 25 |
 | Spigot 26.2, BuildTools revision 4648 | Java 25 |
 
-The v1.0.0 release passed live claim, ownership, language and protection scenarios across these runtimes. Version 1.0.1 passes 108 automated tests, with additional startup, reload, data persistence and update-notification checks on Purpur 1.20.4 and Paper 26.2. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
+The v1.0.0 release passed live claim, ownership, language and protection scenarios across these runtimes. Version 1.0.1 passed 108 automated tests and additional startup, reload, data persistence and update-notification checks on Purpur 1.20.4 and Paper 26.2. The 1.0.2 build passes 148 automated tests and targeted Purpur 1.20.4 checks for console reload, grouped commands, legacy aliases, localized help/TAB and preservation of custom messages. Earlier 1.0.2 checks covered restart persistence, visitor access and ghast projectile block protection. The full historical server matrix was not repeated for 1.0.2. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
 
 ### Optional integrations
 
@@ -179,10 +189,10 @@ No integration is required for core claiming. Installed protection hooks are det
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-v1.0.1.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-v1.0.2.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
 3. Edit `config.yml` and, if desired, the English/Turkish message files.
-4. Run `/claim admin reload` as a permitted player.
+4. Run `/claim admin reload` as a permitted player, or `claim admin reload` in the server console.
 
 Marketplace, auto claim, warnings, mob cleanup, scheduled purge and clan integration are **disabled by default**. Enable the features you want and choose their policies before use. Invalid configuration reloads retain the previous valid settings.
 
@@ -209,7 +219,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-The build output is `build/libs/DyClaim-v1.0.1.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The build output is `build/libs/DyClaim-v1.0.2.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under [GNU GPL v3](LICENSE).
 

@@ -141,11 +141,11 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
+        boolean mob=isMobExplosion(event.getEntity());
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
             Block block = iterator.next();
             ClaimData claim = plugin.getClaimManager().getClaimAt(block.getChunk());
-            boolean mob=event.getEntity() instanceof LivingEntity && !(event.getEntity() instanceof Player);
             if (claim != null && !plugin.getAccessManager().enabled(claim, mob?"mob-explosions":"explosions")) {
                 iterator.remove();
             }
@@ -216,7 +216,7 @@ public class ClaimProtectionListener implements Listener {
                 && event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.PATROL) {
             return;
         }
-        if (!(event.getEntity() instanceof Monster))
+        if (!(event.getEntity() instanceof Enemy))
             return;
         Chunk chunk = event.getLocation().getChunk();
         ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
@@ -279,7 +279,7 @@ public class ClaimProtectionListener implements Listener {
         ClaimData claim=plugin.getClaimManager().getClaimAt(event.getEntity().getLocation().getChunk());
         if(claim==null)return;
         String setting=event instanceof HangingBreakByEntityEvent byEntity
-                &&byEntity.getRemover() instanceof LivingEntity&&!(byEntity.getRemover() instanceof Player)
+                &&isMobExplosion(byEntity.getRemover())
                 ?"mob-explosions":"explosions";
         if(!plugin.getAccessManager().enabled(claim,setting))event.setCancelled(true);
     }
@@ -294,9 +294,16 @@ public class ClaimProtectionListener implements Listener {
         ClaimData claim=plugin.getClaimManager().getClaimAt(entity.getLocation().getChunk());
         if(claim==null)return;
         String setting=event instanceof EntityDamageByEntityEvent byEntity
-                &&byEntity.getDamager() instanceof LivingEntity&&!(byEntity.getDamager() instanceof Player)
+                &&isMobExplosion(byEntity.getDamager())
                 ?"mob-explosions":"explosions";
         if(!plugin.getAccessManager().enabled(claim,setting))event.setCancelled(true);
+    }
+
+    private boolean isMobExplosion(Entity source) {
+        // Bukkit may report the projectile itself, rather than its living shooter.
+        if(source instanceof Projectile projectile)
+            return projectile.getShooter() instanceof LivingEntity && !(projectile.getShooter() instanceof Player);
+        return source instanceof LivingEntity && !(source instanceof Player);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

@@ -1,6 +1,6 @@
 # Update checking
 
-The 1.0.1 development build queries the public Modrinth version API asynchronously. Query filters are URL-encoded JSON arrays. Bukkit strings such as `1.20.4-R0.1-SNAPSHOT` and `26.2.build.2633-stable` are normalized before querying.
+DyClaim 1.0.1 and later query the public Modrinth version API asynchronously. Query filters are URL-encoded JSON arrays. Bukkit strings such as `1.20.4-R0.1-SNAPSHOT` and `26.2.build.2633-stable` are normalized before querying.
 
 Only listed, stable releases compatible with the server's exact Minecraft version and a supported Bukkit-family loader are considered. The highest semantic version is selected rather than trusting publication order. Drafts, scheduled versions, prereleases, incompatible releases and unknown version tags are ignored. The download message links to the selected version page.
 

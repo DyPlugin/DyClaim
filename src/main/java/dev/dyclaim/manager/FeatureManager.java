@@ -29,6 +29,7 @@ public class FeatureManager implements Listener {
     private final Set<UUID> auto=new HashSet<>();
     private final Map<UUID,Long> autoAttempt=new HashMap<>();
     private BukkitTask mobTask,purgeTask;
+    private long purgeGeneration;
     private Iterator<String> mobClaims=Collections.emptyIterator();
     private Iterator<Entity> mobEntities=Collections.emptyIterator();
     private ClaimData scanningClaim;
@@ -76,16 +77,23 @@ public class FeatureManager implements Listener {
                 case "name","isim" -> name(p,args);
                 case "setspawn","spawnayarla" -> spawn(p);
                 case "trustperm","guvenizin","güvenizin" -> trustPermission(p,args);
-                case "trust","guven","güven" -> trust(p,args);
+                case "trust","guven","güven" -> {
+                    if(args.length>=4||(args.length==3&&TrustGrant.RIGHTS.contains(args[2])))trustPermission(p,args);
+                    else trust(p,args);
+                }
                 case "untrust","guvensil","güvensil" -> untrust(p,args);
                 case "trustlist","guvenliste","güvenliste" -> trustList(p);
                 case "villager","koylu","köylü" -> toggle(p,"villager-player-damage");
                 case "doors","kapi","kapı" -> toggle(p,"visitor-doors");
                 case "trapdoors","tuzakkapisi","tuzakkapısı" -> toggle(p,"visitor-trapdoors");
                 case "pvp" -> toggle(p,"pvp");
-                case "explosion","patlama" -> toggle(p,"explosions");
+                case "explosion","patlama" -> {
+                    if(args.length==1)toggle(p,"explosions");
+                    else if(args.length==2&&args[1].equalsIgnoreCase("mob"))toggle(p,"mob-explosions");
+                    else send(p,"invalid-input");
+                }
                 case "mob" -> toggle(p,"mob-spawning");
-                case "mobexplosion","mobpatlama" -> toggle(p,"mob-explosions");
+                case "mobexplosion","mobpatlama" -> {if(args.length==1)toggle(p,"mob-explosions");else send(p,"invalid-input");}
                 case "warn","uyar" -> warn(p,args);
                 case "lang","dil" -> language(p,args);
                 case "tp","isinlan","ışınlan" -> teleport(p,args);
@@ -176,7 +184,8 @@ public class FeatureManager implements Listener {
         c.touch();invalidate(c);plugin.getClaimManager().saveAll();send(p,"trust-removed",Map.of("{player}",args[1]));
     }
     private void trustPermission(Player p,String[] args) {
-        if(!permission(p,"dyclaim.trust")||!enabled("trust.granular-permissions-enabled")){send(p,"feature-disabled");return;}
+        if(!permission(p,"dyclaim.trust"))return;
+        if(!enabled("trust.granular-permissions-enabled")){send(p,"feature-disabled");return;}
         ClaimData c=owned(p,false);if(c==null)return;
         if(args.length!=4||!TrustGrant.RIGHTS.contains(args[2])||!Set.of("allow","deny").contains(args[3])){send(p,"trustperm-usage");return;}
         UUID uuid=known(args[1]);TrustGrant grant=c.getTrustGrants().get(uuid);
@@ -391,7 +400,21 @@ public class FeatureManager implements Listener {
             if(!p.hasPermission("dyclaim.admin")){send(p,"no-permission");return;}
             for(ClaimData c:selected)if(plugin.getClaimManager().getByKey(c.getChunkKey())!=c||c.getRevision()!=versions.get(c.getId())||Double.compare(refunds.get(c.getId()),plugin.getClaimManager().refund(c))!=0){send(p,"operation-changed");return;}
             plugin.getClaimManager().backup("admin-delete");Iterator<ClaimData> iterator=selected.iterator();
-            new org.bukkit.scheduler.BukkitRunnable(){public void run(){if(!p.hasPermission("dyclaim.admin")){cancel();return;}int n=0;while(iterator.hasNext()&&n++<plugin.getConfigManager().values().getInt("admin.purge.batch-size")){ClaimData c=iterator.next();if(plugin.getClaimManager().getByKey(c.getChunkKey())==c&&c.getRevision()==versions.get(c.getId())&&!plugin.getTransactionManager().isLocked(c.getChunkKey())){if(refund)plugin.getClaimManager().refundAndRemove(c);else plugin.getClaimManager().remove(c.getChunkKey());}}plugin.getClaimManager().saveAllSync();if(!iterator.hasNext()){send(p,"operation-success");cancel();}}}.runTaskTimer(plugin,1,1);
+            long generation=purgeGeneration;
+            new org.bukkit.scheduler.BukkitRunnable(){public void run(){
+                if(generation!=purgeGeneration||!p.hasPermission("dyclaim.admin")){cancel();return;}
+                int n=0;
+                while(iterator.hasNext()&&n++<plugin.getConfigManager().values().getInt("admin.purge.batch-size")){
+                    if(generation!=purgeGeneration){cancel();return;}
+                    ClaimData c=iterator.next();
+                    if(plugin.getClaimManager().getByKey(c.getChunkKey())==c&&c.getRevision()==versions.get(c.getId())&&!plugin.getTransactionManager().isLocked(c.getChunkKey())){
+                        if(refund&&Double.compare(refunds.get(c.getId()),plugin.getClaimManager().refund(c))!=0){send(p,"operation-changed");cancel();return;}
+                        if(refund)plugin.getClaimManager().refundAndRemove(c);else plugin.getClaimManager().remove(c.getChunkKey());
+                    }
+                }
+                if(generation!=purgeGeneration){cancel();return;}
+                plugin.getClaimManager().saveAllSync();if(!iterator.hasNext()){send(p,"operation-success");cancel();}
+            }}.runTaskTimer(plugin,1,1);
         },uuid->send(p,"confirm-deny"));
     }
     private void recordSeen(Player p){Seen seen=new Seen();seen.at=now();seen.exempt=p.hasPermission("dyclaim.admin")||p.hasPermission("dyclaim.admin.purge.exempt");state.lastSeen.put(p.getUniqueId(),seen);}
@@ -404,14 +427,19 @@ public class FeatureManager implements Listener {
     private List<ClaimData> purgeCandidates(int days){return plugin.getClaimManager().getAllClaims().values().stream().filter(c->purgeEligible(c,days)).toList();}
     private void purge(List<ClaimData> candidates,int days,Player requester) {
         if(candidates.isEmpty()){if(requester!=null)send(requester,"operation-success");return;}
+        long generation=purgeGeneration;
         plugin.getClaimManager().backup("purge");Iterator<ClaimData> iterator=candidates.iterator();
         new org.bukkit.scheduler.BukkitRunnable(){int removed=0;public void run(){
+            if(generation!=purgeGeneration){cancel();return;}
             if((requester==null&&!enabled("admin.purge.scheduled-enabled"))||(requester!=null&&(!requester.hasPermission("dyclaim.admin")||!requester.hasPermission("dyclaim.admin.purge")))){cancel();return;}
             int batch=plugin.getConfigManager().values().getInt("admin.purge.batch-size");int count=0;
-            while(iterator.hasNext()&&count++<batch){ClaimData c=iterator.next();if(plugin.getClaimManager().getByKey(c.getChunkKey())==c&&purgeEligible(c,days)){
+            while(iterator.hasNext()&&count++<batch){
+                if(generation!=purgeGeneration){cancel();return;}
+                ClaimData c=iterator.next();if(plugin.getClaimManager().getByKey(c.getChunkKey())==c&&purgeEligible(c,days)){
                 UUID id=c.getId();boolean result=enabled("admin.purge.refund")?plugin.getClaimManager().refundAndRemove(c):plugin.getClaimManager().remove(c.getChunkKey());
                 if(result){removed++;plugin.getLogger().info("Purge removed claim "+id+" "+c.getChunkKey());}
             }}
+            if(generation!=purgeGeneration){cancel();return;}
             plugin.getClaimManager().saveAllSync();if(!iterator.hasNext()){if(requester!=null)send(requester,"purge-complete",Map.of("{count}",String.valueOf(removed)));cancel();}
         }}.runTaskTimer(plugin,1,1);
     }
@@ -480,6 +508,7 @@ public class FeatureManager implements Listener {
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void teleportEntry(PlayerTeleportEvent event){entry(event);}
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void teleportExit(PlayerTeleportEvent event){move(event);}
     public void reloadTasks(){
+        purgeGeneration++;
         if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();mobTask=null;purgeTask=null;
         mobClaims=Collections.emptyIterator();mobEntities=Collections.emptyIterator();auto.clear();
         if(enabled("protection.mobs.remove-on-entry.enabled"))mobTask=Bukkit.getScheduler().runTaskTimer(plugin,this::scanMobs,20,plugin.getConfigManager().values().getLong("protection.mobs.remove-on-entry.interval-ticks"));
@@ -492,7 +521,10 @@ public class FeatureManager implements Listener {
         var cfg=plugin.getConfigManager().values();int budget=cfg.getInt("protection.mobs.remove-on-entry.batch-size");
         for(int processed=0;processed<budget;processed++) {
             if(mobEntities.hasNext()) {
-                Entity e=mobEntities.next();if(e.isValid()&&e instanceof Mob&&plugin.getClaimManager().getClaimAt(e.getLocation().getChunk())==scanningClaim&&removeMob(e))e.remove();continue;
+                Entity e=mobEntities.next();
+                // A claim's spawning choice can change while this snapshot is consumed.
+                boolean cleanupAllowed=!cfg.getBoolean("protection.mobs.remove-on-entry.only-when-spawning-disabled")||!plugin.getAccessManager().enabled(scanningClaim,"mob-spawning");
+                if(cleanupAllowed&&e.isValid()&&e instanceof Mob&&plugin.getClaimManager().getClaimAt(e.getLocation().getChunk())==scanningClaim&&removeMob(e))e.remove();continue;
             }
             if(!mobClaims.hasNext()){mobClaims=new ArrayList<>(plugin.getClaimManager().getAllClaims().keySet()).iterator();return;}
             ClaimData c=plugin.getClaimManager().getByKey(mobClaims.next());if(c==null)continue;
@@ -506,9 +538,9 @@ public class FeatureManager implements Listener {
         if(cfg.getBoolean(prefix+"protect-named")&&entity.getCustomName()!=null)return false;
         if(cfg.getBoolean(prefix+"protect-tamed")&&entity instanceof Tameable tame&&tame.isTamed())return false;
         if(cfg.getStringList(prefix+"excluded-types").contains(entity.getType().name()))return false;
-        return switch(cfg.getString(prefix+"entity-scope")){case "all-mobs"->true;case "list"->cfg.getStringList(prefix+"included-types").contains(entity.getType().name());default->entity instanceof Monster;};
+        return switch(cfg.getString(prefix+"entity-scope")){case "all-mobs"->true;case "list"->cfg.getStringList(prefix+"included-types").contains(entity.getType().name());default->entity instanceof Enemy;};
     }
-    public void close(){if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();for(Player p:Bukkit.getOnlinePlayers())recordSeen(p);save();}
+    public void close(){purgeGeneration++;if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();for(Player p:Bukkit.getOnlinePlayers())recordSeen(p);save();}
 }
 
 

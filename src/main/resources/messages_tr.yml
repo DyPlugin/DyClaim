@@ -1,3 +1,6 @@
+# Türkçe mesajlar. Anahtarları ve {yer_tutucuları} koruyun; & kodları renkleri belirler.
+# Tırnak içindeki metinleri düzenleyip /claim admin yenile komutunu kullanın.
+# Eksik anahtarlarda eklentiyle gelen varsayılan mesaj kullanılır.
 no-permission: "&cBu komutu kullanma izniniz yok!"
 player-only: "&cBu komutu sadece oyuncular kullanabilir!"
 reload-success: "&aYapılandırma başarıyla yeniden yüklendi!"
@@ -113,6 +116,7 @@ toggle-explosion-disabled: "&aPatlama claim'de &ckapatıldı&a! &7({chunk})"
 toggle-mob-enabled: "&aMob doğması claim'de &aaçıldı&a! &7({chunk})"
 toggle-mob-disabled: "&aMob doğması claim'de &ckapatıldı&a! &7({chunk})"
 
+# Yardım metinlerini değiştirmek komutları değiştirmez; komut adlarını eklenti belirler.
 help-header: "&7&m----------&r {prefix} &eYardım &7&m----------"
 help-claim: "&6/claim &7- Bulunduğunuz chunk'ı claim edin"
 help-sell: "&6/claim sat &7- Claim'inizi satın"
@@ -121,7 +125,7 @@ help-see: "&6/claim gör &7- Chunk sınırlarını görün"
 help-info: "&6/claim bilgi &7- Chunk bilgilerini görün"
 help-list: "&6/claim liste [sayfa] &7- Claim listesini görün"
 help-pvp: "&6/claim pvp &7- PvP aç/kapat (claim'inizde)"
-help-explosion: "&6/claim patlama &7- Patlama aç/kapat (claim'inizde)"
+help-explosion: "&6/claim patlama [mob] &7- Genel veya mob patlamalarını aç/kapat"
 help-mob: "&6/claim mob &7- Mob doğması aç/kapat (claim'inizde)"
 help-trust: "&6/claim güven <oyuncu> [süre] &7- Oyuncuyu güvenilenlere ekleyin"
 help-untrust: "&6/claim güvensil <oyuncu> &7- Güvenilenlerden çıkarın"
@@ -174,7 +178,7 @@ acquire-spacing: '&cBaşka bir sahibin claim alanına çok yakınsın.'
 acquire-cooldown: '&cYeniden denemeden önce claim bekleme sürenin dolmasını bekle.'
 setting-locked: '&cBu ayar sunucu tarafından kilitlenmiş.'
 setting-updated: '&a{setting}: {value}'
-trustperm-usage: '&cKullanım: &e/claim güvenizin <oyuncu> <inşa|sandıklar|kapılar|tuzakkapıları|kızıltaş|varlıklar|ışınlanma> <izinver|reddet>'
+trustperm-usage: '&cKullanım: &e/claim güven <oyuncu> <inşa|sandıklar|kapılar|tuzakkapıları|kızıltaş|varlıklar|ışınlanma> <izinver|reddet>'
 clan-unavailable: '&cKlan sağlayıcısına ulaşılamıyor veya klan kimliği tek bir klana çözümlenemiyor.'
 coowner-usage: '&cKullanım: &e/claim ortak ekle <oyuncu> &cveya &e/claim ortak çıkar'
 coowner-full: '&cBu claim alanının zaten bir ortak sahibi var.'
@@ -220,11 +224,11 @@ warning-received: '&cClaim sahibinden uyarı aldın ({count}/{max}). Lütfen ala
 warning-ban-reason: '&cClaim alanında tekrarlanan taciz.'
 entry-exit-unavailable: '&cYüklü alanlarda güvenli çıkış bulunamadı. Bir yöneticiye haber ver.'
 protection-villager: '&cBu claim içinde köylülere vuramazsın.'
-help-mobexplosion: "&6/claim mobpatlama &7- Claiminde mob patlamalarını aç/kapat"
+help-mobexplosion: "&6/claim patlama mob &7- Claiminde mob patlamalarını aç/kapat"
 help-villager: "&6/claim köylü &7- Oyuncuların köylülere hasar vermesini aç/kapat"
 help-doors: "&6/claim kapı &7- Ziyaretçilerin kapı erişimini aç/kapat"
 help-trapdoors: "&6/claim tuzakkapısı &7- Ziyaretçilerin tuzak kapısı erişimini aç/kapat"
-help-trustperm: "&6/claim güvenizin <oyuncu> <izin> <izinver|reddet> &7- Güvenilen oyuncunun erişim izinlerini ayarla"
+help-trustperm: "&6/claim güven <oyuncu> <izin> <izinver|reddet> &7- Güvenilen oyuncunun erişim izinlerini ayarla"
 help-coowner-add: "&6/claim ortak ekle <oyuncu> &7- Ortak sahip davet et"
 help-coowner-remove: "&6/claim ortak çıkar &7- Ortak sahibi kaldır"
 help-transfer: "&6/claim devret <oyuncu> &7- Çevrimiçi oyuncuya sahiplik devri teklif et"
@@ -243,6 +247,7 @@ admin-help-ban: "&6/claim admin yasakla <oyuncu> <süre> &7- Oyuncunun claim alm
 admin-help-unban: "&6/claim admin yasakkaldir <oyuncu> &7- Claim alma yasağını kaldır"
 admin-help-purge: "&6/claim admin temizle <gün> &7- Etkin olmayan claimler için temizleme önizlemesi"
 admin-help-transactions: "&6/claim admin islemler &7- Çözümlenmemiş ekonomi işlemlerini göster"
+# Claim ayarlarında ve durum mesajlarında kullanılan ortak ifadeler.
 state-enabled: '&aAçık'
 state-disabled: '&cKapalı'
 state-yes: 'evet'
@@ -258,4 +263,3 @@ transfer-offer: '&e{owner}, {chunk} alanının sahipliğini teklif ediyor. Eski 
 punishment-server-ban: 'sunucu yasağı'
 punishment-claim-entry-ban: 'bu claim alanına giriş yasağı'
 setting-mob-explosions: 'Mob patlamaları'
-

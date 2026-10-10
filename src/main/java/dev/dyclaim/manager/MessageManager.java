@@ -143,6 +143,17 @@ public class MessageManager {
             };
             if (previous.equals(target.get(key))) target.put(key, current);
         }
+        // Upgrade known shipped command text in memory; never overwrite custom translations.
+        for(String key:java.util.List.of("help-explosion","help-mobexplosion","help-trustperm","trustperm-usage")) {
+            String current=defaults.getString(key);if(current==null)continue;
+            String previous=switch(key) {
+                case "help-explosion" -> tr ? "&6/claim patlama &7- Patlama aç/kapat (claim'inizde)" : "&6/claim explosion &7- Toggle explosions (in your claim)";
+                case "help-mobexplosion" -> current.replace(tr?"/claim patlama mob":"/claim explosion mob",tr?"/claim mobpatlama":"/claim mobexplosion");
+                default -> current.replace(tr?"/claim güven ":"/claim trust ",tr?"/claim güvenizin ":"/claim trustperm ");
+            };
+            String stored=target.get(key);
+            if(previous.equals(stored)||(key.equals("trustperm-usage")&&previous.replace(tr?"&cKullanım: ":"&cUsage: ","").equals(stored)))target.put(key,current);
+        }
     }
 
     private String resolveConfiguredLanguage() {

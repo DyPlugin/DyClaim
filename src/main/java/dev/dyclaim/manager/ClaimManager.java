@@ -43,6 +43,7 @@ public class ClaimManager {
         if (!writable) throw new IllegalStateException("Claim writes disabled");
         if (pendingSave == null) pendingSave = plugin.getServer().getScheduler().runTaskLater(plugin, () -> { pendingSave = null; saveAllSync(); }, 20L);
     }
+    public boolean isWritable() { return writable; }
     public void saveAllSync() {
         if (!writable) return;
         if (pendingSave != null) { pendingSave.cancel(); pendingSave = null; }

@@ -14,6 +14,12 @@ Version 1.0.1 retains schema 2. Existing 1.0.0 claim, trust, transaction and sta
 
 Invalid claim data prevents startup and writes instead of being replaced with an empty claim collection. Restore a verified backup before restarting. Invalid configuration reloads retain the previous valid settings. A successful reload clears pending confirmations and stops temporary automatic-claim sessions.
 
+Version 1.0.2 also retains schema 2 and existing configuration keys. A successful reload invalidates active inactive-claim purge batches so they cannot continue using old rules. Shutdown logs component failures and continues independent claim saving and visual cleanup; this does not make a failed disk write successful. If a transaction journal update fails, the previous stage remains visible for reconciliation and the claim remains locked.
+
+The second 1.0.2 review extends reload/shutdown invalidation to administrative deletion and bulk sales. Remaining bulk-sale claims are checked against the confirmed refund, and claim write failure blocks subsequent financial transactions. Payments already attempted before a storage failure still require reconciliation; the plugin does not replay them automatically. Comments added to bundled YAML defaults do not rewrite existing custom settings or translations.
+
+The 1.0.2 command follow-up allows console reload and global configuration commands. Help groups granular rights under `trust` and mob explosions under `explosion mob`; old `trustperm` / `güvenizin` and `mobexplosion` / `mobpatlama` aliases remain usable. Known shipped help text from older message files is adapted in memory without replacing custom text or rewriting those files. Restart the server after replacing the JAR; configuration reload alone does not load new plugin classes.
+
 ## Economy reconciliation
 
 `transactions.json` records payment intent and progress. Definite failures are rejected or compensated when the result is known. An uncertain provider response locks the affected claim; restarting does not automatically repeat the payment.
