@@ -1,0 +1,23 @@
+plugins { id 'java' }
+group=rootProject.group
+version=rootProject.version
+repositories { mavenCentral();maven { url='https://libraries.minecraft.net/' } }
+dependencies {
+    compileOnly 'net.md-5:bungeecord-api:1.21-R0.3'
+    compileOnly project(':proxy-common')
+    testImplementation project(':proxy-common')
+    testImplementation 'net.md-5:bungeecord-api:1.21-R0.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.mockito:mockito-core:5.15.2'
+}
+java { sourceCompatibility=JavaVersion.VERSION_17;targetCompatibility=JavaVersion.VERSION_17 }
+tasks.withType(JavaCompile).configureEach { options.encoding='UTF-8';options.release=17 }
+test { useJUnitPlatform() }
+processResources { filesMatching('bungee.yml') { expand(version:project.version) } }
+tasks.jar {
+    dependsOn ':proxy-common:classes'
+    // Resolve after every project is configured; eager lookup can inherit root sourceSets.
+    from { rootProject.project(':proxy-common').sourceSets.main.output }
+    archiveFileName="DyClaim-v${version}-BungeeCord.jar"
+    preserveFileTimestamps=false;reproducibleFileOrder=true
+}

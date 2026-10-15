@@ -1,0 +1,12 @@
+plugins { id 'java' }
+group=rootProject.group
+version=rootProject.version
+java { sourceCompatibility=JavaVersion.VERSION_17; targetCompatibility=JavaVersion.VERSION_17 }
+sourceSets.main.java {
+    srcDir rootProject.file('src/main/java')
+    include 'dev/dyclaim/platform/proxy/StatusProtocol.java', 'dev/dyclaim/platform/proxy/StatusRequests.java', 'dev/dyclaim/platform/proxy/BridgeVersion.java'
+}
+sourceSets.main.resources { srcDir rootProject.file('src/main/resources');include 'dyclaim-bridge-version.properties' }
+processResources { filesMatching('dyclaim-bridge-version.properties') { expand(version:project.version) } }
+tasks.withType(JavaCompile).configureEach { options.encoding='UTF-8'; options.release=17 }
+tasks.jar { preserveFileTimestamps=false; reproducibleFileOrder=true }

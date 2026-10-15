@@ -9,12 +9,14 @@ import java.util.*;
 
 public class ChunkVisualizer {
     private final DyClaim plugin;
+    private final dev.dyclaim.platform.RegionalBorderView regional;
     private final Map<UUID,BukkitTask> tasks=new HashMap<>();
     private final Map<UUID,List<Location>> fake=new HashMap<>();
-    public ChunkVisualizer(DyClaim plugin){this.plugin=plugin;}
-    public boolean isViewing(UUID uuid){return tasks.containsKey(uuid);}
+    public ChunkVisualizer(DyClaim plugin){this.plugin=plugin;var platform=plugin.getPlatformTasks();regional=platform!=null&&platform.isRegionThreaded()?new dev.dyclaim.platform.RegionalBorderView(plugin,platform,this::bedrock):null;}
+    public boolean isViewing(UUID uuid){return regional!=null?regional.isViewing(uuid):tasks.containsKey(uuid);}
     public void showChunkBorders(Player p){showChunkBorders(p,p.getLocation().getChunk());}
     public void showChunkBorders(Player p,Chunk chunk){
+        if(regional!=null){regional.show(p,chunk);return;}
         if(isViewing(p.getUniqueId()))return;
         var cfg=plugin.getConfigManager().values();int duration=cfg.getInt("visualization.duration-seconds");
         int minX=chunk.getX()*16,minZ=chunk.getZ()*16;
@@ -44,7 +46,7 @@ public class ChunkVisualizer {
         }
     }
     private void fake(Player p,Location loc,BlockData data,List<Location> list){if(loc.getBlock().getType().isAir()&&!list.contains(loc)){p.sendBlockChange(loc,data);list.add(loc);}}
-    public void cleanupPlayer(Player p){BukkitTask task=tasks.remove(p.getUniqueId());if(task!=null)task.cancel();List<Location> locations=fake.remove(p.getUniqueId());if(locations!=null&&p.isOnline())for(Location loc:locations)if(loc.getWorld()==p.getWorld())p.sendBlockChange(loc,loc.getBlock().getBlockData());}
-    public void cleanupAll(){for(UUID uuid:new HashSet<>(tasks.keySet())){Player p=Bukkit.getPlayer(uuid);if(p!=null)cleanupPlayer(p);else{tasks.remove(uuid).cancel();fake.remove(uuid);}}}
+    public void cleanupPlayer(Player p){if(regional!=null){regional.hide(p);return;}BukkitTask task=tasks.remove(p.getUniqueId());if(task!=null)task.cancel();List<Location> locations=fake.remove(p.getUniqueId());if(locations!=null&&p.isOnline())for(Location loc:locations)if(loc.getWorld()==p.getWorld())p.sendBlockChange(loc,loc.getBlock().getBlockData());}
+    public void cleanupAll(){if(regional!=null){regional.reset();return;}for(UUID uuid:new HashSet<>(tasks.keySet())){Player p=Bukkit.getPlayer(uuid);if(p!=null)cleanupPlayer(p);else{tasks.remove(uuid).cancel();fake.remove(uuid);}}}
     private boolean bedrock(Player p){try{Class<?> api=Class.forName("org.geysermc.floodgate.api.FloodgateApi");Object instance=api.getMethod("getInstance").invoke(null);return (boolean)api.getMethod("isFloodgatePlayer",UUID.class).invoke(instance,p.getUniqueId());}catch(ReflectiveOperationException|LinkageError ex){return false;}}
 }

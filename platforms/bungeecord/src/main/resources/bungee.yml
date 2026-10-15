@@ -1,0 +1,5 @@
+name: DyClaim
+version: '${version}'
+main: dev.dyclaim.bungeecord.BungeeBridge
+author: Claww
+description: Optional proxy diagnostics; DyClaim gameplay and protection stay on the backend.

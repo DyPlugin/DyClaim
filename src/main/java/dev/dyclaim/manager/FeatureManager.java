@@ -15,21 +15,26 @@ import java.util.*;
 /** Command features share the existing managers rather than creating a second claim model. */
 public class FeatureManager implements Listener {
     public static class Seen { public long at; public boolean exempt; }
-    public static class WarningChain { public List<Long> times=new ArrayList<>(); public String stage="pending"; public long until; public String mode; public UUID target; public String name; }
+    public static class WarningChain {
+        public List<Long> times=new java.util.concurrent.CopyOnWriteArrayList<>();
+        public volatile String stage="pending";public volatile long until;public volatile String mode;public volatile UUID target;public volatile String name;
+    }
     public static class State {
         public int version=1;
-        public Map<UUID,Seen> lastSeen=new HashMap<>();
-        public Map<UUID,Long> bans=new HashMap<>();
-        public Map<String,WarningChain> warnings=new HashMap<>();
-        public Map<UUID,String> languages=new HashMap<>();
+        public Map<UUID,Seen> lastSeen=new java.util.concurrent.ConcurrentHashMap<>();
+        public Map<UUID,Long> bans=new java.util.concurrent.ConcurrentHashMap<>();
+        public Map<String,WarningChain> warnings=new java.util.concurrent.ConcurrentHashMap<>();
+        public Map<UUID,String> languages=new java.util.concurrent.ConcurrentHashMap<>();
     }
     private final DyClaim plugin;
     private final Path stateFile;
     private final State state;
-    private final Set<UUID> auto=new HashSet<>();
-    private final Map<UUID,Long> autoAttempt=new HashMap<>();
+    private final dev.dyclaim.platform.RegionalEjection regionalEjection;
+    private final Set<UUID> auto=java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final Map<UUID,Long> autoAttempt=new java.util.concurrent.ConcurrentHashMap<>();
     private BukkitTask mobTask,purgeTask;
-    private long purgeGeneration;
+    private dev.dyclaim.platform.RegionalMobSweep regionalMobs;
+    private volatile long purgeGeneration;
     private Iterator<String> mobClaims=Collections.emptyIterator();
     private Iterator<Entity> mobEntities=Collections.emptyIterator();
     private ClaimData scanningClaim;
@@ -41,15 +46,31 @@ public class FeatureManager implements Listener {
         for(var entry:state.bans.entrySet())if(entry.getKey()==null||entry.getValue()==null||entry.getValue()<0)throw new IllegalStateException("Invalid ban");
         for(var chain:state.warnings.values())if(chain==null||chain.times==null||chain.stage==null||chain.until<0)throw new IllegalStateException("Invalid warning");
         for(var seen:state.lastSeen.values())if(seen==null||seen.at<0)throw new IllegalStateException("Invalid activity record");
+        // Gson creates ordinary collections when loading; restore the same concurrency contract as new state.
+        state.lastSeen=new java.util.concurrent.ConcurrentHashMap<>(state.lastSeen);
+        state.bans=new java.util.concurrent.ConcurrentHashMap<>(state.bans);
+        state.languages=new java.util.concurrent.ConcurrentHashMap<>(state.languages);
+        state.warnings.values().forEach(chain->chain.times=new java.util.concurrent.CopyOnWriteArrayList<>(chain.times));
+        state.warnings=new java.util.concurrent.ConcurrentHashMap<>(state.warnings);
         for(Player player:Bukkit.getOnlinePlayers())recordSeen(player);
+        regionalEjection=new dev.dyclaim.platform.RegionalEjection(plugin,plugin.getPlatformTasks(),(world,x,z)->{
+            if(!world.isChunkLoaded(x,z)||plugin.getClaimManager().isChunkClaimed(world.getName(),x,z))return null;
+            Location loc=new Location(world,x*16+8.5,world.getHighestBlockYAt(x*16+8,z*16+8)+1,z*16+8.5);
+            return TeleportManager.safe(loc)?loc:null;
+        },this::entryBanned);
     }
     public void save(){try{AtomicJson.write(stateFile,state);}catch(IOException ex){plugin.getServer().getPluginManager().disablePlugin(plugin);throw new IllegalStateException("State write failed",ex);}}
     public String language(UUID uuid){return state.languages.get(uuid);}
     private long now(){return System.currentTimeMillis();}
     private boolean enabled(String key){return plugin.getConfigManager().values().getBoolean(key);}
     public boolean isClaimBanned(UUID uuid){Long expiry=state.bans.get(uuid);return enabled("admin.claim-bans.enabled")&&expiry!=null&&(expiry==0||expiry>now());}
-    public void send(Player p,String key){p.sendMessage(plugin.getMessageManager().getPrefixed(p,key));}
-    private void send(Player p,String key,Map<String,String> values){p.sendMessage(plugin.getMessageManager().getPrefixed(p,key,values));}
+    private void onPlayer(Player player,Runnable action){
+        var tasks=plugin.getPlatformTasks();
+        if(tasks.isRegionThreaded()&&!tasks.ownsEntity(player))tasks.playerLater(player,()->{if(player.isOnline())action.run();},1);
+        else action.run();
+    }
+    public void send(Player p,String key){onPlayer(p,()->p.sendMessage(plugin.getMessageManager().getPrefixed(p,key)));}
+    private void send(Player p,String key,Map<String,String> values){onPlayer(p,()->p.sendMessage(plugin.getMessageManager().getPrefixed(p,key,values)));}
     private void display(Player p,String key){p.sendMessage(plugin.getMessageManager().getMessage(p,key));}
     private void display(Player p,String key,Map<String,String> values){p.sendMessage(plugin.getMessageManager().getMessage(p,key,values));}
     private boolean permission(Player p,String node){if(p.hasPermission(node))return true;send(p,"no-permission");return false;}
@@ -132,9 +153,13 @@ public class FeatureManager implements Listener {
     }
     private boolean acquire(Player p,Chunk chunk,double price,boolean notify) {
         if(!eligibleNew(p,chunk,notify))return false;
-        boolean success=plugin.getTransactionManager().execute("claim",plugin.getClaimManager().getChunkKey(chunk),p.getUniqueId(),null,price,0,()->{
-            if(!plugin.getClaimManager().claimChunk(p,chunk))throw new IllegalStateException("Chunk occupied");
-        });
+        boolean success;
+        try(var admission=plugin.getAcquisitionRules().reserve(p,chunk,null,false)){
+            if(admission.rejection()!=null){if(notify)send(p,admission.rejection());return false;}
+            success=plugin.getTransactionManager().execute(admission.transaction(),"claim",plugin.getClaimManager().getChunkKey(chunk),p.getUniqueId(),null,price,0,()->{
+                if(!plugin.getClaimManager().claimChunk(p,chunk))throw new IllegalStateException("Chunk occupied");
+            });
+        }
         if(!success){send(p,"transaction-failed");return false;}
         plugin.getCooldownManager().setCooldown(p.getUniqueId());
         send(p,"claim-success",Map.of("{chunk}",chunk.getX()+", "+chunk.getZ()));
@@ -166,7 +191,7 @@ public class FeatureManager implements Listener {
         if(args[1].startsWith("clan:")) {
             String clan=plugin.getClanTrustManager().resolve(args[1].substring(5));
             if(clan==null){send(p,"clan-unavailable");return;}
-            c.getClanGrants().put(clan,new TrustGrant(expiry));c.touch();
+            c.grantClan(clan,expiry);
         }else {
             UUID target=known(args[1]);if(target==null){send(p,"admin-player-not-found");return;}
             if(c.canManage(target)){send(p,"trust-self");return;}
@@ -178,7 +203,7 @@ public class FeatureManager implements Listener {
         if(!permission(p,"dyclaim.trust"))return;ClaimData c=owned(p,false);if(c==null)return;
         if(args.length<2){send(p,"untrust-usage");return;}
         boolean removed;
-        if(args[1].startsWith("clan:")){String id=plugin.getClanTrustManager().resolve(args[1].substring(5));removed=c.getClanGrants().remove(id)!=null;}
+        if(args[1].startsWith("clan:")){String id=plugin.getClanTrustManager().resolve(args[1].substring(5));removed=c.removeClan(id);}
         else {UUID target=known(args[1]);removed=target!=null&&c.removeTrusted(target);}
         if(!removed){send(p,"trust-not-found",Map.of("{player}",args[1]));return;}
         c.touch();invalidate(c);plugin.getClaimManager().saveAll();send(p,"trust-removed",Map.of("{player}",args[1]));
@@ -190,13 +215,14 @@ public class FeatureManager implements Listener {
         if(args.length!=4||!TrustGrant.RIGHTS.contains(args[2])||!Set.of("allow","deny").contains(args[3])){send(p,"trustperm-usage");return;}
         UUID uuid=known(args[1]);TrustGrant grant=c.getTrustGrants().get(uuid);
         if(grant==null||!(grant.expiresAt==0||grant.expiresAt>now())){send(p,"trust-not-found",Map.of("{player}",args[1]));return;}
-        if(args[3].equals("allow"))grant.permissions.add(args[2]);else grant.permissions.remove(args[2]);
-        c.touch();invalidate(c);plugin.getClaimManager().saveAll();send(p,"operation-success");
+        if(!c.changeTrustPermission(uuid,args[2],args[3].equals("allow"))){send(p,"trust-not-found",Map.of("{player}",args[1]));return;}
+        invalidate(c);plugin.getClaimManager().saveAll();send(p,"operation-success");
     }
     private void trustList(Player p) {
         if(!permission(p,"dyclaim.trust"))return;ClaimData c=owned(p,false);if(c==null)return;
+        ClaimData view=c.snapshot();
         display(p,"trust-list-header");int count=0;
-        for(var entry:c.getTrustGrants().entrySet()) {
+        for(var entry:view.getTrustGrants().entrySet()) {
             if(entry.getValue().expiresAt!=0&&entry.getValue().expiresAt<=now())continue;
             if(count++>=20)break;
             String name=Bukkit.getOfflinePlayer(entry.getKey()).getName();
@@ -204,19 +230,23 @@ public class FeatureManager implements Listener {
             if(entry.getValue().expiresAt!=0||!entry.getValue().permissions.containsAll(TrustGrant.RIGHTS))
                 display(p,"trust-list-details",Map.of("{rights}",String.join(", ",entry.getValue().permissions.stream().sorted().map(right->dev.dyclaim.util.CommandWords.display(right,"tr".equals(plugin.getMessageManager().getPreferredLanguage(p)))).toList()),"{expiry}",entry.getValue().expiresAt==0?dev.dyclaim.util.CommandWords.display("permanent","tr".equals(plugin.getMessageManager().getPreferredLanguage(p))):displayDate(entry.getValue().expiresAt)));
         }
-        for(String clan:c.getClanGrants().keySet())if(count++<20)display(p,"trust-list-clan",Map.of("{clan}",clan));
+        for(String clan:view.getClanGrants().keySet())if(count++<20)display(p,"trust-list-clan",Map.of("{clan}",clan));
         if(count==0)display(p,"trust-list-empty");
     }
     private boolean unchanged(ClaimData c,UUID id,long revision,UUID owner) {
-        ClaimData actual=plugin.getClaimManager().getByKey(c.getChunkKey());
-        return actual==c&&c.getId().equals(id)&&c.getRevision()==revision&&c.getOwnerUUID().equals(owner)&&!plugin.getTransactionManager().isLocked(c.getChunkKey());
+        return sameSnapshot(c,id,revision,owner)&&!plugin.getTransactionManager().isLocked(c.getChunkKey());
+    }
+    private boolean sameSnapshot(ClaimData c,UUID id,long revision,UUID owner){
+        ClaimData view=c.snapshot();
+        return plugin.getClaimManager().getByKey(c.getChunkKey())==c&&view.getId().equals(id)&&view.getRevision()==revision&&view.getOwnerUUID().equals(owner);
     }
     private void coowner(Player p,String[] args) {
         if(!permission(p,"dyclaim.coowner")||!enabled("ownership.coowner-enabled")){send(p,"feature-disabled");return;}
         ClaimData c=owned(p,true);if(c==null)return;
         if(args.length<2){send(p,"coowner-usage");return;}
         if(args[1].equals("remove")) {
-            c.setCoowner(null);plugin.getClaimManager().rebuildPlayerIndex();invalidate(c);plugin.getClaimManager().saveAll();send(p,"operation-success");return;
+            if(!plugin.getClaimManager().changeCoowner(c,null,p.getUniqueId(),c.getRevision())){send(p,"operation-changed");return;}
+            invalidate(c);plugin.getClaimManager().saveAll();send(p,"operation-success");return;
         }
         if(args.length!=3||!args[1].equals("add")){send(p,"coowner-usage");return;}
         Player target=Bukkit.getPlayerExact(args[2]);
@@ -227,11 +257,18 @@ public class FeatureManager implements Listener {
         if(error!=null){send(p,error);return;}
         send(target,"coowner-offer",Map.of("{owner}",p.getName(),"{chunk}",c.getChunkKey()));
         plugin.getConfirmationManager().addPending(target.getUniqueId(),ConfirmationManager.ActionType.COOWNER,c.getChunkKey(),uuid->{
+            if(plugin.getPlatformTasks().isRegionThreaded()){acceptRegionalOwnership(p,target,c,true,id,revision,owner);return;}
             if(!p.isOnline()||!target.isOnline()||!p.hasPermission("dyclaim.coowner")||!enabled("ownership.coowner-enabled")||!unchanged(c,id,revision,owner)){send(target,"operation-changed");return;}
             World world=Bukkit.getWorld(c.getWorld());if(world==null){send(target,"operation-changed");return;}
-            String rejection=plugin.getAcquisitionRules().check(target,world.getChunkAt(c.getChunkX(),c.getChunkZ()),c,true);
-            if(rejection!=null){send(target,rejection);return;}
-            c.setCoowner(target.getUniqueId());plugin.getClaimManager().rebuildPlayerIndex();invalidate(c);plugin.getClaimManager().saveAllSync();send(target,"operation-success");send(p,"operation-success");
+            try(var admission=plugin.getAcquisitionRules().reserve(target,world.getChunkAt(c.getChunkX(),c.getChunkZ()),c,true)){
+                if(admission.rejection()!=null){send(target,admission.rejection());return;}
+                if(!sameSnapshot(c,id,revision,owner)){send(target,"operation-changed");return;}
+                if(!plugin.getTransactionManager().execute(admission.transaction(),"coowner",c.getChunkKey(),null,null,0,0,()->{
+                    if(!plugin.getClaimManager().changeCoowner(c,target.getUniqueId(),owner,revision))throw new IllegalStateException("Coowner claim changed");
+                    invalidate(c);
+                })){send(target,"transaction-failed");return;}
+            }
+            send(target,"operation-success");send(p,"operation-success");
         },uuid->send(target,"confirm-deny"));send(p,"offer-sent");
     }
     private void transfer(Player p,String[] args) {
@@ -245,12 +282,42 @@ public class FeatureManager implements Listener {
         send(target,"transfer-offer",Map.of("{owner}",p.getName(),"{chunk}",c.getChunkKey()));
         // Recipient consent is mandatory even when clickable buttons are hidden.
         plugin.getConfirmationManager().addPending(target.getUniqueId(),ConfirmationManager.ActionType.TRANSFER,c.getChunkKey(),uuid->{
+            if(plugin.getPlatformTasks().isRegionThreaded()){acceptRegionalOwnership(p,target,c,false,id,revision,owner);return;}
             if(!p.isOnline()||!target.isOnline()||!p.hasPermission("dyclaim.transfer")||!enabled("ownership.transfer-enabled")||!unchanged(c,id,revision,owner)){send(target,"operation-changed");return;}
             World world=Bukkit.getWorld(c.getWorld());if(world==null){send(target,"operation-changed");return;}
-            String reject=plugin.getAcquisitionRules().check(target,world.getChunkAt(c.getChunkX(),c.getChunkZ()),c,false);
-            if(reject!=null){send(target,reject);return;}
-            plugin.getClaimManager().transfer(c,target);plugin.getClaimManager().saveAllSync();send(target,"operation-success");send(p,"operation-success");
+            try(var admission=plugin.getAcquisitionRules().reserve(target,world.getChunkAt(c.getChunkX(),c.getChunkZ()),c,false)){
+                if(admission.rejection()!=null){send(target,admission.rejection());return;}
+                if(!sameSnapshot(c,id,revision,owner)){send(target,"operation-changed");return;}
+                if(!plugin.getTransactionManager().execute(admission.transaction(),"transfer",c.getChunkKey(),null,null,0,0,()->plugin.getClaimManager().transfer(c,target))){send(target,"transaction-failed");return;}
+            }
+            send(target,"operation-success");send(p,"operation-success");
         },uuid->send(target,"confirm-deny"));send(p,"offer-sent");
+    }
+    /** Consent arrives on the recipient; source permissions and claim hooks have different owners. */
+    private void acceptRegionalOwnership(Player source,Player target,ClaimData claim,boolean coowner,UUID id,long revision,UUID owner){
+        if(!target.isOnline()){return;}
+        UUID recipient=target.getUniqueId();long generation=purgeGeneration;
+        String permission=coowner?"dyclaim.coowner":"dyclaim.transfer",setting=coowner?"ownership.coowner-enabled":"ownership.transfer-enabled";
+        var tasks=plugin.getPlatformTasks();
+        tasks.playerLater(source,()->{
+            if(generation!=purgeGeneration||!source.isOnline()||!source.hasPermission(permission)||!enabled(setting)||!unchanged(claim,id,revision,owner)){send(target,"operation-changed");return;}
+            World world=Bukkit.getWorld(claim.getWorld());if(world==null){send(target,"operation-changed");return;}
+            tasks.regionLater(world,claim.getChunkX(),claim.getChunkZ(),()->{
+                if(generation!=purgeGeneration||!enabled(setting)||plugin.getServer().getPlayer(recipient)!=target||!unchanged(claim,id,revision,owner)){send(target,"operation-changed");return;}
+                try(var admission=plugin.getAcquisitionRules().reserve(target,world.getChunkAt(claim.getChunkX(),claim.getChunkZ()),claim,coowner)){
+                    if(admission.rejection()!=null){send(target,admission.rejection());return;}
+                    if(!sameSnapshot(claim,id,revision,owner)){send(target,"operation-changed");return;}
+                    boolean committed=plugin.getTransactionManager().execute(admission.transaction(),coowner?"coowner":"transfer",claim.getChunkKey(),null,null,0,0,()->{
+                        if(coowner){
+                            if(!plugin.getClaimManager().changeCoowner(claim,recipient,owner,revision))throw new IllegalStateException("Coowner claim changed");
+                            invalidate(claim);
+                        }else plugin.getClaimManager().transfer(claim,target);
+                    });
+                    if(!committed){send(target,"transaction-failed");return;}
+                }
+                send(target,"operation-success");send(source,"operation-success");
+            },1);
+        },1);
     }
     private void market(Player p,String[] args) {
         if(!permission(p,"dyclaim.market")||!enabled("market.enabled")){send(p,"feature-disabled");return;}
@@ -274,14 +341,24 @@ public class FeatureManager implements Listener {
             if(!p.isOnline()||!p.hasPermission("dyclaim.market")||!enabled("market.enabled")||!plugin.getEconomyManager().isEnabled()||!unchanged(c,id,revision,owner)
                     ||Double.compare(tax,plugin.getConfigManager().values().getDouble("market.tax-percent"))!=0){send(p,"operation-changed");return;}
             World world=Bukkit.getWorld(c.getWorld());if(world==null){send(p,"operation-changed");return;}
-            String rejected=plugin.getAcquisitionRules().check(p,world.getChunkAt(c.getChunkX(),c.getChunkZ()),c,false);
-            if(rejected!=null){send(p,rejected);return;}
-            if(!plugin.getEconomyManager().hasEnough(p,price)){send(p,"claim-no-money",Map.of("{price}",plugin.getEconomyManager().formatMoney(price)));return;}
-            if(plugin.getTransactionManager().execute("market",c.getChunkKey(),p.getUniqueId(),owner,price,income,()->plugin.getClaimManager().transfer(c,p))) {
-                send(p,"operation-success");Player seller=Bukkit.getPlayer(owner);if(seller!=null)send(seller,"operation-success");
-            }else send(p,"transaction-failed");
+            long generation=purgeGeneration;
+            Runnable purchase=()->purchaseClaim(p,c,id,revision,owner,price,income,tax,generation,world);
+            if(plugin.getPlatformTasks().isRegionThreaded())plugin.getPlatformTasks().regionLater(world,c.getChunkX(),c.getChunkZ(),purchase,1);
+            else purchase.run();
         };
         if(enabled("confirmations.required.market-purchase"))plugin.getConfirmationManager().addPending(p.getUniqueId(),ConfirmationManager.ActionType.MARKET,c.getChunkKey(),uuid->buy.run(),uuid->send(p,"confirm-deny"));else buy.run();
+    }
+    private void purchaseClaim(Player player,ClaimData claim,UUID id,long revision,UUID owner,double price,double income,double tax,long generation,World world){
+        if(generation!=purgeGeneration||plugin.getServer().getPlayer(player.getUniqueId())!=player||!enabled("market.enabled")||!plugin.getEconomyManager().isEnabled()
+                ||!unchanged(claim,id,revision,owner)||Double.compare(tax,plugin.getConfigManager().values().getDouble("market.tax-percent"))!=0){send(player,"operation-changed");return;}
+        try(var admission=plugin.getAcquisitionRules().reserve(player,world.getChunkAt(claim.getChunkX(),claim.getChunkZ()),claim,false)){
+            if(admission.rejection()!=null){send(player,admission.rejection());return;}
+            if(!sameSnapshot(claim,id,revision,owner)){send(player,"operation-changed");return;}
+            if(!plugin.getEconomyManager().hasEnough(player,price)){send(player,"claim-no-money",Map.of("{price}",plugin.getEconomyManager().formatMoney(price)));return;}
+            if(plugin.getTransactionManager().execute(admission.transaction(),"market",claim.getChunkKey(),player.getUniqueId(),owner,price,income,()->plugin.getClaimManager().transfer(claim,player))){
+                send(player,"operation-success");Player seller=Bukkit.getPlayer(owner);if(seller!=null)send(seller,"operation-success");
+            }else send(player,"transaction-failed");
+        }
     }
     private void auto(Player p,String[] args) {
         if(!permission(p,"dyclaim.auto"))return;
@@ -330,7 +407,7 @@ public class FeatureManager implements Listener {
         }
         if(c.getMarketPrice()!=null)display(p,"claim-market",Map.of("{price}",plugin.getEconomyManager().formatMoney(c.getMarketPrice())));
         if(c.canManage(p.getUniqueId())||p.hasPermission("dyclaim.admin")){
-            display(p,"info-trusted",Map.of("{trusted}",String.valueOf(c.getTrustGrants().values().stream().filter(grant->grant.expiresAt==0||grant.expiresAt>now()).count())));
+            display(p,"info-trusted",Map.of("{trusted}",String.valueOf(c.snapshot().getTrustGrants().values().stream().filter(grant->grant.expiresAt==0||grant.expiresAt>now()).count())));
             if(c.hasSpawn())display(p,"info-custom-spawn");
         }
         p.sendMessage(plugin.getMessageManager().getMessage(p,"info-footer"));
@@ -379,9 +456,14 @@ public class FeatureManager implements Listener {
     private void adminGive(Player p,String[] args) {
         if(args.length!=3){send(p,"admin-usage-give");return;}Player target=Bukkit.getPlayerExact(args[2]);if(target==null){send(p,"admin-player-not-found");return;}
         Chunk chunk=p.getLocation().getChunk();ClaimData old=plugin.getClaimManager().getClaimAt(chunk);
-        String reject=plugin.getAcquisitionRules().check(target,chunk,old,false);if(reject!=null){send(p,reject);return;}
-        if(old==null)plugin.getClaimManager().giveChunk(target,chunk);else plugin.getClaimManager().transfer(old,target);
-        plugin.getClaimManager().saveAllSync();send(p,"operation-success");
+        try(var admission=plugin.getAcquisitionRules().reserve(target,chunk,old,false)){
+            if(admission.rejection()!=null){send(p,admission.rejection());return;}
+            if(!plugin.getTransactionManager().execute(admission.transaction(),"admin-give",plugin.getClaimManager().getChunkKey(chunk),null,null,0,0,()->{
+                if(old==null){if(!plugin.getClaimManager().claimChunk(target,chunk))throw new IllegalStateException("Given chunk changed");}
+                else plugin.getClaimManager().transfer(old,target);
+            })){send(p,"transaction-failed");return;}
+        }
+        send(p,"operation-success");
     }
     private void adminDelete(Player p,String[] args,boolean refund) {
         List<ClaimData> selected;
@@ -401,7 +483,7 @@ public class FeatureManager implements Listener {
             for(ClaimData c:selected)if(plugin.getClaimManager().getByKey(c.getChunkKey())!=c||c.getRevision()!=versions.get(c.getId())||Double.compare(refunds.get(c.getId()),plugin.getClaimManager().refund(c))!=0){send(p,"operation-changed");return;}
             plugin.getClaimManager().backup("admin-delete");Iterator<ClaimData> iterator=selected.iterator();
             long generation=purgeGeneration;
-            new org.bukkit.scheduler.BukkitRunnable(){public void run(){
+            new BatchTask(){public void execute(){
                 if(generation!=purgeGeneration||!p.hasPermission("dyclaim.admin")){cancel();return;}
                 int n=0;
                 while(iterator.hasNext()&&n++<plugin.getConfigManager().values().getInt("admin.purge.batch-size")){
@@ -414,10 +496,19 @@ public class FeatureManager implements Listener {
                 }
                 if(generation!=purgeGeneration){cancel();return;}
                 plugin.getClaimManager().saveAllSync();if(!iterator.hasNext()){send(p,"operation-success");cancel();}
-            }}.runTaskTimer(plugin,1,1);
+            }}.start(p);
         },uuid->send(p,"confirm-deny"));
     }
-    private void recordSeen(Player p){Seen seen=new Seen();seen.at=now();seen.exempt=p.hasPermission("dyclaim.admin")||p.hasPermission("dyclaim.admin.purge.exempt");state.lastSeen.put(p.getUniqueId(),seen);}
+    private void recordSeen(Player p){
+        var tasks=plugin.getPlatformTasks();
+        if(tasks.isRegionThreaded()&&!tasks.ownsEntity(p)){
+            // A disabled plugin cannot schedule foreign entity work; preserve its last verified record.
+            if(plugin.isEnabled())tasks.playerLater(p,()->{if(p.isOnline()){recordSeenOwned(p);save();}},1);
+            return;
+        }
+        recordSeenOwned(p);
+    }
+    private void recordSeenOwned(Player p){Seen seen=new Seen();seen.at=now();seen.exempt=p.hasPermission("dyclaim.admin")||p.hasPermission("dyclaim.admin.purge.exempt");state.lastSeen.put(p.getUniqueId(),seen);}
     private boolean inactive(UUID uuid,int days) {
         if(Bukkit.getPlayer(uuid)!=null)return false;
         Seen seen=state.lastSeen.get(uuid);
@@ -429,7 +520,7 @@ public class FeatureManager implements Listener {
         if(candidates.isEmpty()){if(requester!=null)send(requester,"operation-success");return;}
         long generation=purgeGeneration;
         plugin.getClaimManager().backup("purge");Iterator<ClaimData> iterator=candidates.iterator();
-        new org.bukkit.scheduler.BukkitRunnable(){int removed=0;public void run(){
+        new BatchTask(){int removed=0;public void execute(){
             if(generation!=purgeGeneration){cancel();return;}
             if((requester==null&&!enabled("admin.purge.scheduled-enabled"))||(requester!=null&&(!requester.hasPermission("dyclaim.admin")||!requester.hasPermission("dyclaim.admin.purge")))){cancel();return;}
             int batch=plugin.getConfigManager().values().getInt("admin.purge.batch-size");int count=0;
@@ -441,7 +532,19 @@ public class FeatureManager implements Listener {
             }}
             if(generation!=purgeGeneration){cancel();return;}
             plugin.getClaimManager().saveAllSync();if(!iterator.hasNext()){if(requester!=null)send(requester,"purge-complete",Map.of("{count}",String.valueOf(removed)));cancel();}
-        }}.runTaskTimer(plugin,1,1);
+        }}.start(requester);
+    }
+    /** Player-authorized batches stay with that player; scheduled maintenance is global data work. */
+    private abstract class BatchTask implements Runnable {
+        private volatile BukkitTask handle;
+        private volatile boolean cancelled;
+        abstract void execute();
+        public final void run(){if(!cancelled)execute();}
+        final void cancel(){cancelled=true;if(handle!=null)handle.cancel();}
+        final void start(Player player){
+            handle=player==null?plugin.getPlatformTasks().globalTimer(this,1,1):plugin.getPlatformTasks().playerTimer(player,this,1,1);
+            if(cancelled&&handle!=null)handle.cancel();
+        }
     }
     private String warningKey(ClaimData claim,UUID uuid){return claim.getId()+":"+uuid;}
     private boolean eligibleWarning(Player target,ClaimData c) {
@@ -451,6 +554,20 @@ public class FeatureManager implements Listener {
     private void warn(Player p,String[] args) {
         if(!permission(p,"dyclaim.warn")||!enabled("warnings.enabled")){send(p,"feature-disabled");return;}ClaimData c=owned(p,false);if(c==null)return;
         if(args.length!=2){send(p,"warn-usage");return;}Player target=Bukkit.getPlayerExact(args[1]);
+        if(target==null){send(p,"warn-ineligible");return;}
+        if(plugin.getPlatformTasks().isRegionThreaded()){
+            UUID id=c.getId(),owner=c.getOwnerUUID();long revision=c.getRevision(),generation=purgeGeneration;
+            plugin.getPlatformTasks().playerLater(p,()->{
+                if(generation!=purgeGeneration||!p.isOnline()||!p.hasPermission("dyclaim.warn")||!enabled("warnings.enabled")||!unchanged(c,id,revision,owner)||!c.canManage(p.getUniqueId())){send(p,"operation-changed");return;}
+                plugin.getPlatformTasks().playerLater(target,()->{
+                    if(generation!=purgeGeneration||!target.isOnline()||!enabled("warnings.enabled")||!unchanged(c,id,revision,owner)){send(p,"operation-changed");return;}
+                    applyWarning(p,target,c);
+                },1);
+            },1);return;
+        }
+        applyWarning(p,target,c);
+    }
+    private void applyWarning(Player p,Player target,ClaimData c){
         if(target==null||plugin.getClaimManager().getClaimAt(target.getLocation().getChunk())!=c||!eligibleWarning(target,c)){send(p,"warn-ineligible");return;}
         String key=warningKey(c,target.getUniqueId());WarningChain chain=state.warnings.computeIfAbsent(key,k->new WarningChain());
         if(!chain.stage.equals("pending")){send(p,"warn-already-applied");return;}
@@ -474,6 +591,7 @@ public class FeatureManager implements Listener {
     }
     private boolean entryBanned(Player p,ClaimData c){WarningChain chain=state.warnings.get(warningKey(c,p.getUniqueId()));return enabled("warnings.enabled")&&chain!=null&&"applied".equals(chain.stage)&&"claim-entry-ban".equals(chain.mode)&&chain.until>now()&&eligibleWarning(p,c);}
     private void eject(Player p,ClaimData c) {
+        if(plugin.getPlatformTasks().isRegionThreaded()){regionalEjection.start(p,c);return;}
         World world=p.getWorld();
         for(int radius=1;radius<=8;radius++)for(int dx=-radius;dx<=radius;dx++)for(int dz=-radius;dz<=radius;dz++) {
             if(Math.abs(dx)!=radius&&Math.abs(dz)!=radius)continue;int x=c.getChunkX()+dx,z=c.getChunkZ()+dz;
@@ -486,19 +604,35 @@ public class FeatureManager implements Listener {
     @EventHandler public void join(PlayerJoinEvent event){recordSeen(event.getPlayer());save();ClaimData c=plugin.getClaimManager().getClaimAt(event.getPlayer().getLocation().getChunk());if(c!=null&&entryBanned(event.getPlayer(),c))eject(event.getPlayer(),c);}
     @EventHandler public void quit(PlayerQuitEvent event){Player p=event.getPlayer();recordSeen(p);auto.remove(p.getUniqueId());autoAttempt.remove(p.getUniqueId());plugin.getConfirmationManager().cancelPending(p.getUniqueId());plugin.getAccessManager().quit(p.getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(p);save();}
     @EventHandler public void world(PlayerChangedWorldEvent event){auto.remove(event.getPlayer().getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(event.getPlayer());}
+    private ClaimData claimAt(Location location){
+        if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
+        return plugin.getClaimManager().getClaimAt(location.getChunk());
+    }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void entry(PlayerMoveEvent event){
-        if(event.getTo()==null)return;Player p=event.getPlayer();ClaimData to=plugin.getClaimManager().getClaimAt(event.getTo().getChunk());
-        if(to!=null&&entryBanned(p,to)){ClaimData from=plugin.getClaimManager().getClaimAt(event.getFrom().getChunk());if(from!=to)event.setCancelled(true);else Bukkit.getScheduler().runTask(plugin,()->eject(p,to));}
+        if(event.getTo()==null)return;Player p=event.getPlayer();ClaimData to=claimAt(event.getTo());
+        if(to!=null&&entryBanned(p,to)){ClaimData from=claimAt(event.getFrom());if(from!=to)event.setCancelled(true);else plugin.getPlatformTasks().playerLater(p,()->eject(p,to),1);}
     }
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void move(PlayerMoveEvent event){
         if(event.getTo()==null)return;
         if(event.getFrom().getWorld()==event.getTo().getWorld()&&(event.getFrom().getBlockX()>>4)==(event.getTo().getBlockX()>>4)&&(event.getFrom().getBlockZ()>>4)==(event.getTo().getBlockZ()>>4))return;
-        Player p=event.getPlayer();ClaimData from=plugin.getClaimManager().getClaimAt(event.getFrom().getChunk()),to=plugin.getClaimManager().getClaimAt(event.getTo().getChunk());
+        Player p=event.getPlayer();ClaimData from=claimAt(event.getFrom()),to=claimAt(event.getTo());
         if(enabled("warnings.reset-on-exit")&&from!=null&&from!=to){String key=warningKey(from,p.getUniqueId());WarningChain chain=state.warnings.get(key);if(chain!=null&&chain.stage.equals("pending")){state.warnings.remove(key);save();}}
         if(!auto.contains(p.getUniqueId())||event instanceof PlayerTeleportEvent||p.isInsideVehicle()||to!=null)return;
+        if(plugin.getPlatformTasks().isRegionThreaded()){
+            Location target=event.getTo();String world=target.getWorld().getName();int x=target.getBlockX()>>4,z=target.getBlockZ()>>4;long generation=purgeGeneration;
+            plugin.getPlatformTasks().playerLater(p,()->{
+                if(generation!=purgeGeneration||!p.isOnline()||!auto.contains(p.getUniqueId())||p.isInsideVehicle())return;
+                Location current=p.getLocation();
+                if(!world.equals(current.getWorld().getName())||(current.getBlockX()>>4)!=x||(current.getBlockZ()>>4)!=z||claimAt(current)!=null)return;
+                autoClaim(p,current.getChunk());
+            },1);return;
+        }
+        autoClaim(p,event.getTo().getChunk());
+    }
+    private void autoClaim(Player p,Chunk chunk){
         if(!enabled("auto-claim.enabled")||!p.hasPermission("dyclaim.auto")||!p.hasPermission("dyclaim.claim")){auto.remove(p.getUniqueId());send(p,"auto-disabled");return;}
         long last=autoAttempt.getOrDefault(p.getUniqueId(),0L);if(now()-last<1000)return;autoAttempt.put(p.getUniqueId(),now());
-        Chunk chunk=event.getTo().getChunk();double price=plugin.getEconomyManager().isEnabled()?plugin.getAcquisitionRules().price(chunk.getWorld().getName()):0;
+        double price=plugin.getEconomyManager().isEnabled()?plugin.getAcquisitionRules().price(chunk.getWorld().getName()):0;
         if((enabled("auto-claim.require-economy")&&!plugin.getEconomyManager().isEnabled())||(!enabled("auto-claim.allow-zero-price")&&price==0)){auto.remove(p.getUniqueId());send(p,"auto-disabled");return;}
         String rejection=plugin.getAcquisitionRules().check(p,chunk,null,false);
         if(rejection!=null){if(Set.of("acquire-limit","claim-banned","claiming-disabled").contains(rejection)){auto.remove(p.getUniqueId());send(p,rejection);send(p,"auto-disabled");}return;}
@@ -508,13 +642,25 @@ public class FeatureManager implements Listener {
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void teleportEntry(PlayerTeleportEvent event){entry(event);}
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void teleportExit(PlayerTeleportEvent event){move(event);}
     public void reloadTasks(){
+        regionalEjection.reset();
         purgeGeneration++;
         if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();mobTask=null;purgeTask=null;
+        if(regionalMobs!=null)regionalMobs.close();regionalMobs=null;
         mobClaims=Collections.emptyIterator();mobEntities=Collections.emptyIterator();auto.clear();
-        if(enabled("protection.mobs.remove-on-entry.enabled"))mobTask=Bukkit.getScheduler().runTaskTimer(plugin,this::scanMobs,20,plugin.getConfigManager().values().getLong("protection.mobs.remove-on-entry.interval-ticks"));
+        var tasks=plugin.getPlatformTasks();
+        if(enabled("protection.mobs.remove-on-entry.enabled")){
+            Runnable scan=this::scanMobs;
+            if(tasks.isRegionThreaded()){
+                regionalMobs=new dev.dyclaim.platform.RegionalMobSweep(tasks,()->plugin.getClaimManager().getAllClaims().values(),plugin.getClaimManager()::getByKey,Bukkit::getWorld,
+                        c->!enabled("protection.mobs.remove-on-entry.only-when-spawning-disabled")||!plugin.getAccessManager().enabled(c,"mob-spawning"),
+                        this::removeMob,()->plugin.getConfigManager().values().getInt("protection.mobs.remove-on-entry.batch-size"));
+                scan=regionalMobs::tick;
+            }
+            mobTask=tasks.globalTimer(scan,20,plugin.getConfigManager().values().getLong("protection.mobs.remove-on-entry.interval-ticks"));
+        }
         if(enabled("admin.purge.scheduled-enabled")){
             long interval=plugin.getConfigManager().values().getLong("admin.purge.check-interval-minutes")*1200;
-            purgeTask=Bukkit.getScheduler().runTaskTimer(plugin,()->{int days=plugin.getConfigManager().values().getInt("admin.purge.inactive-days");purge(purgeCandidates(days),days,null);},interval,interval);
+            purgeTask=tasks.globalTimer(()->{int days=plugin.getConfigManager().values().getInt("admin.purge.inactive-days");purge(purgeCandidates(days),days,null);},interval,interval);
         }
     }
     private void scanMobs(){
@@ -540,7 +686,7 @@ public class FeatureManager implements Listener {
         if(cfg.getStringList(prefix+"excluded-types").contains(entity.getType().name()))return false;
         return switch(cfg.getString(prefix+"entity-scope")){case "all-mobs"->true;case "list"->cfg.getStringList(prefix+"included-types").contains(entity.getType().name());default->entity instanceof Enemy;};
     }
-    public void close(){purgeGeneration++;if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();for(Player p:Bukkit.getOnlinePlayers())recordSeen(p);save();}
+    public void close(){regionalEjection.reset();purgeGeneration++;if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();if(regionalMobs!=null)regionalMobs.close();for(Player p:Bukkit.getOnlinePlayers())recordSeen(p);save();}
 }
 
 

@@ -1,0 +1,10 @@
+{
+  "id": "dyclaim-proxy",
+  "name": "DyClaim",
+  "version": "${version}",
+  "description": "Optional DyClaim proxy diagnostics; gameplay and protection stay on the backend.",
+  "url": "https://github.com/DyPlugin/DyClaim",
+  "authors": ["Claww"],
+  "dependencies": [],
+  "main": "dev.dyclaim.velocity.VelocityBridge"
+}

@@ -1,5 +1,6 @@
 # Build outputs and local dependencies
 /build/
+**/build/
 /target/
 /.gradle/
 node_modules/
@@ -17,6 +18,8 @@ node_modules/
 /docs/v1.0.0-progress.md
 /docs/release-1.0.0.md
 /docs/verification/
+/docs/superpowers/
+/docs/platform-feature-matrix.md
 *.log
 *.log.*
 *.tmp

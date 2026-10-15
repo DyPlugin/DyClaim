@@ -47,8 +47,64 @@ tasks.jar {
 }
 
 processResources {
-    filesMatching('plugin.yml') {
+    filesMatching(['plugin.yml','dyclaim-bridge-version.properties']) {
         expand('version': version)
+    }
+}
+
+def foliaResources = layout.buildDirectory.dir('generated/folia-resources')
+tasks.register('prepareFoliaResources') {
+    dependsOn processResources
+    inputs.file(layout.buildDirectory.file('resources/main/plugin.yml'))
+    outputs.dir(foliaResources)
+    doLast {
+        def directory = foliaResources.get().asFile
+        directory.mkdirs()
+        new File(directory, 'plugin.yml').setText(layout.buildDirectory.file('resources/main/plugin.yml').get().asFile.getText('UTF-8') + '\nfolia-supported: true\n', 'UTF-8')
+        new File(directory, 'dyclaim-platform.properties').setText('platform=folia\n', 'UTF-8')
+    }
+}
+tasks.register('foliaJar', Jar) {
+    dependsOn classes, tasks.named('prepareFoliaResources')
+    archiveBaseName.set('DyClaim')
+    archiveVersion.set('v' + project.version)
+    archiveClassifier.set('Folia')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    from(sourceSets.main.output) { exclude 'plugin.yml', 'dyclaim-platform.properties' }
+    from(foliaResources)
+}
+
+tasks.register('verifyPlatformArtifacts') {
+    group = 'verification'
+    description = 'Checks platform descriptors, versions and proxy/backend isolation.'
+    dependsOn tasks.jar, tasks.named('foliaJar'), ':velocity:jar', ':bungeecord:jar'
+    doLast {
+        def distributions = [
+            [tasks.jar.archiveFile.get().asFile, 'plugin.yml', 'bukkit'],
+            [tasks.named('foliaJar').get().archiveFile.get().asFile, 'plugin.yml', 'folia'],
+            [project(':velocity').tasks.jar.archiveFile.get().asFile, 'velocity-plugin.json', 'proxy'],
+            [project(':bungeecord').tasks.jar.archiveFile.get().asFile, 'bungee.yml', 'proxy']
+        ]
+        distributions.each { entry ->
+            new java.util.zip.ZipFile(entry[0]).withCloseable { zip ->
+                def descriptor = zip.getEntry(entry[1])
+                if (descriptor == null) throw new GradleException("Missing ${entry[1]} in ${entry[0].name}")
+                def text = zip.getInputStream(descriptor).getText('UTF-8')
+                if (!(text =~ /(?m)["']?version["']?\s*:\s*["']?${java.util.regex.Pattern.quote(project.version.toString())}["']?\s*,?\s*$/).find())
+                    throw new GradleException("Wrong version in ${entry[0].name}")
+                if (entry[2] == 'proxy') {
+                    if (zip.getEntry('plugin.yml') != null || zip.getEntry('dev/dyclaim/DyClaim.class') != null)
+                        throw new GradleException("Backend leaked into ${entry[0].name}")
+                    if (zip.getEntry('dev/dyclaim/platform/proxy/StatusProtocol.class') == null)
+                        throw new GradleException("Missing protocol in ${entry[0].name}")
+                } else {
+                    def marker = zip.getInputStream(zip.getEntry('dyclaim-platform.properties')).getText('UTF-8').trim()
+                    if (marker != "platform=${entry[2]}" || text.contains('folia-supported: true') != (entry[2] == 'folia'))
+                        throw new GradleException("Wrong platform marker in ${entry[0].name}")
+                }
+            }
+        }
     }
 }
 

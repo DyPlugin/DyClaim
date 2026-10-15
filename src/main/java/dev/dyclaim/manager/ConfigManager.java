@@ -57,7 +57,7 @@ public class ConfigManager {
         reload();
     }
 
-    public void reload() {
+    public synchronized void reload() {
         FileConfiguration config = loadValidated();
         this.effective = config;
 
@@ -97,7 +97,7 @@ public class ConfigManager {
             this.blacklistedWorlds = new ArrayList<>();
     }
 
-    public FileConfiguration values() { return effective; }
+    public synchronized FileConfiguration values() { return effective; }
 
     private FileConfiguration loadValidated() {
         try {
@@ -166,7 +166,7 @@ public class ConfigManager {
         }
     }
 
-    public void saveConfig() {
+    public synchronized void saveConfig() {
         FileConfiguration config = plugin.getConfig();
         config.set("prefix", prefix);
         config.set("lang", lang);
@@ -187,150 +187,154 @@ public class ConfigManager {
         config.set("notification.show-enter", showEnter);
         config.set("notification.show-leave", showLeave);
         plugin.saveConfig();
-        effective = config;
+        // Readers may retain this view while an administrator makes the next change.
+        YamlConfiguration snapshot=new YamlConfiguration();
+        try{snapshot.loadFromString(config.saveToString());}
+        catch(org.bukkit.configuration.InvalidConfigurationException ex){throw new IllegalStateException("Could not snapshot valid configuration",ex);}
+        if(config.getDefaults()!=null)snapshot.setDefaults(config.getDefaults());effective = snapshot;
     }
 
-    public String getPrefix() {
+    public synchronized String getPrefix() {
         return prefix;
     }
 
-    public String getLang() {
+    public synchronized String getLang() {
         return lang;
     }
 
-    public boolean isEconomyEnabled() {
+    public synchronized boolean isEconomyEnabled() {
         return economyEnabled;
     }
 
-    public double getClaimPrice() {
+    public synchronized double getClaimPrice() {
         return claimPrice;
     }
 
-    public int getSellRefundPercent() {
+    public synchronized int getSellRefundPercent() {
         return sellRefundPercent;
     }
 
-    public double getPreviousClaimPrice() {
+    public synchronized double getPreviousClaimPrice() {
         return previousClaimPrice;
     }
 
-    public boolean isAutoRefundPriceDifference() {
+    public synchronized boolean isAutoRefundPriceDifference() {
         return autoRefundPriceDifference;
     }
 
-    public boolean isCooldownEnabled() {
+    public synchronized boolean isCooldownEnabled() {
         return cooldownEnabled;
     }
 
-    public int getCooldownSeconds() {
+    public synchronized int getCooldownSeconds() {
         return cooldownSeconds;
     }
 
-    public int getMaxClaimsPerPlayer() {
+    public synchronized int getMaxClaimsPerPlayer() {
         return maxClaimsPerPlayer;
     }
 
-    public boolean isAllowClaiming() {
+    public synchronized boolean isAllowClaiming() {
         return allowClaiming;
     }
 
-    public int getTeleportWarmup() {
+    public synchronized int getTeleportWarmup() {
         return teleportWarmup;
     }
 
-    public boolean isPvpDisabled() {
+    public synchronized boolean isPvpDisabled() {
         return pvpDisabled;
     }
 
-    public boolean isExplosionDisabled() {
+    public synchronized boolean isExplosionDisabled() {
         return explosionDisabled;
     }
 
-    public boolean isMobGriefingDisabled() {
+    public synchronized boolean isMobGriefingDisabled() {
         return mobGriefingDisabled;
     }
 
-    public int getVisualizationDuration() {
+    public synchronized int getVisualizationDuration() {
         return visualizationDuration;
     }
 
-    public String getParticleType() {
+    public synchronized String getParticleType() {
         return particleType;
     }
 
-    public String getBedrockBlock() {
+    public synchronized String getBedrockBlock() {
         return bedrockBlock;
     }
 
-    public int getConfirmationTimeout() {
+    public synchronized int getConfirmationTimeout() {
         return confirmationTimeout;
     }
 
-    public List<String> getBlacklistedWorlds() {
-        return blacklistedWorlds;
+    public synchronized List<String> getBlacklistedWorlds() {
+        return List.copyOf(blacklistedWorlds);
     }
 
-    public boolean isWorldBlacklisted(String worldName) {
+    public synchronized boolean isWorldBlacklisted(String worldName) {
         return blacklistedWorlds.contains(worldName);
     }
 
-    public boolean isUseActionbar() {
+    public synchronized boolean isUseActionbar() {
         return useActionbar;
     }
 
-    public boolean isShowEnter() {
+    public synchronized boolean isShowEnter() {
         return showEnter;
     }
 
-    public boolean isShowLeave() {
+    public synchronized boolean isShowLeave() {
         return showLeave;
     }
 
-    public void setPrefix(String prefix) {
+    public synchronized void setPrefix(String prefix) {
         this.prefix = prefix;
         saveConfig();
     }
 
-    public void setEconomyEnabled(boolean economyEnabled) {
+    public synchronized void setEconomyEnabled(boolean economyEnabled) {
         this.economyEnabled = economyEnabled;
         saveConfig();
     }
 
-    public void setClaimPrice(double claimPrice) {
+    public synchronized void setClaimPrice(double claimPrice) {
         if(!Double.isFinite(claimPrice)||claimPrice<0)throw new IllegalArgumentException("Invalid price");
         this.previousClaimPrice = this.claimPrice;
         this.claimPrice = claimPrice;
         saveConfig();
     }
 
-    public void setPreviousClaimPrice(double previousClaimPrice) {
+    public synchronized void setPreviousClaimPrice(double previousClaimPrice) {
         this.previousClaimPrice = previousClaimPrice;
         saveConfig();
     }
 
-    public void setAutoRefundPriceDifference(boolean autoRefundPriceDifference) {
+    public synchronized void setAutoRefundPriceDifference(boolean autoRefundPriceDifference) {
         this.autoRefundPriceDifference = autoRefundPriceDifference;
         saveConfig();
     }
 
-    public void setCooldownSeconds(int cooldownSeconds) {
+    public synchronized void setCooldownSeconds(int cooldownSeconds) {
         if(cooldownSeconds<0||cooldownSeconds>Integer.MAX_VALUE/20)throw new IllegalArgumentException("Invalid cooldown");
         this.cooldownSeconds = cooldownSeconds;
         this.cooldownEnabled = cooldownSeconds > 0;
         saveConfig();
     }
 
-    public void setAllowClaiming(boolean allowClaiming) {
+    public synchronized void setAllowClaiming(boolean allowClaiming) {
         this.allowClaiming = allowClaiming;
         saveConfig();
     }
 
-    public void setLang(String lang) {
+    public synchronized void setLang(String lang) {
         this.lang = lang;
         saveConfig();
     }
 
-    public boolean addBlacklistedWorld(String worldName) {
+    public synchronized boolean addBlacklistedWorld(String worldName) {
         if (blacklistedWorlds.contains(worldName))
             return false;
         blacklistedWorlds.add(worldName);
@@ -338,7 +342,7 @@ public class ConfigManager {
         return true;
     }
 
-    public boolean removeBlacklistedWorld(String worldName) {
+    public synchronized boolean removeBlacklistedWorld(String worldName) {
         boolean removed = blacklistedWorlds.remove(worldName);
         if (removed)
             saveConfig();

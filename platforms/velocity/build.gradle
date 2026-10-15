@@ -1,0 +1,30 @@
+plugins { id 'java' }
+group=rootProject.group
+version=rootProject.version
+repositories { mavenCentral(); maven { url='https://repo.papermc.io/repository/maven-public/' } }
+configurations.compileClasspath.attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,25)
+configurations.testCompileClasspath.attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,25)
+configurations.testRuntimeClasspath.attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,25)
+dependencies {
+    compileOnly 'com.velocitypowered:velocity-api:4.2.0'
+    compileOnly project(':proxy-common')
+    testImplementation project(':proxy-common')
+    testImplementation 'com.velocitypowered:velocity-api:4.2.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    // Java 25 API fixtures require a Byte Buddy version which understands class major 69.
+    testImplementation 'org.mockito:mockito-core:5.23.0'
+}
+def runtime25=rootProject.findProperty('platformJava25')
+def executableSuffix=System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('windows')?'.exe':''
+tasks.withType(JavaCompile).configureEach {
+    options.encoding='UTF-8';options.release=17
+    if(runtime25!=null){options.fork=true;options.forkOptions.executable="${runtime25}/bin/javac${executableSuffix}"}
+}
+tasks.withType(Test).configureEach { useJUnitPlatform();if(runtime25!=null)executable="${runtime25}/bin/java${executableSuffix}" }
+processResources { filesMatching('velocity-plugin.json') { expand(version:project.version) } }
+tasks.jar {
+    dependsOn ':proxy-common:classes'
+    from { rootProject.project(':proxy-common').sourceSets.main.output }
+    archiveFileName="DyClaim-v${version}-Velocity.jar"
+    preserveFileTimestamps=false;reproducibleFileOrder=true
+}

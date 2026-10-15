@@ -14,6 +14,7 @@ public class TeleportManager implements Listener {
     private final DyClaim plugin;
     private final Map<UUID,BukkitTask> pending=new HashMap<>();
     private final Map<UUID,PotionEffect> effects=new HashMap<>();
+    private volatile dev.dyclaim.platform.RegionalTeleportFlow regional;
     public TeleportManager(DyClaim plugin){this.plugin=plugin;}
     public static boolean safe(Location loc) {
         World w=loc.getWorld();if(w==null||loc.getY()<w.getMinHeight()+1||loc.getY()+1>=w.getMaxHeight()||!w.getWorldBorder().isInside(loc))return false;
@@ -34,26 +35,38 @@ public class TeleportManager implements Listener {
         return null;
     }
     public void startTeleport(Player player,ClaimData claim) {
+        if(plugin.getPlatformTasks().isRegionThreaded()){
+            regionalFlow().start(player,claim);return;
+        }
         if(pending.containsKey(player.getUniqueId())){send(player,"tp-already-pending");return;}
-        if(destination(claim)==null){send(player,"tp-unsafe");return;}
+        if(destination(claim.snapshot())==null){send(player,"tp-unsafe");return;}
         UUID uuid=player.getUniqueId(),id=claim.getId();String key=claim.getChunkKey();
         int warmup=plugin.getConfigManager().getTeleportWarmup();
         PotionEffect previous=player.getPotionEffect(PotionEffectType.BLINDNESS);if(previous!=null)effects.put(uuid,previous);
         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS,warmup*20+20,0,false,false));
         player.sendMessage(plugin.getMessageManager().getPrefixed(player,"tp-warmup",Map.of("{seconds}",String.valueOf(warmup))));
-        pending.put(uuid,Bukkit.getScheduler().runTaskLater(plugin,()->{
+        pending.put(uuid,plugin.getPlatformTasks().playerLater(player,()->{
             pending.remove(uuid);restore(player);
             ClaimData current=plugin.getClaimManager().getByKey(key);
             if(!player.isOnline()||!player.hasPermission("dyclaim.teleport")||current==null||!current.getId().equals(id)||!plugin.getAccessManager().allows(player,current,"teleport")){send(player,"operation-changed");return;}
-            Location target=destination(current);if(target==null){send(player,"tp-unsafe");return;}
+            Location target=destination(current.snapshot());if(target==null){send(player,"tp-unsafe");return;}
             if(player.teleport(target))send(player,"tp-success");else send(player,"tp-cancelled");
         },Math.max(1,warmup*20L)));
+    }
+    private dev.dyclaim.platform.RegionalTeleportFlow regionalFlow(){
+        var flow=regional;
+        if(flow==null)synchronized(this){
+            flow=regional;
+            if(flow==null){flow=new dev.dyclaim.platform.RegionalTeleportFlow(plugin,plugin.getPlatformTasks(),this::destination);regional=flow;}
+        }
+        return flow;
     }
     public void startTeleport(Player player,Location ignored){send(player,"tp-unsafe");}
     private void send(Player p,String key){p.sendMessage(plugin.getMessageManager().getPrefixed(p,key));}
     private void restore(Player p){p.removePotionEffect(PotionEffectType.BLINDNESS);PotionEffect previous=effects.remove(p.getUniqueId());if(previous!=null)p.addPotionEffect(previous);}
-    private void cancel(Player p,boolean notify){BukkitTask task=pending.remove(p.getUniqueId());if(task!=null){task.cancel();restore(p);if(notify)send(p,"tp-cancelled");}}
+    private void cancel(Player p,boolean notify){if(regional!=null)regional.cancel(p,notify);BukkitTask task=pending.remove(p.getUniqueId());if(task!=null){task.cancel();restore(p);if(notify)send(p,"tp-cancelled");}}
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void move(PlayerMoveEvent e){if(e.getTo()!=null&&(e.getFrom().getWorld()!=e.getTo().getWorld()||e.getFrom().getBlockX()!=e.getTo().getBlockX()||e.getFrom().getBlockY()!=e.getTo().getBlockY()||e.getFrom().getBlockZ()!=e.getTo().getBlockZ()))cancel(e.getPlayer(),true);}
     @EventHandler public void quit(PlayerQuitEvent e){cancel(e.getPlayer(),false);}
-    public void close(){for(UUID uuid:new HashSet<>(pending.keySet())){Player p=Bukkit.getPlayer(uuid);if(p!=null)cancel(p,false);else pending.remove(uuid).cancel();}}
+    @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void teleport(PlayerTeleportEvent e){if(regional!=null&&regional.expectedTransfer(e.getPlayer(),e.getTo()))return;move(e);}
+    public void close(){if(regional!=null){if(plugin.isEnabled())regional.reset();else regional.close();}for(UUID uuid:new HashSet<>(pending.keySet())){Player p=Bukkit.getPlayer(uuid);if(p!=null)cancel(p,false);else pending.remove(uuid).cancel();}}
 }

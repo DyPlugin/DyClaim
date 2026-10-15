@@ -18,19 +18,20 @@ import java.util.Map;
 public class MessageManager {
 
     private final DyClaim plugin;
-    private final Map<String, String> messagesEn = new HashMap<>();
-    private final Map<String, String> messagesTr = new HashMap<>();
+    private record Catalog(Map<String,String> en,Map<String,String> tr) {}
+    private volatile Catalog catalog=new Catalog(Map.of(),Map.of());
 
     public MessageManager(DyClaim plugin) {
         this.plugin = plugin;
         reload();
     }
 
-    public void reload() {
-        messagesEn.clear();
-        messagesTr.clear();
-        loadLanguage("en", messagesEn);
-        loadLanguage("tr", messagesTr);
+    public synchronized void reload() {
+        Map<String,String> en=new HashMap<>(),tr=new HashMap<>();
+        loadLanguage("en", en);
+        loadLanguage("tr", tr);
+        // Publish both complete languages together; readers retain the previous catalog during I/O.
+        catalog=new Catalog(Map.copyOf(en),Map.copyOf(tr));
     }
 
     public String getMessage(String key) {
@@ -181,12 +182,13 @@ public class MessageManager {
     }
 
     private String getMessageInternal(String lang, String key) {
-        Map<String, String> selected = lang.equals("tr") ? messagesTr : messagesEn;
+        Catalog view=catalog;
+        Map<String, String> selected = lang.equals("tr") ? view.tr() : view.en();
         String value = selected.get(key);
         if (value != null) {
             return value;
         }
-        String fallback = messagesEn.get(key);
+        String fallback = view.en().get(key);
         return fallback != null ? fallback : "&cMessage not found: " + key;
     }
 
