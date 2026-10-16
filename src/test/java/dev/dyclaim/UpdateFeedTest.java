@@ -34,7 +34,7 @@ class UpdateFeedTest {
                 version("Middle","1.0.1","listed","release","26.2","spigot")+"]";
         var release=UpdateFeed.select(json,"26.2","1.0.0-Beta");
         assertEquals("v1.0.2",release.version());assertTrue(release.url().endsWith("/New"));
-        assertEquals("DyClaim-v1.0.2",UpdateChecker.displayVersion(release.version()));
+        assertEquals("DyClaim-1.0.2",UpdateChecker.displayVersion(release.version()));
     }
     @Test void ignoresUnpublishedPrereleaseAndIncompatibleEntries() {
         String json="["+version("A","1.0.9","draft","release","26.2","paper")+","+

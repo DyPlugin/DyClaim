@@ -46,6 +46,14 @@ public class ClaimProtectionListener implements Listener {
     public ClaimProtectionListener(DyClaim plugin) {
         this.plugin = plugin;
     }
+    private ClaimData claimAt(Location location){
+        if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
+        return plugin.getClaimManager().getClaimAt(location.getChunk());
+    }
+    private ClaimData claimAt(org.bukkit.block.Block block){
+        if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(block.getWorld().getName(),block.getX()>>4,block.getZ()>>4);
+        return plugin.getClaimManager().getClaimAt(block.getChunk());
+    }
 
     private static boolean isProtectedInteraction(String typeName) {
         for (String keyword : PROTECTED_INTERACTION_KEYWORDS) {
@@ -59,8 +67,7 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = event.getBlock().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getBlock());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "build"))
@@ -74,7 +81,7 @@ public class ClaimProtectionListener implements Listener {
         Player player = event.getPlayer();
         if (event instanceof BlockMultiPlaceEvent multiple) {
             for (BlockState state : multiple.getReplacedBlockStates()) {
-                ClaimData part = plugin.getClaimManager().getClaimAt(state.getBlock().getChunk());
+                ClaimData part = claimAt(state.getBlock());
                 if (!plugin.getAccessManager().allows(player, part, "build")) {
                     event.setCancelled(true);
                     player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-block-place"));
@@ -82,8 +89,7 @@ public class ClaimProtectionListener implements Listener {
                 }
             }
         }
-        Chunk chunk = event.getBlock().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getBlock());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "build"))
@@ -100,8 +106,7 @@ public class ClaimProtectionListener implements Listener {
             return;
 
         Player player = event.getPlayer();
-        Chunk chunk = event.getClickedBlock().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getClickedBlock());
         if (claim == null)
             return;
         String typeName = event.getClickedBlock().getType().name();
@@ -135,7 +140,7 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void signChange(SignChangeEvent event) {
-        ClaimData claim=plugin.getClaimManager().getClaimAt(event.getBlock().getChunk());
+        ClaimData claim=claimAt(event.getBlock());
         if(!plugin.getAccessManager().allows(event.getPlayer(),claim,"build"))event.setCancelled(true);
     }
 
@@ -145,7 +150,7 @@ public class ClaimProtectionListener implements Listener {
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
             Block block = iterator.next();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(block.getChunk());
+            ClaimData claim = claimAt(block);
             if (claim != null && !plugin.getAccessManager().enabled(claim, mob?"mob-explosions":"explosions")) {
                 iterator.remove();
             }
@@ -157,7 +162,7 @@ public class ClaimProtectionListener implements Listener {
         Iterator<Block> iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
             Block block = iterator.next();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(block.getChunk());
+            ClaimData claim = claimAt(block);
             if (claim != null && !plugin.getAccessManager().enabled(claim, "explosions")) {
                 iterator.remove();
             }
@@ -172,28 +177,17 @@ public class ClaimProtectionListener implements Listener {
         if (attacker == null) {
             if(event.getDamager() instanceof Projectile projectile
                     &&projectile.getShooter() instanceof org.bukkit.projectiles.BlockProjectileSource source) {
-                ClaimData target=plugin.getClaimManager().getClaimAt(victim.getLocation().getChunk());
-                ClaimData origin=plugin.getClaimManager().getClaimAt(source.getBlock().getChunk());
+                ClaimData target=claimAt(victim.getLocation());
+                ClaimData origin=claimAt(source.getBlock());
                 if((target!=null&&!plugin.getAccessManager().enabled(target,"pvp"))
                         ||(origin!=null&&!plugin.getAccessManager().enabled(origin,"pvp")))event.setCancelled(true);
             }
             return;
         }
 
-        Chunk victimChunk = victim.getLocation().getChunk();
-        Chunk attackerChunk = attacker.getLocation().getChunk();
-        ClaimData victimClaim = plugin.getClaimManager().getClaimAt(victimChunk);
-        ClaimData attackerClaim = plugin.getClaimManager().getClaimAt(attackerChunk);
-
-        boolean blocked = false;
-        if (victimClaim != null && !plugin.getAccessManager().enabled(victimClaim, "pvp"))
-            blocked = true;
-        if (attackerClaim != null && !plugin.getAccessManager().enabled(attackerClaim, "pvp"))
-            blocked = true;
-
-        if (blocked && !plugin.getAccessManager().bypass(attacker)) {
+        if (blocksPvp(attacker,victim)) {
             event.setCancelled(true);
-            attacker.sendMessage(plugin.getMessageManager().getPrefixed(attacker, "protection-pvp"));
+            notifyPlayer(attacker,"protection-pvp");
         }
     }
 
@@ -218,8 +212,7 @@ public class ClaimProtectionListener implements Listener {
         }
         if (!(event.getEntity() instanceof Enemy))
             return;
-        Chunk chunk = event.getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getLocation());
         if (claim != null && !plugin.getAccessManager().enabled(claim, "mob-spawning")) {
             event.setCancelled(true);
         }
@@ -228,8 +221,7 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBucketEmpty(PlayerBucketEmptyEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = event.getBlock().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getBlock());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "build"))
@@ -241,8 +233,7 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBucketFill(PlayerBucketFillEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = event.getBlock().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getBlock());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "build"))
@@ -263,8 +254,7 @@ public class ClaimProtectionListener implements Listener {
             player = p;
         if (player == null)
             return;
-        Chunk chunk = event.getEntity().getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getEntity().getLocation());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "entities"))
@@ -276,7 +266,7 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void hangingExplosion(HangingBreakEvent event) {
         if(event.getCause()!=HangingBreakEvent.RemoveCause.EXPLOSION)return;
-        ClaimData claim=plugin.getClaimManager().getClaimAt(event.getEntity().getLocation().getChunk());
+        ClaimData claim=claimAt(event.getEntity().getLocation());
         if(claim==null)return;
         String setting=event instanceof HangingBreakByEntityEvent byEntity
                 &&isMobExplosion(byEntity.getRemover())
@@ -291,7 +281,7 @@ public class ClaimProtectionListener implements Listener {
         Entity entity=event.getEntity();
         if(!(entity instanceof Hanging||entity instanceof ArmorStand||entity instanceof Animals
                 ||entity instanceof Villager||entity instanceof Vehicle))return;
-        ClaimData claim=plugin.getClaimManager().getClaimAt(entity.getLocation().getChunk());
+        ClaimData claim=claimAt(entity.getLocation());
         if(claim==null)return;
         String setting=event instanceof EntityDamageByEntityEvent byEntity
                 &&isMobExplosion(byEntity.getDamager())
@@ -311,8 +301,7 @@ public class ClaimProtectionListener implements Listener {
         Player player = event.getPlayer();
         if (player == null)
             return;
-        Chunk chunk = event.getEntity().getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getEntity().getLocation());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "entities"))
@@ -324,10 +313,10 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-pistons"))return;
-        ClaimData piston=plugin.getClaimManager().getClaimAt(event.getBlock().getChunk());
-        if(crosses(piston,plugin.getClaimManager().getClaimAt(event.getBlock().getRelative(event.getDirection()).getChunk()))){event.setCancelled(true);return;}
+        ClaimData piston=claimAt(event.getBlock());
+        if(crosses(piston,claimAt(event.getBlock().getRelative(event.getDirection())))){event.setCancelled(true);return;}
         for (Block block : event.getBlocks()) {
-            ClaimData source=plugin.getClaimManager().getClaimAt(block.getChunk()),destination=plugin.getClaimManager().getClaimAt(block.getRelative(event.getDirection()).getChunk());
+            ClaimData source=claimAt(block),destination=claimAt(block.getRelative(event.getDirection()));
             if(crosses(piston,source)||crosses(source,destination)||crosses(piston,destination)){event.setCancelled(true);return;}
         }
     }
@@ -335,9 +324,9 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-pistons"))return;
-        ClaimData piston=plugin.getClaimManager().getClaimAt(event.getBlock().getChunk());
+        ClaimData piston=claimAt(event.getBlock());
         for (Block block : event.getBlocks()) {
-            ClaimData source=plugin.getClaimManager().getClaimAt(block.getChunk());
+            ClaimData source=claimAt(block);
             if(crosses(piston,source)){event.setCancelled(true);return;}
         }
     }
@@ -346,8 +335,7 @@ public class ClaimProtectionListener implements Listener {
     public void onBlockSpread(BlockSpreadEvent event) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire"))return;
         if (event.getSource().getType().name().contains("FIRE")) {
-            Chunk chunk = event.getBlock().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+            ClaimData claim = claimAt(event.getBlock());
             if (claim != null) {
                 event.setCancelled(true);
             }
@@ -359,15 +347,13 @@ public class ClaimProtectionListener implements Listener {
         if (event.getCause() == BlockIgniteEvent.IgniteCause.SPREAD
                 || event.getCause() == BlockIgniteEvent.IgniteCause.LAVA
                 || event.getCause() == BlockIgniteEvent.IgniteCause.LIGHTNING) {
-            Chunk chunk = event.getBlock().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+            ClaimData claim = claimAt(event.getBlock());
             if (claim != null && plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire")) {
                 event.setCancelled(true);
             }
         }
         if (event.getPlayer() != null) {
-            Chunk chunk = event.getBlock().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+            ClaimData claim = claimAt(event.getBlock());
             if (claim == null)
                 return;
             if (plugin.getAccessManager().allows(event.getPlayer(), claim, "build"))
@@ -380,13 +366,16 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockFromTo(BlockFromToEvent event) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fluid"))return;
-        Chunk fromChunk = event.getBlock().getChunk();
-        Chunk toChunk = event.getToBlock().getChunk();
-        if (fromChunk.equals(toChunk))
-            return;
-
-        ClaimData toClaim = plugin.getClaimManager().getClaimAt(toChunk);
-        ClaimData fromClaim = plugin.getClaimManager().getClaimAt(fromChunk);
+        ClaimData fromClaim,toClaim;
+        if(plugin.getPlatformTasks().isRegionThreaded()){
+            var from=event.getBlock();var to=event.getToBlock();
+            if(from.getWorld()==to.getWorld()&&(from.getX()>>4)==(to.getX()>>4)&&(from.getZ()>>4)==(to.getZ()>>4))return;
+            fromClaim=claimAt(from);toClaim=claimAt(to);
+        }else{
+            Chunk fromChunk=event.getBlock().getChunk(),toChunk=event.getToBlock().getChunk();
+            if(fromChunk.equals(toChunk))return;
+            fromClaim=plugin.getClaimManager().getClaimAt(fromChunk);toClaim=plugin.getClaimManager().getClaimAt(toChunk);
+        }
         if (crosses(fromClaim,toClaim)) {
             event.setCancelled(true);
         }
@@ -394,8 +383,7 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityChangeBlock(EntityChangeBlockEvent event) {
-        Chunk chunk = event.getBlock().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getBlock());
         if (claim == null)
             return;
 
@@ -406,7 +394,7 @@ public class ClaimProtectionListener implements Listener {
             event.setCancelled(true);
         }
         if (entity instanceof Player player) {
-            if (!plugin.getClaimManager().isAllowed(player, chunk)) {
+            if (!plugin.getAccessManager().allows(player, claim, "build")) {
                 event.setCancelled(true);
             }
         }
@@ -416,8 +404,7 @@ public class ClaimProtectionListener implements Listener {
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
-        Chunk chunk = entity.getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(entity.getLocation());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "entities"))
@@ -435,28 +422,27 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void leash(PlayerLeashEntityEvent event) {
-        ClaimData claim=plugin.getClaimManager().getClaimAt(event.getEntity().getLocation().getChunk());
+        ClaimData claim=claimAt(event.getEntity().getLocation());
         if(!plugin.getAccessManager().allows(event.getPlayer(),claim,"entities"))event.setCancelled(true);
     }
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void unleash(PlayerUnleashEntityEvent event) {
-        ClaimData claim=plugin.getClaimManager().getClaimAt(event.getEntity().getLocation().getChunk());
+        ClaimData claim=claimAt(event.getEntity().getLocation());
         if(!plugin.getAccessManager().allows(event.getPlayer(),claim,"entities"))event.setCancelled(true);
     }
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void vehicleEnter(VehicleEnterEvent event) {
         if(!(event.getEntered() instanceof Player player))return;
-        ClaimData claim=plugin.getClaimManager().getClaimAt(event.getVehicle().getLocation().getChunk());
+        ClaimData claim=claimAt(event.getVehicle().getLocation());
         if(!plugin.getAccessManager().allows(player,claim,"entities"))event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
         Player player = event.getPlayer();
-        Chunk chunk = event.getRightClicked().getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getRightClicked().getLocation());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "entities"))
@@ -469,8 +455,7 @@ public class ClaimProtectionListener implements Listener {
     public void onVehicleDestroy(VehicleDestroyEvent event) {
         Player player = getPlayerAttacker(event.getAttacker());
         if (player == null) return;
-        Chunk chunk = event.getVehicle().getLocation().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+        ClaimData claim = claimAt(event.getVehicle().getLocation());
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(player, claim, "entities"))
@@ -485,8 +470,10 @@ public class ClaimProtectionListener implements Listener {
             return;
         if (event.getTo() == null)
             return;
-        Chunk toChunk = event.getTo().getChunk();
-        ClaimData claim = plugin.getClaimManager().getClaimAt(toChunk);
+        Location destination=event.getTo();
+        ClaimData claim = plugin.getPlatformTasks().isRegionThreaded()
+                ?plugin.getClaimManager().getClaimAt(destination.getWorld().getName(),destination.getBlockX()>>4,destination.getBlockZ()>>4)
+                :claimAt(destination);
         if (claim == null)
             return;
         if (plugin.getAccessManager().allows(event.getPlayer(), claim, "build"))
@@ -503,13 +490,13 @@ public class ClaimProtectionListener implements Listener {
         if((entity instanceof Hanging||entity instanceof ArmorStand||entity instanceof Animals
                 ||entity instanceof Villager||entity instanceof Vehicle)&&event.getDamager() instanceof Projectile projectile
                 &&projectile.getShooter() instanceof org.bukkit.projectiles.BlockProjectileSource source) {
-            ClaimData target=plugin.getClaimManager().getClaimAt(entity.getLocation().getChunk());
-            ClaimData origin=plugin.getClaimManager().getClaimAt(source.getBlock().getChunk());
+            ClaimData target=claimAt(entity.getLocation());
+            ClaimData origin=claimAt(source.getBlock());
             if(target!=null&&crosses(origin,target)){event.setCancelled(true);return;}
         }
         if(entity instanceof Villager) {
             Player attacker=getPlayerAttacker(event.getDamager());
-            ClaimData claim=plugin.getClaimManager().getClaimAt(entity.getLocation().getChunk());
+            ClaimData claim=claimAt(entity.getLocation());
             if(attacker!=null&&claim!=null&&!plugin.getAccessManager().bypass(attacker)
                     &&(!plugin.getAccessManager().enabled(claim,"villager-player-damage")||!plugin.getAccessManager().allows(attacker,claim,"entities"))) {
                 event.setCancelled(true);attacker.sendMessage(plugin.getMessageManager().getPrefixed(attacker,"protection-villager"));
@@ -524,8 +511,7 @@ public class ClaimProtectionListener implements Listener {
             if (attacker == null)
                 return;
 
-            Chunk chunk = entity.getLocation().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+            ClaimData claim = claimAt(entity.getLocation());
             if (claim == null)
                 return;
             if (plugin.getAccessManager().allows(attacker, claim, "entities"))
@@ -544,15 +530,14 @@ public class ClaimProtectionListener implements Listener {
 
         String typeName = event.getClickedBlock().getType().name();
         if(typeName.contains("PRESSURE")) {
-            ClaimData claim=plugin.getClaimManager().getClaimAt(event.getClickedBlock().getChunk());
+            ClaimData claim=claimAt(event.getClickedBlock());
             if(!plugin.getAccessManager().allows(event.getPlayer(),claim,"redstone"))event.setCancelled(true);
             return;
         }
         if (typeName.contains("FARMLAND") || typeName.contains("TURTLE_EGG")) {
             if(typeName.contains("FARMLAND")&&!plugin.getConfigManager().values().getBoolean("protection.farmland.protect-from-visitors"))return;
             Player player = event.getPlayer();
-            Chunk chunk = event.getClickedBlock().getChunk();
-            ClaimData claim = plugin.getClaimManager().getClaimAt(chunk);
+            ClaimData claim = claimAt(event.getClickedBlock());
             if (claim == null)
                 return;
             if (plugin.getAccessManager().allows(player, claim, "build"))
@@ -569,28 +554,33 @@ public class ClaimProtectionListener implements Listener {
     public void dispense(BlockDispenseEvent event) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-dispensers",true))return;
         if(!(event.getBlock().getBlockData() instanceof Directional facing))return;
-        ClaimData source=plugin.getClaimManager().getClaimAt(event.getBlock().getChunk());
-        ClaimData destination=plugin.getClaimManager().getClaimAt(event.getBlock().getRelative(facing.getFacing()).getChunk());
+        ClaimData source=claimAt(event.getBlock());
+        ClaimData destination=claimAt(event.getBlock().getRelative(facing.getFacing()));
         if(crosses(source,destination))event.setCancelled(true);
     }
-    private void filterGrowth(Chunk source,Player player,java.util.List<BlockState> blocks) {
+    private void filterGrowth(ClaimData from,Player player,java.util.List<BlockState> blocks) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-growth",true))return;
-        ClaimData from=plugin.getClaimManager().getClaimAt(source);
         blocks.removeIf(state->{
-            ClaimData to=plugin.getClaimManager().getClaimAt(state.getBlock().getChunk());
+            ClaimData to=claimAt(state.getBlock());
             return to!=null&&(player!=null?!plugin.getAccessManager().allows(player,to,"build"):crosses(from,to));
         });
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
-    public void structureGrow(StructureGrowEvent event) { filterGrowth(event.getLocation().getChunk(),event.getPlayer(),event.getBlocks()); }
+    public void structureGrow(StructureGrowEvent event) { filterGrowth(claimAt(event.getLocation()),event.getPlayer(),event.getBlocks()); }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
-    public void fertilize(BlockFertilizeEvent event) { filterGrowth(event.getBlock().getChunk(),event.getPlayer(),event.getBlocks()); }
+    public void fertilize(BlockFertilizeEvent event) { filterGrowth(claimAt(event.getBlock()),event.getPlayer(),event.getBlocks()); }
     private boolean blocksPvp(Player attacker, Player victim) {
+        if(!plugin.getAccessManager().actorKnown(attacker)||!plugin.getAccessManager().actorKnown(victim))return true;
         if(plugin.getAccessManager().bypass(attacker))return false;
-        ClaimData from=plugin.getClaimManager().getClaimAt(attacker.getLocation().getChunk());
-        ClaimData to=plugin.getClaimManager().getClaimAt(victim.getLocation().getChunk());
+        ClaimData from=plugin.getAccessManager().actorClaim(attacker);
+        ClaimData to=plugin.getAccessManager().actorClaim(victim);
         return (from!=null&&!plugin.getAccessManager().enabled(from,"pvp"))
                 ||(to!=null&&!plugin.getAccessManager().enabled(to,"pvp"));
+    }
+    private void notifyPlayer(Player player,String key){
+        Runnable message=()->{if(player.isOnline())player.sendMessage(plugin.getMessageManager().getPrefixed(player,key));};
+        var tasks=plugin.getPlatformTasks();
+        if(tasks.isRegionThreaded()&&!tasks.ownsEntity(player))tasks.playerLater(player,message,1);else message.run();
     }
     private boolean harmful(java.util.Collection<org.bukkit.potion.PotionEffect> effects) {
         Set<String> harmful=Set.of("HARM","INSTANT_DAMAGE","POISON","WITHER","SLOW","SLOWNESS",
@@ -614,7 +604,7 @@ public class ClaimProtectionListener implements Listener {
         if(!harmful(effects))return;
         event.getAffectedEntities().removeIf(entity->entity instanceof Player victim&&attacker!=victim&&blocksPvp(attacker,victim));
     }
-    private ClaimData inventoryClaim(Inventory inventory){Location loc=inventory.getLocation();return loc==null?null:plugin.getClaimManager().getClaimAt(loc.getChunk());}
+    private ClaimData inventoryClaim(Inventory inventory){Location loc=inventory.getLocation();return loc==null?null:claimAt(loc);}
     private java.util.List<Inventory> inventoryParts(Inventory inventory) {
         if(inventory instanceof DoubleChestInventory chest)return java.util.List.of(chest.getLeftSide(),chest.getRightSide());
         return java.util.List.of(inventory);
@@ -633,17 +623,17 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void hopperPickup(InventoryPickupItemEvent event) {
         if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-hoppers"))return;
         for(Inventory part:inventoryParts(event.getInventory()))
-            if(crosses(inventoryClaim(part),plugin.getClaimManager().getClaimAt(event.getItem().getLocation().getChunk()))){event.setCancelled(true);return;}
+            if(crosses(inventoryClaim(part),claimAt(event.getItem().getLocation()))){event.setCancelled(true);return;}
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void burn(BlockBurnEvent event){
-        if(plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire")&&plugin.getClaimManager().getClaimAt(event.getBlock().getChunk())!=null)event.setCancelled(true);
+        if(plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire")&&claimAt(event.getBlock())!=null)event.setCancelled(true);
     }
     @EventHandler(priority=EventPriority.HIGH) public void redstone(BlockRedstoneEvent event){
         if(event.getNewCurrent()<=event.getOldCurrent()||!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-redstone-effects"))return;
-        ClaimData target=plugin.getClaimManager().getClaimAt(event.getBlock().getChunk());if(target==null)return;
+        ClaimData target=claimAt(event.getBlock());if(target==null)return;
         for(org.bukkit.block.BlockFace face:java.util.List.of(org.bukkit.block.BlockFace.NORTH,org.bukkit.block.BlockFace.SOUTH,org.bukkit.block.BlockFace.EAST,org.bukkit.block.BlockFace.WEST,org.bukkit.block.BlockFace.UP,org.bukkit.block.BlockFace.DOWN)) {
             Block neighbor=event.getBlock().getRelative(face);
-            if(neighbor.getBlockPower()>0&&crosses(plugin.getClaimManager().getClaimAt(neighbor.getChunk()),target)){event.setNewCurrent(event.getOldCurrent());return;}
+            if(neighbor.getBlockPower()>0&&crosses(claimAt(neighbor),target)){event.setNewCurrent(event.getOldCurrent());return;}
         }
     }
 }

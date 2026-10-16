@@ -4,11 +4,22 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.2** improves command organization, console administration, localized TAB suggestions, protection and failure recovery while preserving existing command aliases and claim data.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.3** adds joined claim outlines, filtered claim lists, a clearer personal access summary, a short administrator diagnostic command and a separate Folia build. Existing command aliases, English/Turkish selection and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
 [Modrinth](https://modrinth.com/plugin/dyclaim) · [GitHub](https://github.com/DyPlugin/DyClaim)
+
+## Downloads and installation
+
+| Your server | File |
+|---|---|
+| Bukkit, Spigot, Paper or Purpur | `DyClaim-1.0.3.jar` |
+| Folia | `DyClaim-1.0.3-Folia.jar` |
+
+Install **one** backend JAR per server. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder. Both builds use the same schema-2 claim data and EN/TR commands. There are no proxy companions in this release.
+
+[Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md)
 
 ## A measured look at protection
 
@@ -110,9 +121,9 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim name <name>` | Name the current claim |
 | `/claim setspawn` | Save a safe spawn inside the claim |
 | `/claim tp <number\|name>` | Teleport to a claim from your list |
-| `/claim list [page]` | View a paginated claim list |
+| `/claim list [page]` | View a paginated claim list; optional name/world/sale filters |
 | `/claim info` | Inspect the current claim |
-| `/claim see` | Display chunk borders |
+| `/claim see` | Display the nearby outer outline of connected claims |
 | `/claim pvp`, `/claim mob`, `/claim villager` | Toggle the corresponding unlocked setting |
 | `/claim explosion [mob]` | Toggle ordinary explosions, or select `mob` for mob explosions |
 | `/claim doors`, `/claim trapdoors` | Toggle visitor access |
@@ -156,13 +167,17 @@ Inactive cleanup removes claim records, not world blocks. Deletion and bulk oper
 | `dyclaim.admin.purge.exempt` | OP | Exemption from inactive cleanup |
 | `dyclaim.warn.exempt` | OP | Exemption from visitor-warning sanctions |
 
+`/claim admin diagnose` works in console and for permitted administrators. It reports version, backend, storage, economy and installed integrations without secrets or filesystem paths. Turkish alias: `/claim admin tanı` (ASCII `tani` also works). Installed integrations are not a compatibility certification.
+
 Individual player permissions are available for `claim`, `sell`, `see`, `info`, `list`, `trust`, `teleport`, `settings`, `coowner`, `transfer`, `market`, `auto`, `name`, `setspawn` and `warn`, prefixed with `dyclaim.`. They default to everyone; configuration can still disable a feature. See [plugin.yml](src/main/resources/plugin.yml) for the complete permission definition.
 
 ## Compatibility
 
 The plugin compiles to **Java 17 bytecode**. Run the Java version required by your server; Java 17 is not the runtime requirement for every Minecraft version.
 
-| Tested server | Tested Java |
+Current 1.0.3 automation and isolated-server checks are documented in [1.0.3 verification](docs/verification-1.0.3.md). The following table is historical evidence from earlier releases.
+
+| Previously tested server | Tested Java |
 |---|---|
 | Purpur 1.20.4, build 2176 | Java 21 |
 | Paper 26.2, build 129 | Java 25 |
@@ -189,7 +204,7 @@ No integration is required for core claiming. Installed protection hooks are det
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-v1.0.2.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-1.0.3.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
 3. Edit `config.yml` and, if desired, the English/Turkish message files.
 4. Run `/claim admin reload` as a permitted player, or `claim admin reload` in the server console.
@@ -201,6 +216,8 @@ Marketplace, auto claim, warnings, mob cleanup, scheduled purge and clan integra
 DyClaim periodically checks Modrinth for the newest compatible public stable release and notifies administrators with a direct version link. Checks run every six hours by default, failed requests retry after ten minutes, and repeated notices are avoided within a login session. Settings apply on reload. See [update checking](docs/update-checking.md).
 
 Existing v1.0.0 claim data remains compatible. Missing configuration options are added without overwriting existing settings. Back up your JAR and complete DyClaim data folder before upgrading.
+
+Version 1.0.3 keeps schema 2 and the existing configuration/message merge behavior. Its checks are recorded separately in [1.0.3 verification](docs/verification-1.0.3.md).
 
 **Beta and original v1.0.0 users must update manually once.** Their installed update-checker defect cannot be repaired remotely. The checker uses Modrinth releases; publishing a GitHub release alone does not trigger Modrinth notifications. No automatic JAR replacement is performed.
 
@@ -219,7 +236,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-The build output is `build/libs/DyClaim-v1.0.2.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.0.3.jar` and `build/libs/DyClaim-1.0.3-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under [GNU GPL v3](LICENSE).
 

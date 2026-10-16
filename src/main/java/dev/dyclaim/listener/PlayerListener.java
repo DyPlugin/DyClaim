@@ -19,12 +19,17 @@ public class PlayerListener implements Listener {
 
     public PlayerListener(DyClaim plugin) {
         this.plugin = plugin;
+        if(plugin.getPlatformTasks().isRegionThreaded())for(Player player:org.bukkit.Bukkit.getOnlinePlayers())plugin.getPlatformTasks().playerLater(player,()->plugin.getAccessManager().watchActor(player),1);
     }
+    @EventHandler public void onJoin(org.bukkit.event.player.PlayerJoinEvent event){plugin.getAccessManager().watchActor(event.getPlayer());}
+    @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true)
+    public void onActorTeleport(org.bukkit.event.player.PlayerTeleportEvent event){if(event.getTo()!=null)plugin.getAccessManager().recordActor(event.getPlayer(),event.getTo());}
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent event) {
         if (event.getTo() == null)
             return;
+        if(plugin.getPlatformTasks().isRegionThreaded())plugin.getAccessManager().recordActor(event.getPlayer(),event.getTo());
 
         int fromCX = event.getFrom().getBlockX() >> 4;
         int fromCZ = event.getFrom().getBlockZ() >> 4;

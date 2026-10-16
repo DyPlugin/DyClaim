@@ -13,7 +13,7 @@ public class ClaimCommand implements CommandExecutor,TabCompleter {
     private final DyClaim plugin;
     public ClaimCommand(DyClaim plugin){this.plugin=plugin;}
     private void send(CommandSender p,String key){p.sendMessage(plugin.getMessageManager().getPrefixed(p,key));}
-    private static final Set<String> CONSOLE_ADMIN=Set.of("enable","disable","price","fiyat","pricediff","farkver","cooldown","prefix","economy","ekonomi","lang","dil","blacklist","karaliste","reload","yenile","help","yardim","yardım");
+    private static final Set<String> CONSOLE_ADMIN=Set.of("enable","disable","price","fiyat","pricediff","farkver","cooldown","prefix","economy","ekonomi","lang","dil","blacklist","karaliste","reload","yenile","diagnose","tani","tanı","help","yardim","yardım");
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args) {
         args=dev.dyclaim.util.CommandWords.normalize(args);
         try {
@@ -49,6 +49,7 @@ public class ClaimCommand implements CommandExecutor,TabCompleter {
         if(!(p instanceof Player)&&!CONSOLE_ADMIN.contains(args[1].toLowerCase(Locale.ROOT))){send(p,"player-only");return;}
         var cfg=plugin.getConfigManager();
         switch(args[1].toLowerCase(Locale.ROOT)) {
+            case "diagnose","tani","tanı" -> {if(args.length!=2){send(p,"invalid-input");return;}dev.dyclaim.manager.Diagnostics.send(plugin,p);}
             case "enable","ac","aç" -> {cfg.setAllowClaiming(true);send(p,"admin-claiming-enabled");}
             case "disable","kapat" -> {cfg.setAllowClaiming(false);send(p,"admin-claiming-disabled");}
             case "price","fiyat" -> {
@@ -87,7 +88,8 @@ public class ClaimCommand implements CommandExecutor,TabCompleter {
     private void help(CommandSender p,boolean admin) {
         MessageManager msg=plugin.getMessageManager();String root=admin?"admin-help-":"help-";
         p.sendMessage(msg.getMessage(p,root+"header",Map.of("{prefix}",msg.getPrefix())));
-        for(String suffix:admin?List.of("toggle","delete","give","price","cooldown","prefix","economy","pvp","explosion","mob","bulksell","pricediff","lang","blacklist","reload","bypass","ban","unban","purge","transactions"):List.of("claim","sell","unclaim","see","info","list","pvp","explosion","mob","villager","doors","trapdoors","trust","trustperm","untrust","trustlist","coowner-add","coowner-remove","transfer","market-list","market-cancel","market-buy","auto","name","setspawn","tp","warn","lang","confirm","cancel")){
+        for(String suffix:admin?List.of("toggle","delete","give","price","cooldown","prefix","economy","pvp","explosion","mob","bulksell","pricediff","lang","blacklist","reload","diagnose","bypass","ban","unban","purge","transactions"):List.of("claim","sell","unclaim","see","info","list","list-filters","pvp","explosion","mob","villager","doors","trapdoors","trust","trustperm","untrust","trustlist","coowner-add","coowner-remove","transfer","market-list","market-cancel","market-buy","auto","name","setspawn","tp","warn","lang","confirm","cancel")){
+            if(suffix.equals("list-filters")&&!p.hasPermission("dyclaim.list"))continue;
             if(!(p instanceof Player)&&!suffix.equals("toggle")&&!CONSOLE_ADMIN.contains(suffix))continue;
             p.sendMessage(msg.getMessage(p,root+suffix));
         }
@@ -122,7 +124,7 @@ public class ClaimCommand implements CommandExecutor,TabCompleter {
             if(en.equals("admin")) {
                 if(!(sender instanceof Player)&&args.length>2&&!CONSOLE_ADMIN.contains(args[1]))return List.of();
                 if(args.length>2&&!adminLeafAllowed(sender,args[1]))return List.of();
-                if(args.length==2)options.addAll(tr?List.of("aç","kapat","sil","ver","fiyat","bekleme","önek","ekonomi","pvp","patlama","mob","toplusat","farkver","dil","karaliste","yenile","koruma-atla","yasakla","yasakkaldir","temizle","islemler"):List.of("enable","disable","delete","give","price","cooldown","prefix","economy","pvp","explosion","mob","bulksell","pricediff","lang","blacklist","reload","bypass","ban","unban","purge","transactions"));
+                if(args.length==2)options.addAll(tr?List.of("aç","kapat","sil","ver","fiyat","bekleme","önek","ekonomi","pvp","patlama","mob","toplusat","farkver","dil","karaliste","yenile","tanı","koruma-atla","yasakla","yasakkaldir","temizle","islemler"):List.of("enable","disable","delete","give","price","cooldown","prefix","economy","pvp","explosion","mob","bulksell","pricediff","lang","blacklist","reload","diagnose","bypass","ban","unban","purge","transactions"));
                 else if(args.length==3){switch(args[1]){case "give","ver","delete","sil","ban","yasakla","unban","yasakkaldir","bulksell","toplusat"->Bukkit.getOnlinePlayers().forEach(p->options.add(p.getName()));case "lang","dil"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"auto","en","tr"));case "blacklist","karaliste"->options.addAll(tr?List.of("ekle","çıkar"):dev.dyclaim.util.CommandWords.choices(tr,"add","remove"));case "pvp","explosion","patlama","mob","economy","ekonomi","bypass","koruma-atla"->options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"on","off"));default->{}}}
                 else if(args.length==4){if(Set.of("delete","sil","pvp","explosion","patlama","mob").contains(args[1]))options.add(tr?"tümü":"all");if(Set.of("blacklist","karaliste").contains(args[1]))Bukkit.getWorlds().forEach(w->options.add(w.getName()));if(Set.of("ban","yasakla").contains(args[1]))options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"30m","2h","7d","permanent"));}
                 if(args.length==2)options.removeIf(word->!adminLeafAllowed(sender,word));
@@ -131,6 +133,7 @@ public class ClaimCommand implements CommandExecutor,TabCompleter {
             else if(args.length==3){if(en.equals("coowner")&&args[1].equals("add"))Bukkit.getOnlinePlayers().forEach(p->options.add(p.getName()));if(en.equals("trust"))options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"30m","2h","7d","permanent"));if(Set.of("trust","trustperm").contains(en))options.addAll(dev.dyclaim.model.TrustGrant.RIGHTS.stream().map(word->dev.dyclaim.util.CommandWords.display(word,tr)).toList());}
             else if(args.length==4&&Set.of("trust","trustperm").contains(en)&&dev.dyclaim.model.TrustGrant.RIGHTS.contains(args[2]))options.addAll(dev.dyclaim.util.CommandWords.choices(tr,"allow","deny"));
             if(args.length==2&&en.equals("explosion"))options.add("mob");
+            if(en.equals("list")&&sender instanceof Player p)options.addAll(dev.dyclaim.util.ClaimListQuery.suggestions(args,tr,plugin.getClaimManager().getPlayerClaims(p.getUniqueId())));
         }
 
         return options.stream().filter(s->dev.dyclaim.util.CommandWords.startsWith(s,input)).sorted().toList();

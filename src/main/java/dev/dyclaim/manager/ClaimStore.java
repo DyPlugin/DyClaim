@@ -38,8 +38,11 @@ public final class ClaimStore {
         return claims;
     }
     public void save(Map<String, ClaimData> claims) throws IOException {
-        validate(claims);
-        AtomicJson.write(file, Map.of("schemaVersion", VERSION, "claims", claims));
+        if(claims==null)throw new IOException("Missing claims map");
+        Map<String,ClaimData> snapshot=new LinkedHashMap<>();
+        claims.forEach((key,claim)->snapshot.put(key,claim==null?null:claim.snapshot()));
+        validate(snapshot);
+        AtomicJson.write(file, Map.of("schemaVersion", VERSION, "claims", snapshot));
     }
     public static void validate(Map<String, ClaimData> claims) throws IOException {
         if (claims == null) throw new IOException("Missing claims map");
