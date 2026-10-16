@@ -238,6 +238,7 @@ Linux/macOS:  ./gradlew clean build
 
 Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.0.3.jar` and `build/libs/DyClaim-1.0.3-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
-Licensed under [GNU GPL v3](LICENSE).
+Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
+Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.
 
 
