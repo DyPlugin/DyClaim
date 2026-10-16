@@ -37,7 +37,6 @@ abstract class ManagerFixture {
         Server server=mock(Server.class);when(plugin.getServer()).thenReturn(server);when(server.getPluginManager()).thenReturn(mock(PluginManager.class));
         PluginManager pluginManager=server.getPluginManager();bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
         scheduler=mock(BukkitScheduler.class);when(server.getScheduler()).thenReturn(scheduler);bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);timers=new ArrayList<>();
-        when(plugin.getPlatformTasks()).thenReturn(dev.dyclaim.platform.PlatformTasks.bukkit(plugin));
         when(scheduler.runTaskLater(eq(plugin),any(Runnable.class),anyLong())).thenAnswer(invocation->{timers.add(invocation.getArgument(1));return mock(BukkitTask.class);});
         when(scheduler.runTaskTimer(eq(plugin),any(Runnable.class),anyLong(),anyLong())).thenReturn(mock(BukkitTask.class));
         values=new YamlConfiguration();values.loadFromString(new String(getClass().getResourceAsStream("/config.yml").readAllBytes(),java.nio.charset.StandardCharsets.UTF_8));

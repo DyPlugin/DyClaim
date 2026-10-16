@@ -9,12 +9,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class LifecycleRegressionTest extends ManagerFixture {
-    @Test void administrativeReloadCancelsTeleportWarmupsThroughTheManager() throws Exception {
-        var teleports=mock(TeleportManager.class);var visuals=mock(ChunkVisualizer.class);var feature=mock(FeatureManager.class);
-        field("configManager",config);field("messageManager",plugin.getMessageManager());field("confirmationManager",confirmations);
-        field("chunkVisualizer",visuals);field("featureManager",feature);field("teleportManager",teleports);
-        doCallRealMethod().when(plugin).reload();plugin.reload();verify(teleports).close();verify(visuals).cleanupAll();verify(feature).reloadTasks();
-    }
     private void field(String name,Object value) throws Exception {
         var field=DyClaim.class.getDeclaredField(name);field.setAccessible(true);field.set(plugin,value);
     }

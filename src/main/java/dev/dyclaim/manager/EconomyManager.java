@@ -9,15 +9,9 @@ import java.util.UUID;
 
 public class EconomyManager {
     private final DyClaim plugin;
-    private final ThreadLocal<Boolean> uncertain=ThreadLocal.withInitial(()->false);
-    private final java.util.function.Supplier<Economy> providerLookup;
-    // A method reference to registeredProvider would eagerly link its optional Vault return type.
-    public EconomyManager(DyClaim plugin) { this.plugin=plugin;this.providerLookup=null; }
-    public EconomyManager(DyClaim plugin,java.util.function.Supplier<Economy> providerLookup) { this.plugin=plugin;this.providerLookup=java.util.Objects.requireNonNull(providerLookup); }
+    private boolean uncertain;
+    public EconomyManager(DyClaim plugin) { this.plugin=plugin; }
     private Economy provider() {
-        return providerLookup==null?registeredProvider():providerLookup.get();
-    }
-    private static Economy registeredProvider() {
         if(Bukkit.getPluginManager().getPlugin("Vault")==null)return null;
         var registration=Bukkit.getServicesManager().getRegistration(Economy.class);
         return registration==null ? null : registration.getProvider();
@@ -33,18 +27,18 @@ public class EconomyManager {
     public boolean deposit(OfflinePlayer player,double amount) {return transaction(player,amount,false);}
     public boolean withdraw(UUID uuid,double amount) {return withdraw(Bukkit.getOfflinePlayer(uuid),amount);}
     public boolean deposit(UUID uuid,double amount) {return deposit(Bukkit.getOfflinePlayer(uuid),amount);}
-    public boolean wasUncertain() {return uncertain.get();}
+    public boolean wasUncertain() {return uncertain;}
     private boolean transaction(OfflinePlayer player,double amount,boolean withdraw) {
-        uncertain.remove();
+        uncertain=false;
         if(!Double.isFinite(amount)||amount<0)return false;
         if(amount==0)return true;
         try {
             Economy e=provider();if(e==null)return false;
             EconomyResponse response=withdraw?e.withdrawPlayer(player,amount):e.depositPlayer(player,amount);
-            if(response==null){uncertain.set(true);return false;}
+            if(response==null){uncertain=true;return false;}
             return response.transactionSuccess();
         } catch(Exception|LinkageError ex) {
-            uncertain.set(true);plugin.getLogger().severe("Economy response uncertain: "+ex.getMessage());return false;
+            uncertain=true;plugin.getLogger().severe("Economy response uncertain: "+ex.getMessage());return false;
         }
     }
     public String formatMoney(double amount) {

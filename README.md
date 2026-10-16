@@ -10,19 +10,6 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 [Modrinth](https://modrinth.com/plugin/dyclaim) · [GitHub](https://github.com/DyPlugin/DyClaim)
 
-## Platform builds
-
-Use the standard JAR on Bukkit, Spigot, Paper or Purpur, or the separate **Folia** backend. Optional **Velocity** and **BungeeCord** companions check the connected backend; claims and gameplay commands remain on the game server.
-
-| Platform | Download |
-| --- | --- |
-| Bukkit / Spigot / Paper / Purpur | [DyClaim-v1.0.2.jar](https://github.com/DyPlugin/DyClaim/releases/download/v1.0.2/DyClaim-v1.0.2.jar) |
-| Folia | [DyClaim-v1.0.2-Folia.jar](https://github.com/DyPlugin/DyClaim/releases/download/v1.0.2/DyClaim-v1.0.2-Folia.jar) |
-| Velocity | [DyClaim-v1.0.2-Velocity.jar](https://github.com/DyPlugin/DyClaim/releases/download/v1.0.2/DyClaim-v1.0.2-Velocity.jar) |
-| BungeeCord | [DyClaim-v1.0.2-BungeeCord.jar](https://github.com/DyPlugin/DyClaim/releases/download/v1.0.2/DyClaim-v1.0.2-BungeeCord.jar) |
-
-Install one backend JAR per server. See [platform setup and verification](docs/platforms.md) for Java requirements, proxy permissions, Folia integration limits and the scenarios actually tested.
-
 ## A measured look at protection
 
 ![Processing time for 1,000 block-break checks across four plugins](docs/images/DyClaim-4-plugins-en.png)
@@ -182,7 +169,7 @@ The plugin compiles to **Java 17 bytecode**. Run the Java version required by yo
 | Purpur 26.2, build 2633 | Java 25 |
 | Spigot 26.2, BuildTools revision 4648 | Java 25 |
 
-The v1.0.0 release passed live claim, ownership, language and protection scenarios across these runtimes. Version 1.0.1 passed 108 automated tests and additional startup, reload, data persistence and update-notification checks on Purpur 1.20.4 and Paper 26.2. The previously published 1.0.2 build passed 148 automated tests and targeted Purpur 1.20.4 checks for console reload, grouped commands, legacy aliases, localized help/TAB and preservation of custom messages. Earlier 1.0.2 checks covered restart persistence, visitor access and ghast projectile block protection. The full historical server matrix was not repeated for 1.0.2. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
+The v1.0.0 release passed live claim, ownership, language and protection scenarios across these runtimes. Version 1.0.1 passed 108 automated tests and additional startup, reload, data persistence and update-notification checks on Purpur 1.20.4 and Paper 26.2. The 1.0.2 build passes 148 automated tests and targeted Purpur 1.20.4 checks for console reload, grouped commands, legacy aliases, localized help/TAB and preservation of custom messages. Earlier 1.0.2 checks covered restart persistence, visitor access and ghast projectile block protection. The full historical server matrix was not repeated for 1.0.2. Intermediate Minecraft patch releases were not individually tested. Tests on 26.2 used Java protocol clients through ViaVersion/ViaBackwards; direct 26.2 and Bedrock client tests were not performed. See the [test matrix](docs/compatibility-test.md).
 
 ### Optional integrations
 
@@ -228,11 +215,11 @@ Rolling back requires a matching old-format data backup; replacing only the JAR 
 Build from source with the bundled Gradle wrapper:
 
 ```text
-Windows:      gradlew.bat clean :test :jar :foliaJar
-Linux/macOS:  ./gradlew clean :test :jar :foliaJar
+Windows:      gradlew.bat clean build
+Linux/macOS:  ./gradlew clean build
 ```
 
-Backend outputs are `build/libs/DyClaim-v1.0.2.jar` and `build/libs/DyClaim-v1.0.2-Folia.jar`. See the [platform build instructions](docs/platforms.md#build) to include both proxies with a Java 25 compiler. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The build output is `build/libs/DyClaim-v1.0.2.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under [GNU GPL v3](LICENSE).
 

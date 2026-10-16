@@ -28,13 +28,10 @@ public class DyClaim extends JavaPlugin {
     private FeatureManager featureManager;
     private TransactionManager transactionManager;
     private ClanTrustManager clanTrustManager;
-    private dev.dyclaim.platform.PlatformTasks platformTasks;
-    private dev.dyclaim.platform.proxy.BackendStatusBridge statusBridge;
 
     @Override
     public void onEnable() {
         instance = this;
-        platformTasks = dev.dyclaim.platform.PlatformTasks.distribution(this);
 
         saveDefaultConfig();
         if (!new java.io.File(getDataFolder(),"messages_en.yml").exists()) saveResource("messages_en.yml", false);
@@ -53,8 +50,6 @@ public class DyClaim extends JavaPlugin {
         this.transactionManager = new TransactionManager(this);
         this.clanTrustManager = new ClanTrustManager(this);
         this.featureManager = new FeatureManager(this);
-        this.statusBridge = new dev.dyclaim.platform.proxy.BackendStatusBridge(this,platformTasks,getDescription().getVersion());
-        statusBridge.register();
 
         try {
             WorldGuardHook.init();
@@ -106,7 +101,6 @@ public class DyClaim extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if(statusBridge!=null) shutdown("proxy diagnostics",statusBridge::close);
         if(updateChecker!=null) shutdown("update checker",updateChecker::close);
         if(confirmationManager!=null) shutdown("confirmations",confirmationManager::clear);
         if(teleportManager!=null) shutdown("teleports",teleportManager::close);
@@ -117,7 +111,6 @@ public class DyClaim extends JavaPlugin {
         if (chunkVisualizer != null) {
             shutdown("visualization",chunkVisualizer::cleanupAll);
         }
-        if(platformTasks!=null) shutdown("platform tasks",platformTasks::close);
         getLogger().info("DyClaim disabled!");
     }
 
@@ -166,7 +159,6 @@ public class DyClaim extends JavaPlugin {
         configManager.reload();
         messageManager.reload();
         confirmationManager.clear();
-        if(teleportManager!=null)teleportManager.close();
         chunkVisualizer.cleanupAll();
         featureManager.reloadTasks();
         if(updateChecker!=null) updateChecker.reload();
@@ -176,5 +168,4 @@ public class DyClaim extends JavaPlugin {
     public FeatureManager getFeatureManager(){return featureManager;}
     public TransactionManager getTransactionManager(){return transactionManager;}
     public ClanTrustManager getClanTrustManager(){return clanTrustManager;}
-    public dev.dyclaim.platform.PlatformTasks getPlatformTasks(){return platformTasks;}
 }

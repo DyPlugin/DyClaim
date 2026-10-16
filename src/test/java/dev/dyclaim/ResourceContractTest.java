@@ -6,9 +6,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.*;
 class ResourceContractTest {
-    @Test void bridgeVersionMatchesThePackagedBackendVersion() throws Exception {
-        assertEquals(load("plugin.yml").getString("version"),dev.dyclaim.platform.proxy.BridgeVersion.get());
-    }
     @Test void bothLanguagesHaveMatchingKeysAndPlaceholders() throws Exception {
         YamlConfiguration en=load("messages_en.yml"),tr=load("messages_tr.yml");assertEquals(en.getKeys(true),tr.getKeys(true));Pattern placeholder=Pattern.compile("\\{[^}]+}");
         for(String key:en.getKeys(true)){Set<String> first=new HashSet<>(),second=new HashSet<>();var a=placeholder.matcher(en.getString(key));while(a.find())first.add(a.group());var b=placeholder.matcher(tr.getString(key));while(b.find())second.add(b.group());assertEquals(first,second,key);}

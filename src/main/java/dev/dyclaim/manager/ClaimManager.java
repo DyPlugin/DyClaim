@@ -9,20 +9,20 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
-/** Claim/index changes and file writes are coordinated independently of external payments. */
+/** All mutations and snapshots occur on the server thread. */
 public class ClaimManager {
     private final DyClaim plugin;
-    private final Map<String, ClaimData> claims = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, ClaimData> claims = new HashMap<>();
     private final Map<UUID, Set<String>> playerIndex = new HashMap<>();
     private final ClaimStore store;
-    private volatile boolean writable;
+    private boolean writable;
     private BukkitTask pendingSave;
     public ClaimManager(DyClaim plugin) {
         this.plugin = plugin;
         store = new ClaimStore(plugin.getDataFolder().toPath().resolve("claims.json"));
         loadAll();
     }
-    public synchronized void loadAll() {
+    public void loadAll() {
         writable = false;
         try {
             Map<String, ClaimData> loaded = store.load(plugin.getConfigManager().getClaimPrice());
@@ -32,19 +32,19 @@ public class ClaimManager {
             throw new IllegalStateException("Claim data cannot be loaded. Writes disabled; restore a verified backup. " + ex.getMessage(), ex);
         }
     }
-    public synchronized void rebuildPlayerIndex() {
+    public void rebuildPlayerIndex() {
         playerIndex.clear();
         claims.forEach((key, claim) -> {
             playerIndex.computeIfAbsent(claim.getOwnerUUID(), uuid -> new HashSet<>()).add(key);
             if (claim.getCoowner() != null) playerIndex.computeIfAbsent(claim.getCoowner(), uuid -> new HashSet<>()).add(key);
         });
     }
-    public synchronized void saveAll() {
+    public void saveAll() {
         if (!writable) throw new IllegalStateException("Claim writes disabled");
-        if (pendingSave == null) pendingSave = plugin.getPlatformTasks().globalLater(() -> { synchronized(ClaimManager.this){pendingSave = null; saveAllSync();} }, 20L);
+        if (pendingSave == null) pendingSave = plugin.getServer().getScheduler().runTaskLater(plugin, () -> { pendingSave = null; saveAllSync(); }, 20L);
     }
     public boolean isWritable() { return writable; }
-    public synchronized void saveAllSync() {
+    public void saveAllSync() {
         if (!writable) return;
         if (pendingSave != null) { pendingSave.cancel(); pendingSave = null; }
         try { store.save(claims); }
@@ -55,7 +55,7 @@ public class ClaimManager {
             throw new IllegalStateException("Claim write failed", ex);
         }
     }
-    public synchronized void backup(String reason) {
+    public void backup(String reason) {
         saveAllSync();
         try {
             Path dir = plugin.getDataFolder().toPath().resolve("backups"); Files.createDirectories(dir);
@@ -76,27 +76,22 @@ public class ClaimManager {
         ClaimData claim=new ClaimData(player.getUniqueId(),player.getName(),chunk.getWorld().getName(),chunk.getX(),chunk.getZ());
         claim.inheritChoices();
         claim.recordPrice(plugin.getEconomyManager().isEnabled() ? plugin.getAcquisitionRules().price(chunk.getWorld().getName()) : 0);
-        synchronized(this){
-            // The provider lookup above does not hold the state lock; recheck before committing.
-            if(claims.containsKey(key)||mutationBlocked(key))return false;
-            claims.put(key,claim);playerIndex.computeIfAbsent(claim.getOwnerUUID(),uuid->new HashSet<>()).add(key);saveAll();return true;
-        }
+        claims.put(key,claim); playerIndex.computeIfAbsent(player.getUniqueId(),uuid->new HashSet<>()).add(key); saveAll(); return true;
     }
     public boolean unclaimChunk(Chunk chunk) { return remove(getChunkKey(chunk)); }
     public boolean unclaimChunk(String world,int x,int z) { return remove(getChunkKey(world,x,z)); }
-    public synchronized boolean remove(String key) {
-        if(mutationBlocked(key))return false;
+    public boolean remove(String key) {
         ClaimData removed=claims.remove(key); if (removed==null) return false;
         removeIndex(removed.getOwnerUUID(),key);if(removed.getCoowner()!=null)removeIndex(removed.getCoowner(),key);
         if (plugin.getFeatureManager()!=null) plugin.getFeatureManager().invalidate(removed);
         saveAll(); return true;
     }
-    public synchronized List<ClaimData> getPlayerClaims(UUID uuid) {
+    public List<ClaimData> getPlayerClaims(UUID uuid) {
         Set<String> keys=playerIndex.getOrDefault(uuid,Set.of());
         return keys.stream().map(claims::get).filter(Objects::nonNull)
                 .sorted(Comparator.comparing(ClaimData::getWorld).thenComparingInt(ClaimData::getChunkX).thenComparingInt(ClaimData::getChunkZ)).toList();
     }
-    public synchronized int getPlayerClaimCount(UUID uuid) { return playerIndex.getOrDefault(uuid,Set.of()).size(); }
+    public int getPlayerClaimCount(UUID uuid) { return playerIndex.getOrDefault(uuid,Set.of()).size(); }
     public int removeAllPlayerClaims(UUID uuid) {
         List<ClaimData> owned=getPlayerClaims(uuid).stream().filter(c->c.getOwnerUUID().equals(uuid)).toList();
         int count=0; for(ClaimData c:owned) if(!plugin.getTransactionManager().isLocked(c.getChunkKey()) && remove(c.getChunkKey())) count++;
@@ -113,26 +108,13 @@ public class ClaimManager {
         return dev.dyclaim.util.Rules.money(claim.getRefundBasis(plugin.getConfigManager().getClaimPrice()) * plugin.getConfigManager().getSellRefundPercent()/100.0);
     }
     public boolean refundAndRemove(ClaimData claim) {
-        try(var reservation=plugin.getTransactionManager().reserve(claim.getChunkKey())){
-            if(reservation==null)return false;
-            synchronized(this){if(claims.get(claim.getChunkKey())!=claim)return false;}
-            return plugin.getTransactionManager().execute(reservation,"refund",claim.getChunkKey(),null,claim.getOwnerUUID(),0,refund(claim),()->{
-                if(!remove(claim.getChunkKey()))throw new IllegalStateException("Refund claim changed before removal");
-            });
-        }
+        return plugin.getTransactionManager().execute("refund",claim.getChunkKey(),null,claim.getOwnerUUID(),0,refund(claim),()->remove(claim.getChunkKey()));
     }
-    private boolean mutationBlocked(String key){var transactions=plugin.getTransactionManager();return transactions!=null&&transactions.isLocked(key)&&!transactions.ownsMutation(key);}
-    public synchronized void transfer(ClaimData c,Player target) {
-        if(claims.get(c.getChunkKey())!=c||mutationBlocked(c.getChunkKey()))throw new IllegalStateException("Claim changed or is locked");
+    public void transfer(ClaimData c,Player target) {
         removeIndex(c.getOwnerUUID(),c.getChunkKey());if(c.getCoowner()!=null)removeIndex(c.getCoowner(),c.getChunkKey());
-        c.transferOwnership(target.getUniqueId(),target.getName());
+        c.setOwnerUUID(target.getUniqueId()); c.setOwnerName(target.getName()); c.clearAccess();
         if(c.getName()!=null && getPlayerClaims(target.getUniqueId()).stream().anyMatch(other->other!=c && c.getName().equalsIgnoreCase(other.getName()))) c.setName(null);
         playerIndex.computeIfAbsent(target.getUniqueId(),uuid->new HashSet<>()).add(c.getChunkKey());plugin.getFeatureManager().invalidate(c); saveAll();
-    }
-    public synchronized boolean changeCoowner(ClaimData claim,UUID target,UUID expectedOwner,long expectedRevision){
-        if(claims.get(claim.getChunkKey())!=claim||mutationBlocked(claim.getChunkKey())||!claim.getOwnerUUID().equals(expectedOwner)||claim.getRevision()!=expectedRevision)return false;
-        UUID previous=claim.getCoowner();if(previous!=null)removeIndex(previous,claim.getChunkKey());
-        claim.setCoowner(target);if(target!=null)playerIndex.computeIfAbsent(target,uuid->new HashSet<>()).add(claim.getChunkKey());return true;
     }
     public void setAllClaimsPvp(boolean disabled) { claims.values().forEach(c->c.setChoice("pvp",!disabled)); saveAll(); }
     public void setAllClaimsExplosion(boolean disabled) { claims.values().forEach(c->c.setChoice("explosions",!disabled)); saveAll(); }
@@ -142,15 +124,11 @@ public class ClaimManager {
         if(!Double.isFinite(difference)||difference<=0||!plugin.getEconomyManager().isEnabled())return 0;
         double current=plugin.getConfigManager().getClaimPrice(); Set<UUID> owners=new HashSet<>();
         for(ClaimData c:new ArrayList<>(claims.values())) {
-            try(var reservation=plugin.getTransactionManager().reserve(c.getChunkKey())){
-                if(reservation==null)continue;
-                synchronized(this){if(claims.get(c.getChunkKey())!=c)continue;}
-                double basis=c.getRefundBasis(current), amount=dev.dyclaim.util.Rules.money(Math.min(difference,Math.max(0,basis-current)));
-                if(amount>0 && plugin.getTransactionManager().execute(reservation,"price-difference",c.getChunkKey(),null,c.getOwnerUUID(),0,amount,()->{c.setRefundBasis(basis-amount);saveAll();})) owners.add(c.getOwnerUUID());
-            }
+            double basis=c.getRefundBasis(current), amount=dev.dyclaim.util.Rules.money(Math.min(difference,Math.max(0,basis-current)));
+            if(amount>0 && plugin.getTransactionManager().execute("price-difference",c.getChunkKey(),null,c.getOwnerUUID(),0,amount,()->{c.setRefundBasis(basis-amount);saveAll();})) owners.add(c.getOwnerUUID());
         }
         return owners.size();
     }
-    public synchronized Map<String,ClaimData> getAllClaims() { return Map.copyOf(claims); }
+    public Map<String,ClaimData> getAllClaims() { return Collections.unmodifiableMap(claims); }
     private void removeIndex(UUID uuid,String key){Set<String> keys=playerIndex.get(uuid);if(keys!=null){keys.remove(key);if(keys.isEmpty())playerIndex.remove(uuid);}}
 }
