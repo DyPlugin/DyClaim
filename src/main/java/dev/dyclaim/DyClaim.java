@@ -66,6 +66,10 @@ public class DyClaim extends JavaPlugin {
         ClaimCommand claimCommand = new ClaimCommand(this);
         getCommand("claim").setExecutor(claimCommand);
         getCommand("claim").setTabCompleter(claimCommand);
+        for (String shortcut : new String[]{"dyca", "cltp"}) {
+            getCommand(shortcut).setExecutor(claimCommand);
+            getCommand(shortcut).setTabCompleter(claimCommand);
+        }
 
         UnclaimCommand unclaimCommand = new UnclaimCommand(this);
         getCommand("unclaim").setExecutor(unclaimCommand);

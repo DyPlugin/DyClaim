@@ -120,6 +120,18 @@ public class MessageManager {
                 }
             }
             refreshPreviousDefaults(lang, target, defConfig);
+            upgradeShippedTexts(lang, target, defConfig);
+        }
+    }
+
+    /** Texts still exactly as an earlier release shipped them follow the current wording; edited texts stay. */
+    private void upgradeShippedTexts(String lang, Map<String,String> target, YamlConfiguration defaults) {
+        InputStream stream = plugin.getResource("message-history_" + lang + ".yml");
+        if (stream == null) return;
+        YamlConfiguration history = YamlConfiguration.loadConfiguration(new InputStreamReader(stream, StandardCharsets.UTF_8));
+        for (String key : history.getKeys(false)) {
+            String current = defaults.getString(key);
+            if (current != null && history.getStringList(key).contains(target.get(key))) target.put(key, current);
         }
     }
 

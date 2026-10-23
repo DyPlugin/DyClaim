@@ -1,0 +1,389 @@
+# Texts shipped by earlier DyClaim versions. A server file still holding one of
+# these exact texts receives the current default; edited texts are never replaced.
+'access-role-coowner':
+- 'Coowner'
+'acquire-cooldown':
+- '&cWait for your claim cooldown before trying again.'
+'acquire-limit':
+- '&cYour total or world ownership limit has been reached.'
+'acquire-spacing':
+- '&cThis claim is too close to another owner.'
+'admin-blacklist-added':
+- '&aWorld &e{world} &aadded to blacklist!'
+'admin-blacklist-already':
+- '&eWorld &f{world} &eis already in the blacklist.'
+'admin-blacklist-not-found':
+- '&eWorld &f{world} &eis not in the blacklist.'
+'admin-blacklist-removed':
+- '&aWorld &e{world} &aremoved from blacklist!'
+'admin-bulk-sell-all':
+- '&aTotal &6{count} &aclaims sold and refunded to owners!'
+'admin-bulk-sell-player':
+- '&a{owner}''s &6{count} &aclaims sold and &6{refund} &arefunded!'
+'admin-claim-deleted':
+- '&aClaim by {owner} has been deleted! &7({chunk})'
+'admin-claim-deleted-all':
+- '&aAll claims by {owner} have been deleted! &7({count} total)'
+'admin-claim-given':
+- '&aChunk given to {player}! &7({chunk})'
+'admin-claiming-disabled':
+- '&cClaiming has been disabled!'
+'admin-claiming-enabled':
+- '&aClaiming has been enabled!'
+'admin-cooldown-set':
+- '&aCooldown set to &e{seconds} seconds&a!'
+'admin-economy-disabled':
+- '&cEconomy system disabled!'
+'admin-economy-enabled':
+- '&aEconomy system enabled!'
+'admin-help-ban':
+- '&6/claim admin ban <player> <duration> &7- Ban a player from acquiring claims'
+'admin-help-blacklist':
+- '&6/claim admin blacklist add/remove <world> &7- Manage world blacklist'
+'admin-help-bulksell':
+- '&6/claim admin bulksell [player] &7- Bulk sell + refund'
+'admin-help-bypass':
+- '&6/claim admin bypass [on|off] &7- Toggle your protection bypass'
+'admin-help-cooldown':
+- '&6/claim admin cooldown <seconds> &7- Set cooldown'
+'admin-help-delete':
+- '&6/claim admin delete <player> [all] &7- Delete claims'
+'admin-help-diagnose':
+- '&6/claim admin diagnose &7- Show a short server support summary'
+'admin-help-economy':
+- '&6/claim admin economy enable/disable &7- Toggle economy'
+'admin-help-explosion':
+- '&6/claim admin explosion enable/disable [all] &7- Toggle explosions'
+'admin-help-give':
+- '&6/claim admin give <player> &7- Give chunk'
+'admin-help-lang':
+- '&6/claim admin lang <auto/en/tr> &7- Change language'
+'admin-help-mob':
+- '&6/claim admin mob enable/disable [all] &7- Toggle mob spawning'
+'admin-help-prefix':
+- '&6/claim admin prefix <prefix> &7- Set prefix'
+'admin-help-price':
+- '&6/claim admin price <amount> &7- Set price'
+'admin-help-pricediff':
+- '&6/claim admin pricediff [old price] &7- Refund price difference'
+'admin-help-purge':
+- '&6/claim admin purge <days> &7- Preview cleanup of inactive claims'
+'admin-help-pvp':
+- '&6/claim admin pvp enable/disable [all] &7- Toggle PvP'
+'admin-help-reload':
+- '&6/claim admin reload &7- Reload configuration'
+'admin-help-toggle':
+- '&6/claim admin enable/disable &7- Toggle claiming'
+'admin-help-transactions':
+- '&6/claim admin transactions &7- View unresolved economy transactions'
+'admin-help-unban':
+- '&6/claim admin unban <player> &7- Remove a claim acquisition ban'
+'admin-invalid-number':
+- '&cInvalid number!'
+'admin-lang-set':
+- '&aLanguage set to &e{lang}&a!'
+'admin-no-claims':
+- '&cThis player has no claims!'
+'admin-player-not-found':
+- '&cPlayer not found!'
+'admin-prefix-set':
+- '&aPrefix has been set!'
+'admin-price-diff-received':
+- '&aPrice difference refund! &6{refund} &aadded to your account. &7({count} claims)'
+'admin-price-diff-success':
+- '&aPrice difference of &6{refund} &arefunded to &6{count} &aclaim owners!'
+'admin-price-set':
+- '&aClaim price set to &6{price}&a!'
+'admin-pricediff-error':
+- '&cOld price must be higher than current price! (&e{price}&c)'
+'admin-refund-received':
+- '&aYour claims were sold by admin. &6{refund} &arefunded. &7({count} total)'
+'admin-toggle-single':
+- '&eClaim toggle: &f{feature} {status}'
+'admin-world-not-found':
+- '&cWorld &e{world} &cdoes not exist!'
+'auto-disabled':
+- '&eAutomatic claiming disabled.'
+'auto-enabled':
+- '&aAutomatic claiming enabled for walking into eligible chunks.'
+'auto-unavailable':
+- '&cAutomatic claiming is unavailable with the current economy and feature settings.'
+'bypass-disabled':
+- '&aProtection bypass disabled.'
+'bypass-enabled':
+- '&eProtection bypass enabled.'
+'cancel-market-first':
+- '&cCancel the market listing first.'
+'claim-already-claimed':
+- '&cThis chunk is already claimed! Owner: &e{owner}'
+'claim-already-owned':
+- '&cYou already own this chunk!'
+'claim-banned':
+- '&cYou are prohibited from acquiring claims.'
+'claim-confirmation':
+- '&eClaiming this chunk will cost &6{price}&e. Do you confirm?'
+'claim-cooldown':
+- '&cYou must wait &e{remaining} seconds &cbefore claiming again!'
+'claim-coowner':
+- '&eCoowner: {player}'
+'claim-free':
+- '&eAre you sure you want to claim this chunk for free?'
+'claim-market':
+- '&eMarket price: {price}'
+'claim-max-reached':
+- '&cYou have reached the maximum number of claims! &7({max})'
+'claim-no-money':
+- '&cYou don''t have enough money! Required: &e{price}'
+'claim-private':
+- '&7Trust entries: {trust} | Custom spawn: {spawn}'
+'claim-region-protected':
+- '&cThis area is protected by another plugin! You cannot claim here.'
+'claim-success':
+- '&aChunk claimed successfully! &7({chunk})'
+'claiming-disabled':
+- '&cClaiming is currently disabled!'
+'clan-unavailable':
+- '&cThe clan provider is unavailable, or the clan identity cannot be resolved uniquely.'
+'confirm-expired':
+- '&cConfirmation timed out!'
+'confirm-none':
+- '&cThere is no pending action to confirm!'
+'confirm-replaced':
+- '&eYour previous pending action was replaced.'
+'confirm-text':
+- '&eUse /confirm to accept or /cancel to cancel.'
+'coowner-full':
+- '&cThis claim already has a coowner.'
+'coowner-offer':
+- '&e{owner} invites you to coown {chunk}. You can build, manage trust and settings; you cannot sell, delete, transfer or replace owners. Use /confirm to accept.'
+'diagnose-disabled':
+- 'Disabled'
+'economy-required':
+- '&cAn active economy provider is required.'
+'entry-exit-unavailable':
+- '&cNo safe loaded exit was found. Contact an administrator.'
+'feature-disabled':
+- '&cThis feature is disabled.'
+'help-auto':
+- '&6/claim auto [on|off] &7- Toggle automatic claiming while walking'
+'help-cancel':
+- '&6/cancel &7- Cancel a pending action'
+'help-claim':
+- '&6/claim &7- Claim the chunk you''re standing on'
+'help-confirm':
+- '&6/confirm &7- Confirm a pending action'
+'help-coowner-add':
+- '&6/claim coowner add <player> &7- Invite a coowner'
+'help-coowner-remove':
+- '&6/claim coowner remove &7- Remove the coowner'
+'help-doors':
+- '&6/claim doors &7- Toggle visitor access to doors'
+'help-explosion':
+- '&6/claim explosion &7- Toggle explosions (in your claim)'
+- '&6/claim explosion [mob] &7- Toggle ordinary or mob explosions'
+'help-info':
+- '&6/claim info &7- View chunk information'
+'help-lang':
+- '&6/claim lang <auto|en|tr> &7- Set your preferred language'
+'help-list':
+- '&6/claim list &7- View your claims'
+- '&6/claim list [page] &7- View your claims'
+'help-list-filters':
+- '&6/claim list [page] [name <text>] [world <world>] [sale <all|listed|unlisted>] &7- Filter your claims'
+'help-market-buy':
+- '&6/claim market buy &7- Buy the listed claim'
+'help-market-cancel':
+- '&6/claim market cancel &7- Cancel your claim''s listing'
+'help-market-list':
+- '&6/claim market list <price> &7- List your claim for sale'
+'help-mob':
+- '&6/claim mob &7- Toggle mob spawning (in your claim)'
+'help-mobexplosion':
+- '&6/claim mobexplosion &7- Toggle mob explosions in your claim'
+- '&6/claim explosion mob &7- Toggle mob explosions in your claim'
+'help-name':
+- '&6/claim name <name> &7- Name your claim'
+'help-pvp':
+- '&6/claim pvp &7- Toggle PvP (in your claim)'
+'help-see':
+- '&6/claim see &7- Show chunk borders'
+'help-sell':
+- '&6/claim sell &7- Sell your claim'
+'help-setspawn':
+- '&6/claim setspawn &7- Set your claim''s teleport destination'
+'help-tp':
+- '&6/claim tp <number|name> &7- Teleport to your claim'
+'help-transfer':
+- '&6/claim transfer <player> &7- Offer ownership to an online player'
+'help-trapdoors':
+- '&6/claim trapdoors &7- Toggle visitor access to trapdoors'
+'help-trust':
+- '&6/claim trust <player> &7- Trust a player'
+- '&6/claim trust <player> [duration] &7- Trust a player'
+'help-trustlist':
+- '&6/claim trustlist &7- View trusted players'
+'help-trustperm':
+- '&6/claim trustperm <player> <right> <allow|deny> &7- Set a trusted player''s access rights'
+- '&6/claim trust <player> <right> <allow|deny> &7- Set a trusted player''s access rights'
+'help-unclaim':
+- '&6/unclaim &7- Remove your claim'
+'help-untrust':
+- '&6/claim untrust <player> &7- Untrust a player'
+'help-villager':
+- '&6/claim villager &7- Toggle player damage to villagers'
+'help-warn':
+- '&6/claim warn <player> &7- Warn a visitor in your claim'
+'info-access-expiry':
+- '&7Your trust expires in: &f{remaining}'
+'info-custom-spawn':
+- '&eCustom spawn: &aSet'
+'info-date':
+- '&eDate: &f{date}'
+'info-header':
+- '&7&m----------&r {prefix} &7&m----------'
+'info-mob':
+- '&eMob Spawning: {status}'
+'info-not-claimed':
+- '&eChunk: &fNot claimed'
+'info-trusted':
+- '&eTrusted: &f{trusted}'
+'invalid-input':
+- '&cInvalid input. Use /claim help.'
+'list-empty':
+- '&eYou have no claims.'
+'list-entry':
+- '&7- &e{world} &7| &fChunk ({chunk}) &7| &f{date}'
+'list-filtered':
+- '&7Showing &f{count}&7 of &f{total}&7 claims. Numbers match /claim tp.'
+'list-header':
+- '&7&m----------&r {prefix} &eClaim List &7&m----------'
+'list-no-matches':
+- '&7No claims match these filters.'
+'list-page':
+- '&eClaims — page {page}/{pages}'
+'market-confirm':
+- '&eBuy {chunk} for {price}? Seller receives {income}; the remainder is tax. Old access is cleared.'
+'market-unavailable':
+- '&cThis claim is not available for purchase.'
+'name-duplicate':
+- '&cYou already own a claim with that name.'
+'no-permission':
+- '&cYou do not have permission to use this command!'
+'offer-sent':
+- '&aOffer sent; ownership changes only after the recipient accepts.'
+'operation-changed':
+- '&cConditions changed. Start the action again.'
+'operation-success':
+- '&aAction completed.'
+'ownership-offer':
+- '&e{owner} offers {kind} of {chunk}. Transfer clears old trust, clan access, coownership and listings. Use /confirm to accept.'
+'player-only':
+- '&cOnly players can use this command!'
+'protection-block-break':
+- '&cYou cannot break blocks in this claim!'
+'protection-block-place':
+- '&cYou cannot place blocks in this claim!'
+'protection-entity':
+- '&cYou cannot do that in this claim!'
+'protection-interact':
+- '&cYou cannot interact in this claim!'
+'protection-piston':
+- '&cPistons cannot affect claimed land!'
+'protection-pvp':
+- '&cPvP is disabled in this claim!'
+'protection-villager':
+- '&cYou cannot damage villagers in this claim.'
+'purge-complete':
+- '&aRemoved {count} eligible claims. A backup was saved.'
+'purge-preview':
+- '&ePreview: {count} claims belonging to {players} owners. No claims have been deleted.'
+'reload-invalid':
+- '&cConfiguration is invalid; the previous valid configuration remains active.'
+'reload-success':
+- '&aConfiguration reloaded successfully!'
+'see-already':
+- '&cChunk borders are already being shown!'
+'see-showing':
+- '&aChunk borders shown for &e{duration} seconds&a.'
+'sell-confirmation':
+- '&eAre you sure you want to sell this claim? You will receive &6{refund}&e.'
+'sell-not-claimed':
+- '&cThis chunk is not claimed!'
+'sell-not-owner':
+- '&cYou are not the owner of this chunk!'
+'sell-success':
+- '&aClaim sold successfully! &6{refund} &ahas been added to your account.'
+'setting-visitor-doors':
+- 'Visitor doors and gates'
+'setting-visitor-trapdoors':
+- 'Visitor trapdoors'
+'toggle-explosion-disabled':
+- '&aExplosions have been &cdisabled &ain the claim! &7({chunk})'
+'toggle-explosion-enabled':
+- '&aExplosions have been &aenabled &ain the claim! &7({chunk})'
+'toggle-mob-disabled':
+- '&aMob spawning has been &cdisabled &ain the claim! &7({chunk})'
+'toggle-mob-enabled':
+- '&aMob spawning has been &aenabled &ain the claim! &7({chunk})'
+'toggle-pvp-disabled':
+- '&aPvP has been &cdisabled &ain the claim! &7({chunk})'
+'toggle-pvp-enabled':
+- '&aPvP has been &aenabled &ain the claim! &7({chunk})'
+'tp-already-pending':
+- '&cYou already have a pending teleport!'
+'tp-cancelled':
+- '&cTeleport cancelled! You moved.'
+'tp-invalid-number':
+- '&cInvalid claim number! Check &e/claim list&c.'
+'tp-no-claims':
+- '&cYou have no claims to teleport to!'
+'tp-success':
+- '&aTeleported to your claim!'
+'tp-unsafe':
+- '&cNo safe teleport destination was found in this claim.'
+'tp-warmup':
+- '&eTeleporting in &6{seconds} seconds&e... Don''t move!'
+'tp-world-not-found':
+- '&cThe world for this claim could not be found!'
+'transaction-failed':
+- '&cThe action could not complete. Check the transaction log before retrying.'
+'transaction-locked':
+- '&cThis claim has an unresolved payment. Ask an administrator to reconcile it.'
+'transactions-empty':
+- '&eNo unresolved transactions.'
+'transactions-header':
+- '&eUnresolved transactions:'
+'transfer-offer':
+- '&e{owner} offers ownership of {chunk}. Old trust, clan access, coownership and listings will be cleared. Use /confirm to accept.'
+'trust-added':
+- '&a{player} has been added as trusted to this claim.'
+'trust-list-details':
+- '&7  Rights: &f{rights} &7| Until: &f{expiry}'
+'trust-list-empty':
+- '&eNo trusted players.'
+'trust-not-found':
+- '&e{player} is not trusted in this claim.'
+'trust-removed':
+- '&c{player} has been removed from trusted.'
+'trust-self':
+- '&cYou cannot trust yourself!'
+'trust-usage':
+- '&cUsage: &e/claim trust <player>'
+'trustperm-usage':
+- '&cUsage: &e/claim trustperm <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
+'unknown-command':
+- '&cUnknown command! Use &e/claim help &cfor available commands.'
+'update-available':
+- '&eNew DyClaim version is live! (&6{version}&e)'
+'warn-already-applied':
+- '&eThis warning chain has already triggered a sanction or needs reconciliation.'
+'warn-cooldown':
+- '&eWait before warning this visitor again.'
+'warn-ineligible':
+- '&cThe target must be an unauthorized visitor inside this claim.'
+'warning-ban-reason':
+- '&cRepeated claim harassment.'
+'warning-received':
+- '&cClaim warning ({count}/{max}). Leave the area. The final warning applies {type} for {duration}.'
+'world-blacklisted':
+- '&cYou cannot claim chunks in this world!'

@@ -11,7 +11,7 @@ public final class Diagnostics {
         MessageManager messages=plugin.getMessageManager();
         java.util.function.Function<String,String> state=key->messages.getMessage(sender,key);
         String platform=plugin.getPlatformTasks()!=null&&plugin.getPlatformTasks().isRegionThreaded()?"Folia":"Bukkit";
-        line(plugin,sender,"diagnose-header",Map.of("{version}",Objects.toString(plugin.getDescription()==null?null:plugin.getDescription().getVersion(),"1.0.3"),"{platform}",platform));
+        line(plugin,sender,"diagnose-header",Map.of("{version}",Objects.toString(plugin.getDescription()==null?null:plugin.getDescription().getVersion(),"unknown"),"{platform}",platform));
         line(plugin,sender,"diagnose-storage",Map.of("{status}",state.apply(plugin.getClaimManager().isWritable()?"diagnose-ready":"diagnose-unavailable"),"{count}",String.valueOf(plugin.getClaimManager().getAllClaims().size())));
         String economy=!plugin.getEconomyManager().isEnabled()?"diagnose-disabled":plugin.getEconomyManager().isAvailable()?"diagnose-ready":"diagnose-unavailable";
         line(plugin,sender,"diagnose-economy",Map.of("{status}",state.apply(economy)));

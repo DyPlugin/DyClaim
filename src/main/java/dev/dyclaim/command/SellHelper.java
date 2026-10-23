@@ -26,7 +26,7 @@ public final class SellHelper {
             else send(plugin,player,"transaction-failed");
         };
         if(plugin.getConfigManager().values().getBoolean("confirmations.required."+(unclaim?"unclaim":"refund-sale"),true))
-            plugin.getConfirmationManager().addPending(player.getUniqueId(),dev.dyclaim.manager.ConfirmationManager.ActionType.SELL,key,uuid->execute.run(),uuid->send(plugin,player,"confirm-deny"));
+            plugin.getConfirmationManager().addPending(player.getUniqueId(),dev.dyclaim.manager.ConfirmationManager.ActionType.SELL,key,uuid->execute.run(),uuid->send(plugin,player,"confirm-cancelled"));
         else execute.run();
     }
     private static void send(DyClaim plugin,Player player,String key){player.sendMessage(plugin.getMessageManager().getPrefixed(player,key));}

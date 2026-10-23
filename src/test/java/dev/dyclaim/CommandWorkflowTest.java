@@ -40,7 +40,7 @@ class CommandWorkflowTest extends ManagerFixture {
         when(plugin.getMessageManager().getPrefix()).thenReturn("[DyClaim]");
         when(plugin.getMessageManager().getMessage(any(org.bukkit.command.CommandSender.class),anyString(),anyMap())).thenAnswer(i->i.getArgument(1));
         var owner=player("Owner",chunk(0,0));var command=new ClaimCommand(plugin);
-        command.onCommand(owner,null,"claim",new String[]{"help"});verify(owner).sendMessage("help-explosion");verify(owner,never()).sendMessage("help-mobexplosion");
+        command.onCommand(owner,null,"claim",new String[]{"help","2"});verify(owner).sendMessage("help-explosion");verify(owner,never()).sendMessage("help-mobexplosion");
         var sender=console();command.onCommand(sender,null,"claim",new String[]{"admin","help"});
         verify(sender).sendMessage("admin-help-reload");verify(sender).sendMessage("admin-help-price");verify(sender,never()).sendMessage("admin-help-give");verify(sender,never()).sendMessage("admin-help-purge");
     }

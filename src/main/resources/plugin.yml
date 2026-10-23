@@ -22,6 +22,15 @@ commands:
     usage: /<command> [subcommand]
     aliases:
       - dyclaim
+      - dyc
+  dyca:
+    description: Shortcut for /claim admin
+    usage: /<command> [subcommand]
+    permission: dyclaim.admin
+  cltp:
+    description: Shortcut for /claim tp
+    usage: /<command> <number|name>
+    permission: dyclaim.teleport
   unclaim:
     description: Remove your claim
     usage: /<command>

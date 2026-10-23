@@ -14,8 +14,11 @@ class CommandPresentationTest extends ManagerFixture {
     @Test void helpSendsSeparateNewCommandRowsAndPreservesTheFooter() {
         var p=player("Owner",chunk(0,0));
         new ClaimCommand(plugin).onCommand(p,null,"claim",new String[]{"help"});
+        verify(p).sendMessage("help-claim");
+        clearInvocations(p);
+        // 1.0.4 splits help into pages; the market rows stay together on page 3.
+        new ClaimCommand(plugin).onCommand(p,null,"claim",new String[]{"help","3"});
         var order=inOrder(p);
-        order.verify(p).sendMessage("help-claim");
         order.verify(p).sendMessage("help-market-list");
         order.verify(p).sendMessage("help-market-cancel");
         order.verify(p).sendMessage("help-market-buy");

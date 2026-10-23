@@ -4,7 +4,7 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.3** adds joined claim outlines, filtered claim lists, a clearer personal access summary, a short administrator diagnostic command and a separate Folia build. Existing command aliases, English/Turkish selection and claim data are preserved.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.4** adds paged help, the `/dyc`, `/cltp` and `/dyca` shortcuts, and clearer English and Turkish messages. Existing command aliases, English/Turkish selection and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
@@ -14,8 +14,8 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 | Your server | File |
 |---|---|
-| Bukkit, Spigot, Paper or Purpur | `DyClaim-1.0.3.jar` |
-| Folia | `DyClaim-1.0.3-Folia.jar` |
+| Bukkit, Spigot, Paper or Purpur | `DyClaim-1.0.4.jar` |
+| Folia | `DyClaim-1.0.4-Folia.jar` |
 
 Install **one** backend JAR per server. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder. Both builds use the same schema-2 claim data and EN/TR commands. There are no proxy companions in this release.
 
@@ -100,7 +100,7 @@ Players can select `/claim lang en`, `/claim lang tr` or `/claim lang auto`. An 
 
 ## Player commands
 
-Arguments in `<angle brackets>` are required; `[square brackets]` are optional. Use TAB for suggestions permitted by your permissions.
+Arguments in `<angle brackets>` are required; `[square brackets]` are optional. Use TAB for suggestions permitted by your permissions. `/dyc` is a short form of `/claim` (for example `/dyc list`).
 
 | Command | Purpose |
 |---|---|
@@ -121,6 +121,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim name <name>` | Name the current claim |
 | `/claim setspawn` | Save a safe spawn inside the claim |
 | `/claim tp <number\|name>` | Teleport to a claim from your list |
+| `/cltp <number\|name>` | Short form of `/claim tp`, available to every player |
 | `/claim list [page]` | View a paginated claim list; optional name/world/sale filters |
 | `/claim info` | Inspect the current claim |
 | `/claim see` | Display the nearby outer outline of connected claims |
@@ -129,7 +130,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim doors`, `/claim trapdoors` | Toggle visitor access |
 | `/claim warn <player>` | Warn an unauthorized visitor inside your claim |
 | `/claim lang <auto\|en\|tr>` | Select your language |
-| `/claim help` | Show player help |
+| `/claim help [page]` | Show player help, eight commands per page |
 | `/confirm`, `/cancel` | Accept or reject a pending action |
 
 Trust rights: `build`, `containers`, `doors`, `trapdoors`, `redstone`, `entities`, `teleport`. The original trust command grants all these rights. Durations use `m` for minutes, `h` for hours and `d` for days; permanent access uses `permanent` or its localized equivalent.
@@ -138,7 +139,7 @@ The old `trustperm` / `güvenizin` and `mobexplosion` / `mobpatlama` commands re
 
 ## Admin commands
 
-Use `/claim admin` for help. Console senders can use `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist` and `reload`, with the `dyclaim.admin` permission. Console help and TAB show this supported scope; player-specific administration and confirmation flows remain player-only. In the server console, omit the leading slash: `claim admin reload` (Turkish: `claim admin yenile`).
+Use `/claim admin` or `/claim admin help [page]` for help. `/dyca` is a short form of `/claim admin` (for example `/dyca reload`); it requires `dyclaim.admin` and is hidden from other players. Console senders can use `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist` and `reload`, with the `dyclaim.admin` permission. Console help and TAB show this supported scope; player-specific administration and confirmation flows remain player-only. In the server console, omit the leading slash: `claim admin reload` (Turkish: `claim admin yenile`).
 
 Common tools include `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist`, `reload`, `give`, `delete`, `bulksell`, `bypass`, `ban`, `unban`, `purge` and `transactions`.
 
@@ -204,7 +205,7 @@ No integration is required for core claiming. Installed protection hooks are det
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-1.0.3.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-1.0.4.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
 3. Edit `config.yml` and, if desired, the English/Turkish message files.
 4. Run `/claim admin reload` as a permitted player, or `claim admin reload` in the server console.
@@ -236,7 +237,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.0.3.jar` and `build/libs/DyClaim-1.0.3-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.0.4.jar` and `build/libs/DyClaim-1.0.4-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
 Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.
