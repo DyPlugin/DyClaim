@@ -1,1 +1,1 @@
-Lightweight chunk claiming plugin with land protection, economy integration, and EN/TR support.
+Lightweight chunk claims with trust, visitor bans, web maps, PlaceholderAPI and five languages.

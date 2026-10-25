@@ -1,6 +1,6 @@
 prefix: "&7[&dDyClaim&7]"
 
-# auto uses each player's preference or client language; en/tr overrides everyone.
+# auto uses each player's preference or client language; en, tr, de, es or ru overrides everyone.
 lang: auto
 
 # Prices and refunds require both Vault and a working economy provider.
@@ -21,6 +21,10 @@ cooldown:
 claim:
   # Positive ownership limit; coowned claims also count toward this total.
   max-claims-per-player: 10
+  # dyclaim.limit.<number> permissions replace max-claims-per-player; the highest one wins.
+  # dyclaim.limit.unlimited removes the total limit. Per-world claim-limit values still apply.
+  permission-limits:
+    enabled: true
   allow-claiming: true
 
 teleport:
@@ -197,6 +201,16 @@ warnings:
   punishment:
     type: server-ban
     duration: 2d
+# Owner-written text shown to visitors entering a claim (/claim message).
+claim-messages:
+  enabled: true
+  maximum-length: 64
+  # false removes & colour codes from messages.
+  allow-colors: false
+# Owners can keep specific players out of their claim (/claim ban).
+claim-entry-bans:
+  enabled: true
+  maximum-per-claim: 50
 names:
   maximum-length: 32
 integrations:
@@ -204,3 +218,24 @@ integrations:
   clans:
     enabled: false
     provider: SimpleClans
+  # PlaceholderAPI placeholders such as %dyclaim_claims% and %dyclaim_owner%.
+  placeholderapi:
+    enabled: true
+  # Claim areas on BlueMap, Dynmap and squaremap when those plugins are installed.
+  maps:
+    enabled: true
+    bluemap: true
+    dynmap: true
+    squaremap: true
+    layer-name: "Claims"
+    # Seconds between full map refreshes; claim changes are picked up on the next refresh.
+    refresh-seconds: 60
+    # 0.0 is invisible, 1.0 is solid.
+    fill-opacity: 0.25
+    line-opacity: 0.8
+    # Exact world names that never show claims on maps.
+    hidden-worlds: []
+# Anonymous usage statistics on bStats (server count, player count, versions).
+# Server owners can also turn bStats off for every plugin in plugins/bStats/config.yml.
+metrics:
+  enabled: true

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'dev.dyclaim'
-version = '1.0.4'
+version = '1.1.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -17,6 +17,9 @@ repositories {
     maven { url = 'https://jitpack.io' }
     maven { url = 'https://maven.enginehub.org/repo/' }
     maven { url = 'https://repo.codemc.io/repository/maven-public/' }
+    maven { url = 'https://repo.extendedclip.com/releases/' }
+    maven { url = 'https://repo.bluecolored.de/releases/' }
+    maven { url = 'https://repo.mikeprimm.com/' }
 }
 
 dependencies {
@@ -25,11 +28,19 @@ dependencies {
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
     compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.2.15'
     compileOnly 'com.github.TechFortress:GriefPrevention:16.18.2'
+    compileOnly 'me.clip:placeholderapi:2.12.3'
+    compileOnly 'com.github.BlueMap-Minecraft:BlueMapAPI:v2.6.2'
+    compileOnly 'xyz.jpenilla:squaremap-api:1.2.7'
+    compileOnly 'us.dynmap:DynmapCoreAPI:3.8'
+    compileOnly 'net.kyori:adventure-text-minimessage:4.16.0'
+    compileOnly 'net.kyori:adventure-text-serializer-legacy:4.16.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation 'com.google.code.gson:gson:2.10.1'
     testImplementation 'org.purpurmc.purpur:purpur-api:1.20.4-R0.1-SNAPSHOT'
     testImplementation 'org.mockito:mockito-core:5.15.2'
     testImplementation 'com.github.MilkBowl:VaultAPI:1.7.1'
+    testImplementation 'me.clip:placeholderapi:2.12.3'
+    testImplementation 'com.github.TechFortress:GriefPrevention:16.18.2'
 }
 
 test { useJUnitPlatform() }

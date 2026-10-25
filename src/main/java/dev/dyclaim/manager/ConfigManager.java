@@ -142,7 +142,11 @@ public class ConfigManager {
             long value=config.getLong(key); if(value<=0||value>Integer.MAX_VALUE/20)throw new IllegalArgumentException(key);
         }
         for(String key:List.of("cooldown.seconds","teleport.warmup-seconds","claim-rules.spacing.minimum-empty-chunks")) if(config.getLong(key)<0||config.getLong(key)>Integer.MAX_VALUE/20)throw new IllegalArgumentException(key);
-        if(!List.of("auto","en","tr").contains(config.getString("lang")))throw new IllegalArgumentException("lang");
+        if(!"auto".equals(config.getString("lang"))&&!MessageManager.LANGUAGES.contains(config.getString("lang")))throw new IllegalArgumentException("lang");
+        if(config.getInt("claim-messages.maximum-length")<1||config.getInt("claim-messages.maximum-length")>128)throw new IllegalArgumentException("claim-messages.maximum-length");
+        if(config.getInt("claim-entry-bans.maximum-per-claim")<1||config.getInt("claim-entry-bans.maximum-per-claim")>1000)throw new IllegalArgumentException("claim-entry-bans.maximum-per-claim");
+        if(config.getInt("integrations.maps.refresh-seconds")<10||config.getInt("integrations.maps.refresh-seconds")>3600)throw new IllegalArgumentException("integrations.maps.refresh-seconds");
+        for(String key:List.of("integrations.maps.fill-opacity","integrations.maps.line-opacity")){double value=config.getDouble(key);if(!Double.isFinite(value)||value<0||value>1)throw new IllegalArgumentException(key);}
         if(!"sink".equals(config.getString("market.tax-destination")))throw new IllegalArgumentException("Only tax-destination: sink is supported");
         if(config.getInt("ownership.max-coowners")!=1)throw new IllegalArgumentException("max-coowners must be 1");
         if(config.getInt("names.maximum-length")<1||config.getInt("names.maximum-length")>64)throw new IllegalArgumentException("names.maximum-length");

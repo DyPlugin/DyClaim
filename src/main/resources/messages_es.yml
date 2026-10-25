@@ -1,0 +1,321 @@
+# Mensajes en español. No cambies las claves ni los {marcadores}; los códigos & ponen colores.
+# Edita el texto entre comillas y usa /claim admin reload. Las claves que falten usan los textos incluidos.
+# Los comandos se mantienen en inglés (/claim help, /claim trust ...).
+no-permission: "&cNo tienes permiso para hacer eso."
+player-only: "&cSolo los jugadores pueden usar este comando."
+reload-success: "&aConfiguración recargada."
+claiming-disabled: "&cReclamar terreno está desactivado ahora mismo."
+world-blacklisted: "&cNo puedes reclamar terreno en este mundo."
+unknown-command: "&cComando desconocido. Escribe &e/claim help &cpara ver todos los comandos."
+
+claim-confirmation: "&e¿Reclamar este chunk por &6{price}&e?"
+claim-success: "&a¡Chunk reclamado! &7({chunk})"
+claim-already-claimed: "&cEste chunk ya pertenece a &e{owner}&c."
+claim-already-owned: "&cYa eres dueño de este chunk."
+claim-max-reached: "&cHas alcanzado tu límite de claims. &7({max})"
+claim-no-money: "&cNo tienes suficiente dinero. Necesitas &e{price}&c."
+claim-cooldown: "&cEspera &e{remaining} segundos &cantes de reclamar otra vez."
+claim-free: "&e¿Reclamar este chunk gratis?"
+claim-region-protected: "&cEsta zona está protegida por otro plugin, así que no se puede reclamar."
+
+sell-confirmation: "&e¿Vender este claim? Recibirás &6{refund}&e."
+sell-success: "&aClaim vendido. Se añadieron &6{refund} &aa tu saldo."
+sell-not-owner: "&cNo eres el dueño de este chunk."
+sell-not-claimed: "&cEste chunk no está reclamado."
+
+confirm-accept: "&a&l[Confirmar]"
+confirm-deny: "&c&l[Cancelar]"
+confirm-expired: "&cLa confirmación caducó. Vuelve a usar el comando si aún quieres hacerlo."
+confirm-none: "&cNo tienes nada pendiente de confirmar."
+
+info-header: "&7&m----------&r {prefix} &eInfo del claim &7&m----------"
+info-owner: "&eDueño: &f{owner}"
+info-chunk: "&eChunk: &f{chunk}"
+info-world: "&eMundo: &f{world}"
+info-date: "&eReclamado el: &f{date}"
+info-pvp: "&ePvP: {status}"
+info-explosion: "&eExplosiones: {status}"
+info-mob: "&eAparición de mobs: {status}"
+info-trusted: "&eJugadores de confianza: &f{trusted}"
+info-not-claimed: "&eEste chunk no está reclamado."
+info-footer: "&7&m---------------------------------"
+
+list-header: "&7&m----------&r {prefix} &eTus claims &7&m----------"
+list-entry: "&7{number}. &e{world} &7| &fX:{x} Z:{z} &7| &f{date}"
+list-empty: "&eAún no tienes claims. Ponte en un chunk y escribe &6/claim&e."
+list-footer: "&eTotal: &f{count}/{max}"
+
+see-showing: "&aMostrando los bordes del chunk durante &e{duration} segundos&a."
+see-already: "&cLos bordes del chunk ya se están mostrando."
+
+protection-block-break: "&cNo puedes romper bloques en este claim."
+protection-block-place: "&cNo puedes colocar bloques en este claim."
+protection-interact: "&cNo puedes usar eso en este claim."
+protection-pvp: "&cEl PvP está desactivado en este claim."
+protection-enter: "&7[Has entrado en el claim de {owner}]"
+protection-leave: "&7[Has salido del claim]"
+protection-piston: "&cLos pistones no pueden mover bloques hacia dentro o fuera de terreno reclamado."
+protection-entity: "&cNo puedes hacer eso en este claim."
+
+actionbar-enter: "&7Claim: &a{owner} &7| &cPvP: {pvp}"
+actionbar-leave: "&7Has salido del área reclamada."
+
+trust-added: "&a{player} ahora es de confianza en este claim."
+trust-removed: "&e{player} ya no es de confianza en este claim."
+trust-already: "&e{player} ya es de confianza en este claim."
+trust-not-found: "&e{player} no es de confianza en este claim."
+trust-self: "&cNo puedes darte confianza a ti mismo."
+trust-list-header: "&eJugadores de confianza en este claim:"
+trust-list-entry: "&7- &f{player}"
+trust-list-empty: "&eTodavía nadie es de confianza en este claim."
+trust-usage: "&cUso: &e/claim trust <player> [duration]"
+untrust-usage: "&cUso: &e/claim untrust <player>"
+
+admin-claiming-enabled: "&aReclamar terreno está activado."
+admin-claiming-disabled: "&cReclamar terreno está desactivado."
+admin-claim-deleted: "&aClaim de {owner} eliminado. &7({chunk})"
+admin-claim-deleted-all: "&aSe eliminaron todos los claims de {owner}. &7({count} en total)"
+admin-claim-given: "&aSe dio este chunk a {player}. &7({chunk})"
+admin-price-set: "&aPrecio del claim fijado en &6{price}&a."
+admin-cooldown-set: "&aEspera entre claims fijada en &e{seconds} segundos&a."
+admin-prefix-set: "&aPrefijo de mensajes actualizado."
+admin-economy-enabled: "&aLa economía está activada."
+admin-economy-disabled: "&cLa economía está desactivada."
+admin-player-not-found: "&cJugador no encontrado."
+admin-no-claims: "&cEse jugador no tiene claims."
+admin-bulk-sell-player: "&aSe vendieron &6{count} &aclaims de {owner} y se reembolsaron &6{refund}&a."
+admin-bulk-sell-all: "&aSe vendieron &6{count} &aclaims y se reembolsó a sus dueños."
+admin-refund-received: "&aUn administrador vendió tus claims. Se reembolsaron &6{refund}&a. &7({count} en total)"
+admin-price-diff-success: "&aSe reembolsó la diferencia de precio de &6{refund} &aa &6{count} &adueños."
+admin-price-diff-received: "&aEl precio de los claims bajó, así que se añadieron &6{refund} &aa tu saldo. &7({count} claims)"
+admin-invalid-number: "&cEso no es un número válido."
+admin-usage-delete: "&cUso: &e/claim admin delete <player> [all]"
+admin-usage-give: "&cUso: &e/claim admin give <player>"
+admin-usage-price: "&cUso: &e/claim admin price <amount>"
+admin-usage-cooldown: "&cUso: &e/claim admin cooldown <seconds>"
+admin-usage-prefix: "&cUso: &e/claim admin prefix <prefix>"
+admin-usage-toggle: "&cUso: &e/claim admin {feature} enable/disable [all]"
+admin-usage-blacklist: "&cUso: &e/claim admin blacklist add/remove <world>"
+admin-toggle-single: "&eEste claim: &f{feature} {status}"
+admin-toggle-all: "&eTodos los claims: &f{feature} {status}"
+admin-pricediff-error: "&cEl precio anterior debe ser mayor que el actual (&e{price}&c)."
+admin-blacklist-added: "&aAhora no se puede reclamar en &e{world}&a."
+admin-blacklist-removed: "&aYa se puede reclamar otra vez en &e{world}&a."
+admin-blacklist-already: "&e{world} &eya está en la lista negra."
+admin-blacklist-not-found: "&e{world} &eno está en la lista negra."
+admin-world-not-found: "&cNo existe ningún mundo llamado &e{world}&c."
+admin-lang-set: "&aIdioma fijado en &e{lang}&a."
+
+update-available: "&eHay una nueva versión de DyClaim: &6{version}"
+update-download: "&bDescarga: &n{link}"
+
+toggle-pvp-enabled: "&aEl PvP ahora está &aACTIVADO &aen este claim. &7({chunk})"
+toggle-pvp-disabled: "&aEl PvP ahora está &cDESACTIVADO &aen este claim. &7({chunk})"
+toggle-explosion-enabled: "&aLas explosiones ahora están &aACTIVADAS &aen este claim. &7({chunk})"
+toggle-explosion-disabled: "&aLas explosiones ahora están &cDESACTIVADAS &aen este claim. &7({chunk})"
+toggle-mob-enabled: "&aLa aparición de mobs ahora está &aACTIVADA &aen este claim. &7({chunk})"
+toggle-mob-disabled: "&aLa aparición de mobs ahora está &cDESACTIVADA &aen este claim. &7({chunk})"
+
+help-header: "&7&m----------&r {prefix} &eAyuda &7&m----------"
+help-claim: "&6/claim &7- Reclamar el chunk en el que estás"
+help-sell: "&6/claim sell &7- Vender este claim a cambio de un reembolso"
+help-unclaim: "&6/unclaim &7- Abandonar este claim"
+help-see: "&6/claim see &7- Mostrar los bordes a tu alrededor"
+help-info: "&6/claim info &7- Ver el dueño y los ajustes de este chunk"
+help-list: "&6/claim list [page] &7- Listar tus claims"
+help-pvp: "&6/claim pvp &7- Activar o desactivar el PvP en este claim"
+help-explosion: "&6/claim explosion [mob] &7- Activar o desactivar explosiones o explosiones de mobs"
+help-mob: "&6/claim mob &7- Activar o desactivar la aparición de mobs hostiles"
+help-trust: "&6/claim trust <player> [duration] &7- Dejar que un jugador construya aquí, si quieres por un tiempo"
+help-untrust: "&6/claim untrust <player> &7- Quitar a un jugador de confianza"
+help-trustlist: "&6/claim trustlist &7- Ver quién es de confianza aquí"
+help-admin: "&6/claim admin &7- Comandos de administración"
+help-tp: "&6/claim tp <number|name> &7- Teletransportarte a uno de tus claims"
+help-footer: "&7&m---------------------------------"
+
+admin-help-header: "&7&m----------&r {prefix} &eAyuda de admin &7&m----------"
+admin-help-toggle: "&6/claim admin enable/disable &7- Activar o desactivar los claims para todos"
+admin-help-delete: "&6/claim admin delete <player> [all] &7- Eliminar este claim o todos los de un jugador"
+admin-help-give: "&6/claim admin give <player> &7- Dar a un jugador el chunk en el que estás"
+admin-help-price: "&6/claim admin price <amount> &7- Fijar el precio del claim"
+admin-help-cooldown: "&6/claim admin cooldown <seconds> &7- Fijar la espera entre claims"
+admin-help-prefix: "&6/claim admin prefix <prefix> &7- Cambiar el prefijo de los mensajes"
+admin-help-economy: "&6/claim admin economy enable/disable &7- Activar o desactivar la economía"
+admin-help-pvp: "&6/claim admin pvp enable/disable [all] &7- Fijar el PvP aquí o en todos los claims"
+admin-help-explosion: "&6/claim admin explosion enable/disable [all] &7- Fijar las explosiones aquí o en todos los claims"
+admin-help-mob: "&6/claim admin mob enable/disable [all] &7- Fijar la aparición de mobs aquí o en todos los claims"
+admin-help-bulksell: "&6/claim admin bulksell [player] &7- Vender claims en bloque y reembolsar a sus dueños"
+admin-help-pricediff: "&6/claim admin pricediff [old price] &7- Reembolsar a los dueños tras bajar el precio"
+admin-help-lang: "&6/claim admin lang <auto/en/tr/de/es/ru> &7- Fijar el idioma para todos"
+admin-help-blacklist: "&6/claim admin blacklist add/remove <world> &7- Bloquear o permitir claims en un mundo"
+admin-help-reload: "&6/claim admin reload &7- Recargar la configuración y los mensajes"
+admin-help-footer: "&7&m---------------------------------"
+
+tp-warmup: "&eTeletransporte en &6{seconds} segundos&e. ¡No te muevas!"
+tp-success: "&aTe has teletransportado a tu claim."
+tp-cancelled: "&cTeletransporte cancelado porque te moviste."
+tp-already-pending: "&cYa estás esperando un teletransporte."
+tp-no-claims: "&cNo tienes claims a los que teletransportarte."
+tp-usage: "&cUso: &e/claim tp <1-{max}|name>"
+tp-invalid-number: "&cNo hay ningún claim con ese número o nombre. Revisa &e/claim list&c."
+tp-world-not-found: "&cNo se encontró el mundo de este claim."
+
+confirm-replaced: '&eTu acción pendiente anterior fue sustituida por esta.'
+confirm-text: '&eEscribe /confirm para continuar o /cancel para detenerte.'
+operation-changed: '&cAlgo cambió mientras tanto. Vuelve a usar el comando.'
+operation-success: '&aHecho.'
+transaction-locked: '&cEste claim tiene un pago sin terminar. Un administrador debe revisarlo primero.'
+transaction-failed: '&cNo se pudo completar. Un administrador puede revisar el registro de transacciones antes de que lo intentes otra vez.'
+invalid-input: '&cEse comando no está bien escrito. Escribe /claim help para ver cómo se usa.'
+reload-invalid: '&cLa nueva configuración tiene errores, así que se sigue usando la anterior.'
+feature-disabled: '&cEsta función está desactivada en este servidor.'
+economy-required: '&cEsto necesita un plugin de economía, pero no hay ninguno activo.'
+claim-banned: '&cNo puedes obtener claims nuevos.'
+acquire-occupied: '&cEste chunk ya está reclamado.'
+acquire-limit: '&cHas alcanzado tu límite de claims del servidor o de este mundo.'
+acquire-spacing: '&cEstá demasiado cerca del claim de otro jugador.'
+acquire-cooldown: '&cDebes esperar un poco antes de reclamar otra vez.'
+setting-locked: '&cEl servidor ha bloqueado este ajuste.'
+setting-updated: '&a{setting}: {value}'
+trustperm-usage: '&cUso: &e/claim trust <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
+clan-unavailable: '&cAhora no se encuentra ese clan, o el nombre coincide con varios clanes.'
+coowner-usage: '&cUso: &e/claim coowner add <player> &co &e/claim coowner remove'
+coowner-full: '&cEste claim ya tiene un copropietario.'
+transfer-usage: '&cUso: &e/claim transfer <online-player>'
+ownership-offer: '&e{owner} te ofrece {kind} de {chunk}. Una transferencia quita a los jugadores de confianza, el acceso de clan, el copropietario y cualquier anuncio de venta. Escribe /confirm para aceptar.'
+offer-sent: '&aOferta enviada. Nada cambia hasta que el otro jugador acepte.'
+cancel-market-first: '&cQuita primero el anuncio de venta.'
+market-usage: '&cUso: &e/claim market list <price> | cancel | buy'
+market-unavailable: '&cEste claim no está a la venta.'
+market-confirm: '&e¿Comprar {chunk} por {price}? El vendedor recibe {income}; el resto es impuesto. Se quitarán los accesos anteriores al claim.'
+auto-unavailable: '&cEl auto-claim no está disponible con los ajustes actuales del servidor.'
+auto-enabled: '&aAuto-claim activado. Los chunks que pises se reclamarán cuando sea posible.'
+auto-disabled: '&eAuto-claim desactivado.'
+bypass-enabled: '&eOmisión de protección activada. Ahora puedes editar cualquier claim.'
+bypass-disabled: '&aOmisión de protección desactivada.'
+name-duplicate: '&cYa tienes un claim con ese nombre.'
+tp-unsafe: '&cNo se encontró un lugar seguro para teletransportarse en este claim.'
+claim-summary: '&e{name} | {chunk} | Dueño: {owner} | ID: {id}'
+claim-coowner: '&eCopropietario: {player}'
+claim-setting: '&7{setting}: {value} | bloqueado: {locked}'
+claim-market: '&eEn venta: {price}'
+claim-private: '&7Entradas de confianza: {trust} | Punto propio: {spawn}'
+list-page: '&eClaims - página {page}/{pages}'
+list-named-entry: '&7{number}. &e{name} &7| &e{world} &7| &fX:{x} Z:{z} &7| &f{date}'
+trust-list-details: "&7  Acceso: &f{rights} &7| Hasta: &f{expiry}"
+trust-list-clan: "&7- &eClan: &f{clan}"
+info-name: "&eNombre: &f{name}"
+info-setting: "&e{setting}: {status}"
+info-setting-locked: "&7{setting} está bloqueado por el servidor."
+info-custom-spawn: "&ePunto de teletransporte: &aFijado"
+transactions-empty: "&eNo hay pagos sin terminar."
+transactions-header: "&ePagos sin terminar:"
+transactions-entry: "&7- &f{id} &7| &e{chunk} &7| &f{stage}"
+ban-usage: '&cUso: &e/claim admin ban <player> <30m|2h|7d|permanent> | unban <player>'
+purge-usage: '&cUso: &e/claim admin purge <inactive-days>'
+purge-preview: '&eEsto quitaría {count} claims de {players} dueños. Aún no se ha eliminado nada.'
+purge-complete: '&aSe quitaron {count} claims. Antes se guardó una copia de seguridad.'
+warn-usage: '&cUso: &e/claim warn <visitor>'
+warn-ineligible: '&cSolo puedes advertir a visitantes que estén en tu claim sin permiso.'
+warn-already-applied: '&eEste jugador ya fue sancionado por estas advertencias, o un administrador debe revisarlo.'
+warn-cooldown: '&eEspera un momento antes de advertir otra vez a este jugador.'
+warning-received: '&cAdvertencia {count}/{max} del dueño del claim. Sal de esta zona. La última advertencia aplica {type} durante {duration}.'
+warning-ban-reason: '&cIgnorar repetidamente las advertencias del claim.'
+entry-exit-unavailable: '&cNo se encontró una salida segura cerca. Pide ayuda a un administrador.'
+protection-villager: '&cNo puedes dañar aldeanos en este claim.'
+help-mobexplosion: "&6/claim explosion mob &7- Activar o desactivar explosiones de mobs en este claim"
+help-villager: "&6/claim villager &7- Permitir o bloquear el daño de jugadores a aldeanos"
+help-doors: "&6/claim doors &7- Permitir o no que los visitantes usen puertas y vallas"
+help-trapdoors: "&6/claim trapdoors &7- Permitir o no que los visitantes usen trampillas"
+help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Elegir qué puede hacer un jugador de confianza"
+help-coowner-add: "&6/claim coowner add <player> &7- Invitar a un copropietario"
+help-coowner-remove: "&6/claim coowner remove &7- Quitar al copropietario"
+help-transfer: "&6/claim transfer <player> &7- Ofrecer este claim a un jugador conectado"
+help-market-list: "&6/claim market list <price> &7- Poner este claim a la venta"
+help-market-cancel: "&6/claim market cancel &7- Retirar este claim del mercado"
+help-market-buy: "&6/claim market buy &7- Comprar el claim en el que estás"
+help-auto: "&6/claim auto [on|off] &7- Reclamar chunks automáticamente al caminar"
+help-name: "&6/claim name <name> &7- Ponerle un nombre a este claim"
+help-setspawn: "&6/claim setspawn &7- Elegir dónde apareces al teletransportarte aquí"
+help-warn: "&6/claim warn <player> &7- Advertir a un visitante que no debería estar aquí"
+help-lang: "&6/claim lang <auto|en|tr|de|es|ru> &7- Elegir tu idioma"
+help-confirm: "&6/confirm &7- Confirmar lo que vas a hacer"
+help-cancel: "&6/cancel &7- Cancelar lo que vas a hacer"
+admin-help-bypass: "&6/claim admin bypass [on|off] &7- Ignorar la protección de claims para ti"
+admin-help-ban: "&6/claim admin ban <player> <duration> &7- Impedir que un jugador obtenga claims nuevos"
+admin-help-unban: "&6/claim admin unban <player> &7- Permitir de nuevo reclamar a un jugador bloqueado"
+admin-help-purge: "&6/claim admin purge <days> &7- Ver antes qué claims de jugadores inactivos se quitarían"
+admin-help-transactions: "&6/claim admin transactions &7- Ver pagos de economía sin terminar"
+state-enabled: '&aACTIVADO'
+state-disabled: '&cDESACTIVADO'
+state-yes: 'sí'
+state-no: 'no'
+setting-pvp: 'PvP'
+setting-explosions: 'Explosiones'
+setting-mob-spawning: 'Aparición de mobs hostiles'
+setting-villager-player-damage: 'Daño de jugadores a aldeanos'
+setting-visitor-doors: 'Visitantes usan puertas y vallas'
+setting-visitor-trapdoors: 'Visitantes usan trampillas'
+coowner-offer: '&e{owner} te invita a ser copropietario de {chunk}. Podrás construir y gestionar la confianza y los ajustes, pero no venderlo, eliminarlo ni transferirlo. Escribe /confirm para aceptar.'
+transfer-offer: '&e{owner} quiere darte {chunk}. Se quitarán los jugadores de confianza, el acceso de clan, el copropietario y cualquier anuncio de venta. Escribe /confirm para aceptar.'
+punishment-server-ban: 'una expulsión del servidor'
+punishment-claim-entry-ban: 'una prohibición de entrar en este claim'
+setting-mob-explosions: 'Explosiones de mobs'
+help-list-filters: '&6/claim list [page] [name <text>] [world <world>] [sale <all|listed|unlisted>] &7- Buscar entre tus claims'
+list-no-matches: '&7Ninguno de tus claims coincide con esos filtros.'
+list-filtered: '&7Mostrando &f{count}&7 de &f{total}&7 claims. Usa estos números con /claim tp.'
+info-access: '&7Tu acceso: &f{role} &7| &f{rights}'
+info-access-expiry: '&7Tu confianza termina en: &f{remaining}'
+access-role-owner: 'Dueño'
+access-role-coowner: 'Copropietario'
+access-role-bypass: 'Omisión de admin'
+access-role-trusted: 'Jugador de confianza'
+access-role-visitor: 'Visitante'
+access-none: 'Ninguno'
+admin-help-diagnose: '&6/claim admin diagnose &7- Mostrar un breve informe de estado para soporte'
+diagnose-header: '&eDyClaim {version} &7| &f{platform}'
+diagnose-storage: '&7Almacenamiento de claims: &f{status} &7| Claims: &f{count}'
+diagnose-economy: '&7Economía: &f{status}'
+diagnose-integrations: '&7Integraciones instaladas: &f{plugins}'
+diagnose-hooks: '&7Conexiones activas de DyClaim: &f{hooks}'
+diagnose-ready: 'Listo'
+diagnose-unavailable: 'No disponible'
+diagnose-disabled: 'Desactivado'
+help-page: '&7Página &e{page}&7/&e{pages}'
+help-page-next: '&7Página &e{page}&7/&e{pages} &8| &7Siguiente: &e{command}'
+help-dyc: '&6/dyc &7- Forma corta de /claim, por ejemplo /dyc list'
+help-cltp: '&6/cltp <number|name> &7- Forma corta de /claim tp'
+admin-help-dyca: '&6/dyca <command> &7- Forma corta de /claim admin, por ejemplo /dyca reload'
+confirm-cancelled: '&7Cancelado. No se cambió nada.'
+help-message: "&6/claim message <text|clear> &7- Mostrar un mensaje a quien entre en este claim"
+help-ban: "&6/claim ban <player> [duration] &7- Impedir que un jugador entre en este claim"
+help-unban: "&6/claim unban <player> &7- Dejar entrar de nuevo a un jugador vetado"
+help-banlist: "&6/claim banlist &7- Ver quién tiene prohibida la entrada a este claim"
+admin-help-import: "&6/dyclaim admin import <griefprevention|claimchunk> [confirm] &7- Copiar claims de otro plugin"
+message-usage: '&cUso: &e/claim message <text> &co &e/claim message clear'
+message-set: '&aLos visitantes verán este mensaje al entrar en el claim.'
+message-cleared: '&aSe quitó el mensaje del claim.'
+message-invalid: '&cEl mensaje debe tener entre 1 y {max} caracteres, sin caracteres especiales. Los códigos de color solo funcionan si el servidor los permite.'
+claim-greeting: '&7[{owner}] &f{message}'
+info-greeting: '&eMensaje: &f{message}'
+info-visitor-bans: '&eJugadores vetados: &f{count}'
+visitor-ban-usage: '&cUso: &e/claim ban <player> [30m|2h|7d|permanent]'
+visitor-unban-usage: '&cUso: &e/claim unban <player>'
+visitor-ban-self: '&cNo puedes vetarte a ti mismo ni a un dueño del claim.'
+visitor-ban-exempt: '&cA ese jugador no se le puede vetar en los claims.'
+visitor-ban-full: '&cEste claim alcanzó su límite de vetos. Quita uno primero.'
+visitor-banned: '&a{player} ya no puede entrar en este claim. Se le quitó la confianza.'
+visitor-ban-received: '&c{owner} te ha prohibido la entrada a este claim.'
+visitor-ban-entry: '&cTienes prohibida la entrada al claim de {owner}.'
+visitor-ban-not-found: '&e{player} no tiene prohibida la entrada a este claim.'
+visitor-unbanned: '&a{player} ya puede entrar otra vez en este claim.'
+visitor-ban-list-header: '&eJugadores con entrada prohibida a este claim:'
+visitor-ban-list-entry: '&7- &f{player} &7| Hasta: &f{expiry}'
+visitor-ban-list-empty: '&eNadie tiene prohibida la entrada a este claim.'
+import-usage: '&cUso: &e/dyclaim admin import <griefprevention|claimchunk> [confirm]'
+import-unavailable: '&c{source} no está instalado o no está activado, así que no hay nada que importar.'
+import-preview: '&eSe encontraron {claims} claims de {source} que cubren {chunks} chunks nuevos. Omitidos: {claimed} ya reclamados, {blacklisted} en mundos bloqueados, {conflicts} superpuestos. Aún no ha cambiado nada. Usa &6{command} &epara importar.'
+import-complete: '&aSe importaron {created} chunks y {trusted} jugadores de confianza. {skipped} chunks fueron ocupados mientras tanto. Antes se guardó una copia de seguridad.'
+import-failed: '&cNo se pudieron leer los claims. Revisa la consola para ver los detalles.'
+map-label: '{owner}'
+map-label-named: '{owner} - {names}'

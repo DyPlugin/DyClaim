@@ -17,9 +17,15 @@ import java.util.Map;
 
 public class MessageManager {
 
+    /** Shipped message languages. Commands and TAB words stay English except for Turkish. */
+    public static final java.util.List<String> LANGUAGES = java.util.List.of("en", "tr", "de", "es", "ru");
+    /** A MiniMessage tag such as <green>, <#55ff55>, <gradient:...> or </bold>. */
+    private static final java.util.regex.Pattern TAG = java.util.regex.Pattern.compile("<[a-zA-Z#/!][^<>]*>");
+    private static final boolean MINI_MESSAGE = present("net.kyori.adventure.text.minimessage.MiniMessage")
+            && present("net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer");
+
     private final DyClaim plugin;
-    private record Catalog(Map<String,String> en,Map<String,String> tr) {}
-    private volatile Catalog catalog=new Catalog(Map.of(),Map.of());
+    private volatile Map<String,Map<String,String>> catalog=Map.of();
 
     public MessageManager(DyClaim plugin) {
         this.plugin = plugin;
@@ -27,11 +33,14 @@ public class MessageManager {
     }
 
     public synchronized void reload() {
-        Map<String,String> en=new HashMap<>(),tr=new HashMap<>();
-        loadLanguage("en", en);
-        loadLanguage("tr", tr);
-        // Publish both complete languages together; readers retain the previous catalog during I/O.
-        catalog=new Catalog(Map.copyOf(en),Map.copyOf(tr));
+        Map<String,Map<String,String>> next=new HashMap<>();
+        for (String lang : LANGUAGES) {
+            Map<String,String> messages=new HashMap<>();
+            loadLanguage(lang, messages);
+            next.put(lang, Map.copyOf(messages));
+        }
+        // Publish all complete languages together; readers retain the previous catalog during I/O.
+        catalog=Map.copyOf(next);
     }
 
     public String getMessage(String key) {
@@ -42,7 +51,7 @@ public class MessageManager {
     public String getMessage(String key, Map<String, String> placeholders) {
         String msg = getMessageInternal(resolveConfiguredLanguage(), key);
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            msg = msg.replace(entry.getKey(), entry.getValue());
+            msg = msg.replace(entry.getKey(), escapeTags(entry.getValue()));
         }
         return colorize(msg);
     }
@@ -55,7 +64,7 @@ public class MessageManager {
     public String getMessage(CommandSender sender, String key, Map<String, String> placeholders) {
         String msg = getMessageInternal(resolveLanguage(sender), key);
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            msg = msg.replace(entry.getKey(), entry.getValue());
+            msg = msg.replace(entry.getKey(), escapeTags(entry.getValue()));
         }
         return colorize(msg);
     }
@@ -119,7 +128,7 @@ public class MessageManager {
                     target.put(key, defConfig.getString(key));
                 }
             }
-            refreshPreviousDefaults(lang, target, defConfig);
+            if (lang.equals("en") || lang.equals("tr")) refreshPreviousDefaults(lang, target, defConfig);
             upgradeShippedTexts(lang, target, defConfig);
         }
     }
@@ -171,44 +180,72 @@ public class MessageManager {
 
     private String resolveConfiguredLanguage() {
         String configured = plugin.getConfigManager().getLang().toLowerCase(Locale.ROOT);
-        if (configured.equals("tr") || configured.equals("en")) {
-            return configured;
-        }
-        return "en";
+        return LANGUAGES.contains(configured) ? configured : "en";
     }
 
     private String resolveLanguage(CommandSender sender) {
         String configured = plugin.getConfigManager().getLang().toLowerCase(Locale.ROOT);
-        if (configured.equals("tr") || configured.equals("en")) return configured;
+        if (LANGUAGES.contains(configured)) return configured;
         if(sender instanceof Player player && plugin.getFeatureManager()!=null) {
             String selected=plugin.getFeatureManager().language(player.getUniqueId());
-            if(selected!=null)return selected;
+            if(selected!=null && LANGUAGES.contains(selected))return selected;
         }
         if (sender instanceof Player player) {
             String locale = player.getLocale();
-            if (locale != null && locale.toLowerCase(Locale.ROOT).startsWith("tr")) {
-                return "tr";
+            if (locale != null && locale.length() >= 2) {
+                String prefix = locale.substring(0, 2).toLowerCase(Locale.ROOT);
+                if (LANGUAGES.contains(prefix)) return prefix;
             }
         }
         return "en";
     }
 
     private String getMessageInternal(String lang, String key) {
-        Catalog view=catalog;
-        Map<String, String> selected = lang.equals("tr") ? view.tr() : view.en();
+        Map<String,Map<String,String>> view=catalog;
+        Map<String, String> selected = view.getOrDefault(lang, Map.of());
         String value = selected.get(key);
         if (value != null) {
             return value;
         }
-        String fallback = view.en().get(key);
+        String fallback = view.getOrDefault("en", Map.of()).get(key);
         return fallback != null ? fallback : "&cMessage not found: " + key;
     }
 
+    /**
+     * Applies '&' colour codes and, when the server ships Adventure (Paper, Purpur, Folia), MiniMessage tags.
+     * Text without tags is never handed to MiniMessage; on Spigot only '&' codes apply.
+     */
     @SuppressWarnings("deprecation")
     public static String colorize(String text) {
         if (text == null)
             return "";
-        return ChatColor.translateAlternateColorCodes('&', text);
+        String result = text;
+        if (MINI_MESSAGE && (TAG.matcher(result).find() || result.contains("\\<"))) {
+            try {
+                result = MiniMessageBridge.toLegacy(result);
+            } catch (RuntimeException | LinkageError ignored) {
+                // Malformed tags keep the original text with '&' codes only.
+            }
+        }
+        return ChatColor.translateAlternateColorCodes('&', result);
+    }
+
+    /**
+     * Makes text from players or the server safe to place inside a message: MiniMessage tags in it
+     * are shown as typed instead of being applied. Without Adventure the text is returned unchanged.
+     */
+    public static String escapeTags(String text) {
+        if (!MINI_MESSAGE || text == null || text.indexOf('<') < 0) return text;
+        return text.replace("\\", "\\\\").replace("<", "\\<");
+    }
+
+    private static boolean present(String className) {
+        try {
+            Class.forName(className, false, MessageManager.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError missing) {
+            return false;
+        }
     }
 }
 

@@ -63,16 +63,30 @@ public class PlayerListener implements Listener {
             if (shouldShow && plugin.getConfigManager().isShowEnter()) {
                 sendClaimEnterNotification(player, toClaim);
             }
+            if ((fromClaim == null || !fromClaim.getOwnerUUID().equals(toClaim.getOwnerUUID())) && !toClaim.canManage(player.getUniqueId())) {
+                sendGreeting(player, toClaim);
+            }
         }
 
         if (fromClaim != null && toClaim == null && plugin.getConfigManager().isShowLeave()) {
             String leaveMsg = plugin.getMessageManager().getMessage(player, "actionbar-leave");
             if (plugin.getConfigManager().isUseActionbar()) {
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(MessageManager.colorize(leaveMsg)));
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(leaveMsg));
             } else {
                 player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-leave"));
             }
         }
+    }
+
+    /** Owner-written text; colour codes are removed unless the server allows them. */
+    private void sendGreeting(Player player, ClaimData claim) {
+        var values = plugin.getConfigManager().values();
+        String greeting = claim.getGreeting();
+        if (greeting == null || !values.getBoolean("claim-messages.enabled")) return;
+        // With colours allowed the owner's codes and tags are applied first; otherwise they are shown as plain text.
+        greeting = values.getBoolean("claim-messages.allow-colors") ? MessageManager.colorize(greeting) : greeting.replace("&", "");
+        player.sendMessage(plugin.getMessageManager().getMessage(player, "claim-greeting",
+                Map.of("{owner}", claim.getOwnerName(), "{message}", greeting)));
     }
 
     private void sendClaimEnterNotification(Player player, ClaimData claim) {
@@ -86,7 +100,7 @@ public class PlayerListener implements Listener {
         if (plugin.getConfigManager().isUseActionbar()) {
             String msg = plugin.getMessageManager().getMessage(player, "actionbar-enter",
                     Map.of("{owner}", claim.getOwnerName(), "{pvp}", pvpStatus));
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(MessageManager.colorize(msg)));
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
         } else {
             player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-enter",
                     Map.of("{owner}", claim.getOwnerName())));

@@ -37,11 +37,16 @@ public final class ClaimStore {
         }
         return claims;
     }
-    public void save(Map<String, ClaimData> claims) throws IOException {
+    public void save(Map<String, ClaimData> claims) throws IOException { write(prepare(claims)); }
+    /** Copies and validates the claims; the copy can then be written from another thread. */
+    public Map<String,ClaimData> prepare(Map<String, ClaimData> claims) throws IOException {
         if(claims==null)throw new IOException("Missing claims map");
         Map<String,ClaimData> snapshot=new LinkedHashMap<>();
         claims.forEach((key,claim)->snapshot.put(key,claim==null?null:claim.snapshot()));
         validate(snapshot);
+        return snapshot;
+    }
+    public void write(Map<String,ClaimData> snapshot) throws IOException {
         AtomicJson.write(file, Map.of("schemaVersion", VERSION, "claims", snapshot));
     }
     public static void validate(Map<String, ClaimData> claims) throws IOException {
@@ -58,6 +63,10 @@ public final class ClaimStore {
             for (Map.Entry<String, TrustGrant> grant : claim.getClanGrants().entrySet()) {
                 if (grant.getKey() == null || !validGrant(grant.getValue())) throw new IOException("Invalid clan trust");
             }
+            for (Map.Entry<UUID, Long> ban : claim.getVisitorBans().entrySet()) {
+                if (ban.getKey() == null || ban.getValue() == null || ban.getValue() < 0) throw new IOException("Invalid visitor ban: " + entry.getKey());
+            }
+            if (claim.getGreeting() != null && (claim.getGreeting().length() > 256 || claim.getGreeting().chars().anyMatch(Character::isISOControl))) throw new IOException("Invalid claim message: " + entry.getKey());
             if (!finiteMoney(claim.getPaidPrice()) || !finiteMoney(claim.getMarketPrice()) || !finiteMoney(claim.getRefundBasis(0))) throw new IOException("Invalid claim price");
             if (claim.hasSpawn() && (!Double.isFinite(claim.getSpawnX()) || !Double.isFinite(claim.getSpawnY()) || !Double.isFinite(claim.getSpawnZ())
                     || !Float.isFinite(claim.getSpawnYaw()) || !Float.isFinite(claim.getSpawnPitch())

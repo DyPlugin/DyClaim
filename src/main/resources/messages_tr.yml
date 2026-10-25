@@ -148,7 +148,7 @@ admin-help-explosion: "&6/claim admin patlama aç/kapat [tümü] &7- Patlamalar�
 admin-help-mob: "&6/claim admin mob aç/kapat [tümü] &7- Mob doğmasını burada veya tüm claim'lerde ayarlayın"
 admin-help-bulksell: "&6/claim admin toplusat [oyuncu] &7- Claim'leri toplu satıp sahiplerine iade yapın"
 admin-help-pricediff: "&6/claim admin farkver [eski fiyat] &7- Fiyat düşünce sahiplere farkı iade edin"
-admin-help-lang: "&6/claim admin dil <otomatik/en/tr> &7- Herkes için dili ayarlayın"
+admin-help-lang: "&6/claim admin dil <otomatik/en/tr/de/es/ru> &7- Herkes için dili ayarlayın"
 admin-help-blacklist: "&6/claim admin karaliste ekle/çıkar <dünya> &7- Bir dünyada claim almayı engelleyin veya açın"
 admin-help-reload: "&6/claim admin yenile &7- Ayarları ve mesajları yeniden yükleyin"
 admin-help-footer: "&7&m---------------------------------"
@@ -240,7 +240,7 @@ help-auto: "&6/claim otomatik [aç|kapat] &7- Yürüdükçe chunk'ları otomatik
 help-name: "&6/claim isim <isim> &7- Bu claim'e bir isim verin"
 help-setspawn: "&6/claim spawnayarla &7- Buraya ışınlanınca nereye geleceğinizi ayarlayın"
 help-warn: "&6/claim uyar <oyuncu> &7- İzinsiz bir ziyaretçiyi uyarın"
-help-lang: "&6/claim dil <otomatik|en|tr> &7- Dilinizi seçin"
+help-lang: "&6/claim dil <otomatik|en|tr|de|es|ru> &7- Dilinizi seçin"
 help-confirm: "&6/onayla &7- Bekleyen işlemi onaylayın"
 help-cancel: "&6/reddet &7- Bekleyen işlemden vazgeçin"
 admin-help-bypass: "&6/claim admin koruma-atla [aç|kapat] &7- Claim korumalarını kendiniz için yok sayın"
@@ -283,6 +283,7 @@ diagnose-header: '&eDyClaim {version} &7| &f{platform}'
 diagnose-storage: '&7Claim kaydı: &f{status} &7| Claim sayısı: &f{count}'
 diagnose-economy: '&7Ekonomi: &f{status}'
 diagnose-integrations: '&7Kurulu entegrasyonlar: &f{plugins}'
+diagnose-hooks: '&7Etkin DyClaim bağlantıları: &f{hooks}'
 diagnose-ready: 'Hazır'
 diagnose-unavailable: 'Kullanılamıyor'
 diagnose-disabled: 'Kapalı'
@@ -295,3 +296,37 @@ help-cltp: '&6/cltp <numara|isim> &7- /claim ışınlan komutunun kısası'
 admin-help-dyca: '&6/dyca <komut> &7- /claim admin komutunun kısası, örneğin /dyca yenile'
 # /reddet sonrasında gönderilir; confirm-deny tıklanabilir düğme yazısı olarak kalır.
 confirm-cancelled: '&7İşlem iptal edildi, hiçbir şey değişmedi.'
+
+# Claim mesajları, ziyaretçi yasakları, claim aktarma ve harita etiketleri (1.1.0).
+help-message: "&6/claim mesaj <metin|temizle> &7- Claim'e girenlere bir mesaj gösterin"
+help-ban: "&6/claim yasakla <oyuncu> [süre] &7- Bir oyuncunun bu claim'e girmesini engelleyin"
+help-unban: "&6/claim yasakkaldır <oyuncu> &7- Yasaklı oyuncunun yeniden girmesine izin verin"
+help-banlist: "&6/claim yasaklılar &7- Bu claim'den yasaklı oyuncuları görün"
+admin-help-import: "&6/dyclaim admin aktar <griefprevention|claimchunk> [onayla] &7- Başka bir eklentideki claim'leri aktarın"
+message-usage: '&cKullanım: &e/claim mesaj <metin> &cveya &e/claim mesaj temizle'
+message-set: '&aZiyaretçiler claim''e girince bu mesajı görecek.'
+message-cleared: '&aClaim mesajı kaldırıldı.'
+message-invalid: '&cMesaj 1-{max} karakter olmalı ve özel karakter içermemeli. Renk kodları yalnızca sunucu izin verirse çalışır.'
+claim-greeting: '&7[{owner}] &f{message}'
+info-greeting: '&eMesaj: &f{message}'
+info-visitor-bans: '&eYasaklı oyuncular: &f{count}'
+visitor-ban-usage: '&cKullanım: &e/claim yasakla <oyuncu> [30m|2h|7d|kalıcı]'
+visitor-unban-usage: '&cKullanım: &e/claim yasakkaldır <oyuncu>'
+visitor-ban-self: '&cKendinizi veya bir claim sahibini yasaklayamazsınız.'
+visitor-ban-exempt: '&cBu oyuncu claim''lerden yasaklanamaz.'
+visitor-ban-full: '&cBu claim''in yasak sınırı doldu. Önce birinin yasağını kaldırın.'
+visitor-banned: '&a{player} artık bu claim''e giremez. Güven izni de kaldırıldı.'
+visitor-ban-received: '&c{owner} sizi bu claim''den yasakladı.'
+visitor-ban-entry: '&c{owner} adlı oyuncunun claim''ine girmeniz yasak.'
+visitor-ban-not-found: '&e{player} bu claim''den yasaklı değil.'
+visitor-unbanned: '&a{player} artık bu claim''e yeniden girebilir.'
+visitor-ban-list-header: '&eBu claim''den yasaklı oyuncular:'
+visitor-ban-list-entry: '&7- &f{player} &7| Bitiş: &f{expiry}'
+visitor-ban-list-empty: '&eBu claim''den yasaklı kimse yok.'
+import-usage: '&cKullanım: &e/dyclaim admin aktar <griefprevention|claimchunk> [onayla]'
+import-unavailable: '&c{source} kurulu veya etkin değil; aktarılacak bir şey yok.'
+import-preview: '&e{source} içinde {chunks} yeni chunk kaplayan {claims} claim bulundu. Atlananlar: {claimed} zaten claim''li, {blacklisted} karalistedeki dünyalarda, {conflicts} çakışan. Henüz hiçbir şey değişmedi. Aktarmak için &6{command} &eyazın.'
+import-complete: '&a{created} chunk ve {trusted} güvenilen oyuncu aktarıldı. Bu arada {skipped} chunk başkası tarafından alınmıştı. Öncesinde yedek alındı.'
+import-failed: '&cClaim''ler okunamadı. Ayrıntılar için konsola bakın.'
+map-label: '{owner}'
+map-label-named: '{owner} - {names}'

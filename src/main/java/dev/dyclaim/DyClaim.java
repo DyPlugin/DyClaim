@@ -29,6 +29,10 @@ public class DyClaim extends JavaPlugin {
     private TransactionManager transactionManager;
     private ClanTrustManager clanTrustManager;
     private dev.dyclaim.platform.PlatformTasks platformTasks;
+    private dev.dyclaim.hook.Integrations integrations;
+    private dev.dyclaim.lib.bstats.bukkit.Metrics metrics;
+    /** bStats project: https://bstats.org/plugin/bukkit/DyClaim/34849 */
+    private static final int BSTATS_ID = 34849;
 
     @Override
     public void onEnable() {
@@ -98,6 +102,10 @@ public class DyClaim extends JavaPlugin {
         getServer().getPluginManager().registerEvents(featureManager, this);
         featureManager.reloadTasks();
 
+        integrations = new dev.dyclaim.hook.Integrations(this);
+        integrations.start();
+        startMetrics();
+
         this.updateChecker = new UpdateChecker(this);
         getServer().getPluginManager().registerEvents(updateChecker, this);
         updateChecker.check();
@@ -107,6 +115,8 @@ public class DyClaim extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if(integrations!=null) shutdown("integrations",integrations::close);
+        if(metrics!=null) shutdown("metrics",metrics::shutdown);
         if(updateChecker!=null) shutdown("update checker",updateChecker::close);
         if(confirmationManager!=null) shutdown("confirmations",confirmationManager::clear);
         if(teleportManager!=null) shutdown("teleports",teleportManager::close);
@@ -170,7 +180,39 @@ public class DyClaim extends JavaPlugin {
         chunkVisualizer.cleanupAll();
         featureManager.reloadTasks();
         if(updateChecker!=null) updateChecker.reload();
+        if(integrations!=null) integrations.reload();
     }
+
+    /** Anonymous bStats statistics; metrics.enabled and the global bStats config can both turn it off. */
+    private void startMetrics() {
+        if (!configManager.values().getBoolean("metrics.enabled", true)) return;
+        try {
+            metrics = new dev.dyclaim.lib.bstats.bukkit.Metrics(this, BSTATS_ID);
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("language_mode", () -> configManager.getLang()));
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("platform", () -> platformTasks.isRegionThreaded() ? "Folia" : "Standard"));
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("economy", () -> economyManager.isEnabled() ? "Enabled" : "Disabled"));
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("claims", () -> claimRange(claimManager.getAllClaims().size())));
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("placeholderapi", () -> integrations.placeholdersActive() ? "Yes" : "No"));
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.AdvancedPie("map_plugins", () -> {
+                java.util.Map<String, Integer> maps = new java.util.HashMap<>();
+                for (String name : integrations.activeMaps()) maps.put(name, 1);
+                if (maps.isEmpty()) maps.put("None", 1);
+                return maps;
+            }));
+        } catch (RuntimeException ex) {
+            getLogger().warning("bStats metrics could not start: " + ex.getMessage());
+        }
+    }
+
+    static String claimRange(int claims) {
+        if (claims == 0) return "0";
+        if (claims <= 10) return "1-10";
+        if (claims <= 50) return "11-50";
+        if (claims <= 200) return "51-200";
+        if (claims <= 1000) return "201-1000";
+        return "1000+";
+    }
+    public dev.dyclaim.hook.Integrations getIntegrations(){return integrations;}
     public AccessManager getAccessManager(){return accessManager;}
     public AcquisitionRules getAcquisitionRules(){return acquisitionRules;}
     public FeatureManager getFeatureManager(){return featureManager;}

@@ -19,6 +19,7 @@ public final class CommandWords {
         String[] args=input.clone();if(args.length==0)return args;String root=plain(args[0]);
         if(Set.of("coowner","ortak","market","pazar","auto","otomatik","lang","dil").contains(root)&&args.length>1)args[1]=canonical(args[1]);
         if(Set.of("trust","guven").contains(root)){if(args.length>2)args[2]=canonical(args[2]);if(args.length>3)args[3]=canonical(args[3]);}
+        if(Set.of("ban","yasakla").contains(root)&&args.length>2)args[2]=canonical(args[2]);
         if(Set.of("trustperm","guvenizin").contains(root)){if(args.length>2)args[2]=canonical(args[2]);if(args.length>3)args[3]=canonical(args[3]);}
         if(root.equals("admin")&&args.length>1){
             args[1]=canonical(args[1]);if(args[1].equals("on"))args[1]="enable";if(args[1].equals("off"))args[1]="disable";String sub=plain(args[1]);

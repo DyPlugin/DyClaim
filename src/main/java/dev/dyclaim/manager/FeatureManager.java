@@ -32,6 +32,7 @@ public class FeatureManager implements Listener {
     private final dev.dyclaim.platform.RegionalEjection regionalEjection;
     private final Set<UUID> auto=java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final Map<UUID,Long> autoAttempt=new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<UUID,Long> banNotice=new java.util.concurrent.ConcurrentHashMap<>();
     private BukkitTask mobTask,purgeTask;
     private dev.dyclaim.platform.RegionalMobSweep regionalMobs;
     private volatile long purgeGeneration;
@@ -96,6 +97,10 @@ public class FeatureManager implements Listener {
                 case "market","pazar" -> market(p,args);
                 case "auto","otomatik" -> auto(p,args);
                 case "name","isim" -> name(p,args);
+                case "message","mesaj" -> greeting(p,args);
+                case "ban","yasakla" -> visitorBan(p,args);
+                case "unban","yasakkaldir","yasakkaldır" -> visitorUnban(p,args);
+                case "banlist","yasaklilar","yasaklılar" -> visitorBanList(p);
                 case "setspawn","spawnayarla" -> spawn(p);
                 case "trustperm","guvenizin","güvenizin" -> trustPermission(p,args);
                 case "trust","guven","güven" -> {
@@ -195,7 +200,8 @@ public class FeatureManager implements Listener {
         }else {
             UUID target=known(args[1]);if(target==null){send(p,"admin-player-not-found");return;}
             if(c.canManage(target)){send(p,"trust-self");return;}
-            c.grant(target,expiry);
+            if(c.isVisitorBanned(target))c.unbanVisitor(target);
+            c.grant(target,expiry);dev.dyclaim.api.ApiEvents.trust(plugin,c,target,true);
         }
         invalidate(c);plugin.getClaimManager().saveAll();send(p,"trust-added",Map.of("{player}",args[1]));
     }
@@ -204,7 +210,7 @@ public class FeatureManager implements Listener {
         if(args.length<2){send(p,"untrust-usage");return;}
         boolean removed;
         if(args[1].startsWith("clan:")){String id=plugin.getClanTrustManager().resolve(args[1].substring(5));removed=c.removeClan(id);}
-        else {UUID target=known(args[1]);removed=target!=null&&c.removeTrusted(target);}
+        else {UUID target=known(args[1]);removed=target!=null&&c.removeTrusted(target);if(removed)dev.dyclaim.api.ApiEvents.trust(plugin,c,target,false);}
         if(!removed){send(p,"trust-not-found",Map.of("{player}",args[1]));return;}
         c.touch();invalidate(c);plugin.getClaimManager().saveAll();send(p,"trust-removed",Map.of("{player}",args[1]));
     }
@@ -375,6 +381,59 @@ public class FeatureManager implements Listener {
         if(plugin.getClaimManager().getPlayerClaims(c.getOwnerUUID()).stream().anyMatch(other->other!=c&&text.equalsIgnoreCase(other.getName()))){send(p,"name-duplicate");return;}
         c.setName(text);plugin.getClaimManager().saveAll();send(p,"operation-success");
     }
+    private void greeting(Player p,String[] args) {
+        if(!permission(p,"dyclaim.message"))return;
+        if(!enabled("claim-messages.enabled")){send(p,"feature-disabled");return;}
+        ClaimData c=owned(p,false);if(c==null)return;
+        if(args.length<2){send(p,"message-usage");return;}
+        if(args.length==2&&Set.of("clear","temizle","sil").contains(args[1].toLowerCase(Locale.ROOT))){c.setGreeting(null);plugin.getClaimManager().saveAll();send(p,"message-cleared");return;}
+        String text=String.join(" ",Arrays.copyOfRange(args,1,args.length)).trim();
+        int max=plugin.getConfigManager().values().getInt("claim-messages.maximum-length",64);
+        boolean colors=enabled("claim-messages.allow-colors");
+        if(text.isBlank()||text.length()>max||text.contains("§")||(!colors&&text.contains("&"))||text.chars().anyMatch(Character::isISOControl)){send(p,"message-invalid",Map.of("{max}",String.valueOf(max)));return;}
+        c.setGreeting(text);plugin.getClaimManager().saveAll();send(p,"message-set");
+    }
+    /** Owner-managed bans; ejection reuses the warning system's safe exit search. */
+    private void visitorBan(Player p,String[] args) {
+        if(!permission(p,"dyclaim.ban"))return;
+        if(!enabled("claim-entry-bans.enabled")){send(p,"feature-disabled");return;}
+        ClaimData c=owned(p,false);if(c==null)return;
+        if(args.length<2||args.length>3){send(p,"visitor-ban-usage");return;}
+        UUID target=known(args[1]);if(target==null){send(p,"admin-player-not-found");return;}
+        if(target.equals(p.getUniqueId())||c.canManage(target)){send(p,"visitor-ban-self");return;}
+        Player online=Bukkit.getPlayer(target);
+        if(online!=null&&(online.hasPermission("dyclaim.ban.exempt")||online.hasPermission("dyclaim.admin"))){send(p,"visitor-ban-exempt");return;}
+        if(!c.isVisitorBanned(target)&&c.getVisitorBans().size()>=plugin.getConfigManager().values().getInt("claim-entry-bans.maximum-per-claim",50)){send(p,"visitor-ban-full");return;}
+        long expiry=args.length==3?duration(args[2],false):0;
+        boolean wasTrusted=c.isTrusted(target);
+        c.removeTrusted(target);c.banVisitor(target,expiry);invalidate(c);plugin.getClaimManager().saveAll();
+        if(wasTrusted)dev.dyclaim.api.ApiEvents.trust(plugin,c,target,false);
+        send(p,"visitor-banned",Map.of("{player}",args[1]));
+        if(online!=null){
+            ClaimData banned=c;
+            onPlayer(online,()->{if(claimAt(online.getLocation())==banned&&entryBanned(online,banned)){send(online,"visitor-ban-received",Map.of("{owner}",banned.getOwnerName()));eject(online,banned);}});
+        }
+    }
+    private void visitorUnban(Player p,String[] args) {
+        if(!permission(p,"dyclaim.ban"))return;
+        if(!enabled("claim-entry-bans.enabled")){send(p,"feature-disabled");return;}
+        ClaimData c=owned(p,false);if(c==null)return;
+        if(args.length!=2){send(p,"visitor-unban-usage");return;}
+        UUID target=known(args[1]);
+        if(target==null||!c.unbanVisitor(target)){send(p,"visitor-ban-not-found",Map.of("{player}",args[1]));return;}
+        plugin.getClaimManager().saveAll();send(p,"visitor-unbanned",Map.of("{player}",args[1]));
+    }
+    private void visitorBanList(Player p) {
+        if(!permission(p,"dyclaim.ban"))return;
+        if(!enabled("claim-entry-bans.enabled")){send(p,"feature-disabled");return;}
+        ClaimData c=owned(p,false);if(c==null)return;
+        long now=now();boolean tr="tr".equals(plugin.getMessageManager().getPreferredLanguage(p));
+        var bans=new TreeMap<String,Long>(String.CASE_INSENSITIVE_ORDER);
+        c.getVisitorBans().forEach((uuid,expiry)->{if(expiry==0||expiry>now)bans.put(ClaimImporter.nameOf(uuid,null),expiry);});
+        if(bans.isEmpty()){display(p,"visitor-ban-list-empty");return;}
+        display(p,"visitor-ban-list-header");
+        bans.forEach((name,expiry)->display(p,"visitor-ban-list-entry",Map.of("{player}",name,"{expiry}",expiry==0?dev.dyclaim.util.CommandWords.display("permanent",tr):displayDate(expiry))));
+    }
     private void spawn(Player p) {
         if(!permission(p,"dyclaim.setspawn"))return;ClaimData c=owned(p,false);if(c==null)return;
         Location l=p.getLocation();if(!TeleportManager.safe(l)){send(p,"tp-unsafe");return;}
@@ -396,6 +455,7 @@ public class FeatureManager implements Listener {
         display(p,"info-world",Map.of("{world}",c.getWorld()));
         display(p,"info-date",Map.of("{date}",displayDate(c.getClaimedAt())));
         if(c.getName()!=null)display(p,"info-name",Map.of("{name}",c.getName()));
+        if(c.getGreeting()!=null&&enabled("claim-messages.enabled"))display(p,"info-greeting",Map.of("{message}",enabled("claim-messages.allow-colors")?MessageManager.colorize(c.getGreeting()):c.getGreeting().replace("&","")));
         if(c.getCoowner()!=null)display(p,"claim-coowner",Map.of("{player}",Objects.toString(Bukkit.getOfflinePlayer(c.getCoowner()).getName(),c.getCoowner().toString())));
         for(String key:List.of("pvp","explosions","mob-explosions","mob-spawning","villager-player-damage","visitor-doors","visitor-trapdoors")) {
             var value=plugin.getAccessManager().policy(c,key);
@@ -409,6 +469,7 @@ public class FeatureManager implements Listener {
         if(c.canManage(p.getUniqueId())||p.hasPermission("dyclaim.admin")){
             display(p,"info-trusted",Map.of("{trusted}",String.valueOf(c.snapshot().getTrustGrants().values().stream().filter(grant->grant.expiresAt==0||grant.expiresAt>now()).count())));
             if(c.hasSpawn())display(p,"info-custom-spawn");
+            if(enabled("claim-entry-bans.enabled")){long bans=c.snapshot().getVisitorBans().values().stream().filter(e->e==0||e>now()).count();if(bans>0)display(p,"info-visitor-bans",Map.of("{count}",String.valueOf(bans)));}
         }
         var view=c.snapshot();
         String role=view.getOwnerUUID().equals(p.getUniqueId())?"owner":p.getUniqueId().equals(view.getCoowner())?"coowner":plugin.getAccessManager().bypass(p)?"bypass":"visitor";
@@ -440,9 +501,9 @@ public class FeatureManager implements Listener {
             Map<String,String> row=new HashMap<>(Map.of("{number}",String.valueOf(rows.get(i).number()),"{world}",c.getWorld(),"{x}",String.valueOf(c.getChunkX()),"{z}",String.valueOf(c.getChunkZ()),"{date}",displayDate(c.getClaimedAt()),"{chunk}",c.getChunkKey()));
             if(c.getName()!=null){row.put("{name}",c.getName());display(p,"list-named-entry",row);}else display(p,"list-entry",row);
         }
-        display(p,"list-footer",Map.of("{count}",String.valueOf(claims.size()),"{max}",String.valueOf(plugin.getConfigManager().getMaxClaimsPerPlayer())));
+        int limit=plugin.getAcquisitionRules().limit(p);display(p,"list-footer",Map.of("{count}",String.valueOf(claims.size()),"{max}",limit==Integer.MAX_VALUE?"∞":String.valueOf(limit)));
     }
-    private void language(Player p,String[] args){if(args.length!=2||!Set.of("auto","en","tr").contains(args[1]))throw new IllegalArgumentException("language");if(args[1].equals("auto"))state.languages.remove(p.getUniqueId());else state.languages.put(p.getUniqueId(),args[1]);save();send(p,"operation-success");}
+    private void language(Player p,String[] args){if(args.length!=2||!("auto".equals(args[1])||MessageManager.LANGUAGES.contains(args[1])))throw new IllegalArgumentException("language");if(args[1].equals("auto"))state.languages.remove(p.getUniqueId());else state.languages.put(p.getUniqueId(),args[1]);save();send(p,"operation-success");}
     private boolean admin(Player p,String[] args) {
         if(args.length<2)return false;
         String sub=args[1].toLowerCase(Locale.ROOT);
@@ -475,7 +536,7 @@ public class FeatureManager implements Listener {
         try(var admission=plugin.getAcquisitionRules().reserve(target,chunk,old,false)){
             if(admission.rejection()!=null){send(p,admission.rejection());return;}
             if(!plugin.getTransactionManager().execute(admission.transaction(),"admin-give",plugin.getClaimManager().getChunkKey(chunk),null,null,0,0,()->{
-                if(old==null){if(!plugin.getClaimManager().claimChunk(target,chunk))throw new IllegalStateException("Given chunk changed");}
+                if(old==null){if(!plugin.getClaimManager().claimChunk(target,chunk,dev.dyclaim.api.event.ClaimCreateEvent.Cause.ADMIN))throw new IllegalStateException("Given chunk changed");}
                 else plugin.getClaimManager().transfer(old,target);
             })){send(p,"transaction-failed");return;}
         }
@@ -605,7 +666,14 @@ public class FeatureManager implements Listener {
             }else{chain.stage="applied";save();eject(target,c);}
         }else save();
     }
-    private boolean entryBanned(Player p,ClaimData c){WarningChain chain=state.warnings.get(warningKey(c,p.getUniqueId()));return enabled("warnings.enabled")&&chain!=null&&"applied".equals(chain.stage)&&"claim-entry-ban".equals(chain.mode)&&chain.until>now()&&eligibleWarning(p,c);}
+    private boolean entryBanned(Player p,ClaimData c){
+        if(visitorBanned(p,c))return true;
+        WarningChain chain=state.warnings.get(warningKey(c,p.getUniqueId()));return enabled("warnings.enabled")&&chain!=null&&"applied".equals(chain.stage)&&"claim-entry-ban".equals(chain.mode)&&chain.until>now()&&eligibleWarning(p,c);
+    }
+    private boolean visitorBanned(Player p,ClaimData c){
+        return enabled("claim-entry-bans.enabled")&&c.isVisitorBanned(p.getUniqueId())&&!c.canManage(p.getUniqueId())
+                &&!p.hasPermission("dyclaim.admin")&&!p.hasPermission("dyclaim.ban.exempt")&&!plugin.getAccessManager().bypass(p);
+    }
     private void eject(Player p,ClaimData c) {
         if(plugin.getPlatformTasks().isRegionThreaded()){regionalEjection.start(p,c);return;}
         World world=p.getWorld();
@@ -618,7 +686,7 @@ public class FeatureManager implements Listener {
         send(p,"entry-exit-unavailable");
     }
     @EventHandler public void join(PlayerJoinEvent event){recordSeen(event.getPlayer());save();ClaimData c=plugin.getClaimManager().getClaimAt(event.getPlayer().getLocation().getChunk());if(c!=null&&entryBanned(event.getPlayer(),c))eject(event.getPlayer(),c);}
-    @EventHandler public void quit(PlayerQuitEvent event){Player p=event.getPlayer();recordSeen(p);auto.remove(p.getUniqueId());autoAttempt.remove(p.getUniqueId());plugin.getConfirmationManager().cancelPending(p.getUniqueId());plugin.getAccessManager().quit(p.getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(p);save();}
+    @EventHandler public void quit(PlayerQuitEvent event){Player p=event.getPlayer();recordSeen(p);auto.remove(p.getUniqueId());autoAttempt.remove(p.getUniqueId());banNotice.remove(p.getUniqueId());plugin.getConfirmationManager().cancelPending(p.getUniqueId());plugin.getAccessManager().quit(p.getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(p);save();}
     @EventHandler public void world(PlayerChangedWorldEvent event){auto.remove(event.getPlayer().getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(event.getPlayer());}
     private ClaimData claimAt(Location location){
         if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
@@ -626,7 +694,11 @@ public class FeatureManager implements Listener {
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void entry(PlayerMoveEvent event){
         if(event.getTo()==null)return;Player p=event.getPlayer();ClaimData to=claimAt(event.getTo());
-        if(to!=null&&entryBanned(p,to)){ClaimData from=claimAt(event.getFrom());if(from!=to)event.setCancelled(true);else plugin.getPlatformTasks().playerLater(p,()->eject(p,to),1);}
+        if(to!=null&&entryBanned(p,to)){
+            ClaimData from=claimAt(event.getFrom());if(from!=to)event.setCancelled(true);else plugin.getPlatformTasks().playerLater(p,()->eject(p,to),1);
+            // Movement fires many times per second; tell the visitor at most every few seconds.
+            if(visitorBanned(p,to)&&now()-banNotice.getOrDefault(p.getUniqueId(),0L)>3000){banNotice.put(p.getUniqueId(),now());send(p,"visitor-ban-entry",Map.of("{owner}",to.getOwnerName()));}
+        }
     }
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void move(PlayerMoveEvent event){
         if(event.getTo()==null)return;

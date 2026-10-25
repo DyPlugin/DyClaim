@@ -32,6 +32,8 @@ public class ClaimData {
     private long revision;
     private Double spawnX, spawnY, spawnZ;
     private Float spawnYaw, spawnPitch;
+    private String greeting;
+    private Map<UUID, Long> visitorBans;
 
     public ClaimData() {
     }
@@ -46,6 +48,7 @@ public class ClaimData {
         copy.id=id;copy.coowner=coowner;copy.name=name;copy.trustGrants=copyGrants(trustGrants);copy.clanGrants=copyGrants(clanGrants);
         copy.settings=settings==null?null:new HashMap<>(settings);copy.paidPrice=paidPrice;copy.refundBasis=refundBasis;copy.marketPrice=marketPrice;copy.revision=revision;
         copy.spawnX=spawnX;copy.spawnY=spawnY;copy.spawnZ=spawnZ;copy.spawnYaw=spawnYaw;copy.spawnPitch=spawnPitch;
+        copy.greeting=greeting;copy.visitorBans=visitorBans==null?null:new HashMap<>(visitorBans);
         return copy;
     }
     private static <K> Map<K,TrustGrant> copyGrants(Map<K,TrustGrant> source){
@@ -214,7 +217,7 @@ public class ClaimData {
     public synchronized void touch() { revision++; }
     public synchronized Double getMarketPrice() { return marketPrice; }
     public synchronized void setMarketPrice(Double value) { marketPrice = value; touch(); }
-    public synchronized void clearAccess() { trustedPlayers = new ArrayList<>(); trustGrants = new HashMap<>(); clanGrants = new HashMap<>(); coowner = null; marketPrice = null; touch(); }
+    public synchronized void clearAccess() { trustedPlayers = new ArrayList<>(); trustGrants = new HashMap<>(); clanGrants = new HashMap<>(); coowner = null; marketPrice = null; greeting = null; visitorBans = new HashMap<>(); touch(); }
     public synchronized Double getPaidPrice() { return paidPrice; }
     public synchronized double getRefundBasis(double fallback) { return refundBasis == null ? fallback : refundBasis; }
     public synchronized void recordPrice(double price) { paidPrice = price; refundBasis = price; }
@@ -230,6 +233,24 @@ public class ClaimData {
     public synchronized double getSpawnZ() { return spawnZ; }
     public synchronized float getSpawnYaw() { return spawnYaw == null ? 0 : spawnYaw; }
     public synchronized float getSpawnPitch() { return spawnPitch == null ? 0 : spawnPitch; }
+
+    /** Permanent trust limited to the given rights; merges with an existing grant. */
+    public synchronized void grantRights(UUID uuid, Set<String> rights) {
+        TrustGrant grant = getTrustGrants().get(uuid);
+        if (grant == null) { grant = new TrustGrant(); getTrustGrants().put(uuid, grant); }
+        for (String right : rights) if (TrustGrant.RIGHTS.contains(right)) grant.permissions.add(right);
+        touch();
+    }
+    public synchronized String getGreeting() { return greeting; }
+    public synchronized void setGreeting(String value) { greeting = value; touch(); }
+    /** Visitor bans keyed by player; 0 means permanent, otherwise the expiry time in milliseconds. */
+    public synchronized Map<UUID, Long> getVisitorBans() { if (visitorBans == null) visitorBans = new HashMap<>(); return visitorBans; }
+    public synchronized boolean isVisitorBanned(UUID uuid) {
+        Long expiry = getVisitorBans().get(uuid);
+        return expiry != null && (expiry == 0 || expiry > System.currentTimeMillis());
+    }
+    public synchronized void banVisitor(UUID uuid, long expiry) { getVisitorBans().put(uuid, expiry); touch(); }
+    public synchronized boolean unbanVisitor(UUID uuid) { boolean removed = getVisitorBans().remove(uuid) != null; if (removed) touch(); return removed; }
 
     public synchronized String getChunkKey() {
         return world + ":" + chunkX + ":" + chunkZ;

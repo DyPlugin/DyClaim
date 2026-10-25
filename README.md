@@ -4,7 +4,7 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.0.4** adds paged help, the `/dyc`, `/cltp` and `/dyca` shortcuts, and clearer English and Turkish messages. Existing command aliases, English/Turkish selection and claim data are preserved.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.1.0** adds claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, BlueMap/Dynmap/squaremap layers, importing from GriefPrevention and ClaimChunk, a developer API, German/Spanish/Russian messages, MiniMessage formatting and bStats statistics. Every new system has its own switch. Existing commands, aliases, settings and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
@@ -14,12 +14,12 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 | Your server | File |
 |---|---|
-| Bukkit, Spigot, Paper or Purpur | `DyClaim-1.0.4.jar` |
-| Folia | `DyClaim-1.0.4-Folia.jar` |
+| Bukkit, Spigot, Paper or Purpur | `DyClaim-1.1.0.jar` |
+| Folia | `DyClaim-1.1.0-Folia.jar` |
 
 Install **one** backend JAR per server. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder. Both builds use the same schema-2 claim data and EN/TR commands. There are no proxy companions in this release.
 
-[Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md)
+[Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md) · [Integrations and import](docs/integrations.md) · [Developer API](docs/api.md)
 
 ## A measured look at protection
 
@@ -90,13 +90,15 @@ Enable or disable claiming, manage player claims, adjust prices, maintain a worl
 
 Warnings are disabled by default. Their default rules are three valid warnings within 180 seconds, a 60-second cooldown and a two-day sanction. Server-ban and claim-entry-ban modes are configurable.
 
-## English and Turkish
+## Languages
 
-With `lang: auto`, DyClaim uses a player's saved language preference or their Minecraft language. Turkish clients receive Turkish messages and TAB suggestions; other client languages fall back to English.
+Messages ship in **English, Turkish, German, Spanish and Russian**. Command words and TAB suggestions are translated for Turkish; in the other languages the commands stay English.
 
-TAB shows only the effective language. Both languages remain accepted when typed, including operation words and trust permissions.
+With `lang: auto`, DyClaim uses a player's saved language preference or their Minecraft language. Turkish, German, Spanish and Russian clients receive messages in their language; other client languages fall back to English. Turkish clients also receive Turkish TAB suggestions.
 
-Players can select `/claim lang en`, `/claim lang tr` or `/claim lang auto`. An administrator's `/claim admin lang en|tr` applies to everyone and takes priority over individual preferences. `/claim admin lang auto` restores automatic selection. Localized aliases are accepted without changing the active suggestion language.
+TAB shows only the effective language. English and Turkish command words remain accepted when typed, including operation words and trust permissions.
+
+Players can select `/claim lang en|tr|de|es|ru` or `/claim lang auto`. An administrator's `/claim admin lang en|tr|de|es|ru` applies to everyone and takes priority over individual preferences. `/claim admin lang auto` restores automatic selection. Localized aliases are accepted without changing the active suggestion language.
 
 ## Player commands
 
@@ -129,7 +131,9 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim explosion [mob]` | Toggle ordinary explosions, or select `mob` for mob explosions |
 | `/claim doors`, `/claim trapdoors` | Toggle visitor access |
 | `/claim warn <player>` | Warn an unauthorized visitor inside your claim |
-| `/claim lang <auto\|en\|tr>` | Select your language |
+| `/claim message <text\|clear>` | Show a message to visitors entering the claim |
+| `/claim ban <player> [duration]`, `/claim unban <player>`, `/claim banlist` | Keep a player out of the claim |
+| `/claim lang <auto\|en\|tr\|de\|es\|ru>` | Select your language |
 | `/claim help [page]` | Show player help, eight commands per page |
 | `/confirm`, `/cancel` | Accept or reject a pending action |
 
@@ -153,7 +157,10 @@ Examples:
 /claim admin transactions
 /claim admin lang tr
 /claim admin reload
+/dyclaim admin import griefprevention
 ```
+
+`/dyclaim admin import griefprevention|claimchunk` previews how many claims would be copied from another plugin; adding `confirm` imports them after a backup. Use `/dyclaim` here because GriefPrevention also registers `/claim`. Details: [integrations and import](docs/integrations.md).
 
 Inactive cleanup removes claim records, not world blocks. Deletion and bulk operations use previews, confirmation and backups. Bypass does not exempt a player from acquisition bans, prices or limits.
 
@@ -167,6 +174,10 @@ Inactive cleanup removes claim records, not world blocks. Deletion and bulk oper
 | `dyclaim.admin.purge` | OP | Additional permission for inactive cleanup |
 | `dyclaim.admin.purge.exempt` | OP | Exemption from inactive cleanup |
 | `dyclaim.warn.exempt` | OP | Exemption from visitor-warning sanctions |
+| `dyclaim.message` | Everyone | Set a claim message |
+| `dyclaim.ban` | Everyone | Ban visitors from your claim |
+| `dyclaim.ban.exempt` | OP | Cannot be banned from claims |
+| `dyclaim.limit.<number>` / `dyclaim.limit.unlimited` | Not set | Replaces the default claim limit; the highest one wins |
 
 `/claim admin diagnose` works in console and for permitted administrators. It reports version, backend, storage, economy and installed integrations without secrets or filesystem paths. Turkish alias: `/claim admin tanı` (ASCII `tani` also works). Installed integrations are not a compatibility certification.
 
@@ -200,14 +211,18 @@ The v1.0.0 release passed live claim, ownership, language and protection scenari
 | GriefDefender | Claim overlap checks |
 | Floodgate | Bedrock detection and block-border visualization path |
 | SimpleClans | Experimental clan trust, enabled separately |
+| PlaceholderAPI | `%dyclaim_...%` placeholders such as claims, limit, owner and role |
+| BlueMap, Dynmap, squaremap | Claim areas on the web map (BlueMap only on Folia) |
+
+DyClaim also reports anonymous statistics to [bStats](https://bstats.org/plugin/bukkit/DyClaim/34849); turn this off with `metrics.enabled: false`. Plugins can read claims and listen to claim events through the [developer API](docs/api.md).
 
 No integration is required for core claiming. Installed protection hooks are detected automatically; an unavailable or failing detected hook blocks acquisition rather than allowing an unchecked overlap. Actual provider-version compatibility and Bedrock visualization require testing with your chosen integrations; they are not covered by the completed core-server matrix.
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-1.0.4.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-1.1.0.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
-3. Edit `config.yml` and, if desired, the English/Turkish message files.
+3. Edit `config.yml` and, if desired, the message files (English, Turkish, German, Spanish, Russian).
 4. Run `/claim admin reload` as a permitted player, or `claim admin reload` in the server console.
 
 Marketplace, auto claim, warnings, mob cleanup, scheduled purge and clan integration are **disabled by default**. Enable the features you want and choose their policies before use. Invalid configuration reloads retain the previous valid settings.
@@ -237,7 +252,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.0.4.jar` and `build/libs/DyClaim-1.0.4-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.1.0.jar` and `build/libs/DyClaim-1.1.0-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
 Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.

@@ -147,7 +147,7 @@ admin-help-explosion: "&6/claim admin explosion enable/disable [all] &7- Set exp
 admin-help-mob: "&6/claim admin mob enable/disable [all] &7- Set mob spawning here or in every claim"
 admin-help-bulksell: "&6/claim admin bulksell [player] &7- Sell claims in bulk and refund their owners"
 admin-help-pricediff: "&6/claim admin pricediff [old price] &7- Refund owners after a price drop"
-admin-help-lang: "&6/claim admin lang <auto/en/tr> &7- Set the language for everyone"
+admin-help-lang: "&6/claim admin lang <auto/en/tr/de/es/ru> &7- Set the language for everyone"
 admin-help-blacklist: "&6/claim admin blacklist add/remove <world> &7- Block or allow claiming in a world"
 admin-help-reload: "&6/claim admin reload &7- Reload the config and messages"
 admin-help-footer: "&7&m---------------------------------"
@@ -239,7 +239,7 @@ help-auto: "&6/claim auto [on|off] &7- Claim chunks automatically as you walk"
 help-name: "&6/claim name <name> &7- Give this claim a name"
 help-setspawn: "&6/claim setspawn &7- Set where you arrive when teleporting here"
 help-warn: "&6/claim warn <player> &7- Warn a visitor who shouldn't be here"
-help-lang: "&6/claim lang <auto|en|tr> &7- Choose your language"
+help-lang: "&6/claim lang <auto|en|tr|de|es|ru> &7- Choose your language"
 help-confirm: "&6/confirm &7- Confirm what you're about to do"
 help-cancel: "&6/cancel &7- Cancel what you're about to do"
 admin-help-bypass: "&6/claim admin bypass [on|off] &7- Ignore claim protection yourself"
@@ -282,6 +282,7 @@ diagnose-header: '&eDyClaim {version} &7| &f{platform}'
 diagnose-storage: '&7Claim storage: &f{status} &7| Claims: &f{count}'
 diagnose-economy: '&7Economy: &f{status}'
 diagnose-integrations: '&7Installed integrations: &f{plugins}'
+diagnose-hooks: '&7Active DyClaim hooks: &f{hooks}'
 diagnose-ready: 'Ready'
 diagnose-unavailable: 'Unavailable'
 diagnose-disabled: 'Off'
@@ -294,3 +295,37 @@ help-cltp: '&6/cltp <number|name> &7- Short for /claim tp'
 admin-help-dyca: '&6/dyca <command> &7- Short for /claim admin, for example /dyca reload'
 # Sent after /cancel; confirm-deny remains the clickable button label.
 confirm-cancelled: '&7Cancelled. Nothing was changed.'
+
+# Claim messages, visitor bans, claim import and web-map labels (1.1.0).
+help-message: "&6/claim message <text|clear> &7- Show a message to visitors entering this claim"
+help-ban: "&6/claim ban <player> [duration] &7- Keep a player out of this claim"
+help-unban: "&6/claim unban <player> &7- Let a banned player enter again"
+help-banlist: "&6/claim banlist &7- See who is banned from this claim"
+admin-help-import: "&6/dyclaim admin import <griefprevention|claimchunk> [confirm] &7- Copy claims from another plugin"
+message-usage: '&cUsage: &e/claim message <text> &cor &e/claim message clear'
+message-set: '&aVisitors will see this message when they enter the claim.'
+message-cleared: '&aThe claim message was removed.'
+message-invalid: '&cThe message must be 1-{max} characters, without special characters. Colour codes work only if the server allows them.'
+claim-greeting: '&7[{owner}] &f{message}'
+info-greeting: '&eMessage: &f{message}'
+info-visitor-bans: '&eBanned players: &f{count}'
+visitor-ban-usage: '&cUsage: &e/claim ban <player> [30m|2h|7d|permanent]'
+visitor-unban-usage: '&cUsage: &e/claim unban <player>'
+visitor-ban-self: '&cYou can''t ban yourself or a claim owner.'
+visitor-ban-exempt: '&cThat player can''t be banned from claims.'
+visitor-ban-full: '&cThis claim has reached its ban limit. Unban someone first.'
+visitor-banned: '&a{player} can no longer enter this claim. Their trust was removed.'
+visitor-ban-received: '&c{owner} banned you from this claim.'
+visitor-ban-entry: '&cYou are banned from {owner}''s claim.'
+visitor-ban-not-found: '&e{player} isn''t banned from this claim.'
+visitor-unbanned: '&a{player} can enter this claim again.'
+visitor-ban-list-header: '&ePlayers banned from this claim:'
+visitor-ban-list-entry: '&7- &f{player} &7| Until: &f{expiry}'
+visitor-ban-list-empty: '&eNo one is banned from this claim.'
+import-usage: '&cUsage: &e/dyclaim admin import <griefprevention|claimchunk> [confirm]'
+import-unavailable: '&c{source} is not installed or not enabled, so there is nothing to import.'
+import-preview: '&eFound {claims} {source} claims covering {chunks} new chunks. Skipped: {claimed} already claimed, {blacklisted} in blacklisted worlds, {conflicts} overlapping. Nothing has changed yet. Run &6{command} &eto import.'
+import-complete: '&aImported {created} chunks and {trusted} trusted players. {skipped} chunks were taken in the meantime. A backup was saved first.'
+import-failed: '&cThe claims could not be read. Check the console for details.'
+map-label: '{owner}'
+map-label-named: '{owner} - {names}'

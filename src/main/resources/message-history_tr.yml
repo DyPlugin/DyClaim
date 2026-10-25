@@ -60,6 +60,7 @@
 'admin-help-lang':
 - '&6/claim admin dil <auto/en/tr> &7- Dil değiştir'
 - '&6/claim admin dil <otomatik/en/tr> &7- Dil değiştir'
+- '&6/claim admin dil <otomatik/en/tr> &7- Herkes için dili ayarlayın'
 'admin-help-mob':
 - '&6/claim admin mob aç/kapat [tümü] &7- Mob doğması ayarla'
 'admin-help-prefix':
@@ -190,6 +191,7 @@
 - '&6/claim bilgi &7- Chunk bilgilerini görün'
 'help-lang':
 - '&6/claim dil <otomatik|en|tr> &7- Tercih ettiğin dili ayarla'
+- '&6/claim dil <otomatik|en|tr> &7- Dilinizi seçin'
 'help-list':
 - '&6/claim liste &7- Claim listesini görün'
 - '&6/claim liste [sayfa] &7- Claim listesini görün'

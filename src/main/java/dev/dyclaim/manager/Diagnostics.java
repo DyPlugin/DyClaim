@@ -16,8 +16,13 @@ public final class Diagnostics {
         String economy=!plugin.getEconomyManager().isEnabled()?"diagnose-disabled":plugin.getEconomyManager().isAvailable()?"diagnose-ready":"diagnose-unavailable";
         line(plugin,sender,"diagnose-economy",Map.of("{status}",state.apply(economy)));
         var pm=plugin.getServer().getPluginManager();
-        String installed=List.of("Vault","WorldGuard","GriefPrevention","Towny","Lands","Residence","GriefDefender","Floodgate","SimpleClans").stream().filter(pm::isPluginEnabled).collect(java.util.stream.Collectors.joining(", "));
+        String installed=List.of("Vault","WorldGuard","GriefPrevention","Towny","Lands","Residence","GriefDefender","floodgate","SimpleClans","PlaceholderAPI","BlueMap","dynmap","squaremap").stream().filter(pm::isPluginEnabled).collect(java.util.stream.Collectors.joining(", "));
         line(plugin,sender,"diagnose-integrations",Map.of("{plugins}",installed.isEmpty()?state.apply("access-none"):installed));
+        var hooks=plugin.getIntegrations();
+        if(hooks!=null){
+            List<String> active=new ArrayList<>();if(hooks.placeholdersActive())active.add("PlaceholderAPI");active.addAll(hooks.activeMaps());
+            line(plugin,sender,"diagnose-hooks",Map.of("{hooks}",active.isEmpty()?state.apply("access-none"):String.join(", ",active)));
+        }
     }
     private static void line(DyClaim plugin,CommandSender sender,String key,Map<String,String> values){sender.sendMessage(plugin.getMessageManager().getPrefixed(sender,key,values));}
 }

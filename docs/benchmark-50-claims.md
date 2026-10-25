@@ -1,6 +1,6 @@
 # Four-plugin, 50-claim comparison
 
-Measured on 22 October 2026 with DyClaim 1.0.4; the same procedure was first run on 10 October 2026 with DyClaim 1.0.2. The graphic compares a specific synthetic block-break workload. It does not measure overall CPU usage, plugin-owned RAM, full gameplay throughput or every protection feature.
+Measured on 24 October 2026 with DyClaim 1.1.0; the same procedure was first run on 10 October 2026 with DyClaim 1.0.2 and repeated on 22 October 2026 with DyClaim 1.0.4. The graphic compares a specific synthetic block-break workload. It does not measure overall CPU usage, plugin-owned RAM, full gameplay throughput or every protection feature.
 
 ## Results
 
@@ -8,12 +8,12 @@ All values below are milliseconds of measured processing time per 1,000 dispatch
 
 | Plugin | Owner allowed | Visitor blocked | 50% / 50% mixed workload |
 |---|---:|---:|---:|
-| DyClaim 1.0.4 | 0.752 (0.643–0.874) | 10.705 (9.355–13.308) | 5.751 (4.999–7.091) |
-| GriefPrevention | 0.407 (0.289–0.556) | 13.121 (8.017–18.385) | 6.764 (4.153–9.458) |
-| Towny | 4.366 (3.619–5.710) | 49.987 (40.708–59.338) | 27.176 (22.164–32.524) |
-| ClaimChunk | 1.397 (1.159–1.906) | 58.493 (54.254–62.536) | 29.852 (27.707–32.221) |
+| DyClaim 1.1.0 | 0.677 (0.595–0.841) | 10.194 (6.647–12.506) | 5.430 (3.621–6.674) |
+| GriefPrevention | 0.479 (0.369–0.696) | 12.409 (8.943–17.313) | 6.443 (4.674–9.005) |
+| ClaimChunk | 1.032 (0.921–1.150) | 39.302 (28.809–49.809) | 20.167 (14.872–25.453) |
+| Towny | 3.720 (3.228–4.639) | 37.772 (31.086–43.227) | 20.752 (17.169–23.641) |
 
-The lowest observed mixed-workload median was **DyClaim**. The lowest owner-only median was **GriefPrevention**. In this run the DyClaim and GriefPrevention mixed-workload ranges overlap. This does not establish superiority for all workloads or statistical significance. All windows are retained, including outliers and warmup/JIT variation; no result was removed to favor DyClaim.
+The lowest observed mixed-workload median was **DyClaim**. The lowest owner-only median was **GriefPrevention**. In this run the DyClaim and GriefPrevention mixed-workload ranges overlap, and so do the ClaimChunk and Towny ranges; their order changed compared with 22 October. This does not establish superiority for all workloads or statistical significance. All windows are retained, including outliers and warmup/JIT variation; no result was removed to favor DyClaim.
 
 ## Shared procedure
 
@@ -26,13 +26,13 @@ The lowest observed mixed-workload median was **DyClaim**. The lowest owner-only
 - Every tick dispatched 50 fresh owner BlockBreakEvents and 50 fresh visitor BlockBreakEvents. All claims were visited once per role per tick, with a claim permutation, rotating corner/interior locations and alternating role order.
 - Events were synchronously dispatched through Bukkit PluginManager.callEvent. Blocks were not actually mined; no client mining packets, block drops or tool durability changes were generated. Measured duration includes event construction, dispatch, cancellation counting and each plugin's default denial feedback. Feedback formats and internal processing differ between plugins.
 - Ten-second warmup, followed by three 10-second measurement windows per start. Two starts per plugin; six windows, 60,000 allowed + 60,000 blocked events = 120,000 measured events per plugin, 480,000 across all four.
-- Balanced process order: ClaimChunk, Towny, DyClaim, GriefPrevention, GriefPrevention, DyClaim, Towny, ClaimChunk. All eight measurement starts completed. On 22 October every start, including those without DyClaim, left the JVM running after all worlds had been saved; the console library (jansi) on this host also crashed after saving in separate DyClaim-only checks. The runner waited 90 seconds and then ended those processes, and each forced exit is recorded in the logs. This happened after the timed windows and did not change any measurement.
+- Balanced process order: ClaimChunk, Towny, DyClaim, GriefPrevention, GriefPrevention, DyClaim, Towny, ClaimChunk. All eight measurement starts completed. On 22 and 24 October every start, including those without DyClaim, left the JVM running after all worlds had been saved; the console library (jansi) on this host also crashed after saving in separate DyClaim-only checks. The runner waited 90 seconds and, only when the "All dimensions are saved" log line was present, ended those processes, and each forced exit is recorded in the logs. This happened after the timed windows and did not change any measurement.
 - System.nanoTime bracketed each 50-event batch on the main server thread. Summed durations were divided by event counts. Startup, claim creation, preparation, teleports and a five-second settling interval were outside timed batches. No subtraction of a baseline and no selective pruning of windows.
 - Results can be affected by JIT, GC, host scheduling and different default feedback. They do not predict a normal server's owner/visitor traffic proportions. A denial-heavy synthetic workload emphasizes denial processing.
 
 ## Dataset adapters and settings
 
-- DyClaim 1.0.4: existing ClaimManager API created 50 chunk claims. Ownership limit 100, update checker disabled; other shipped protection/message defaults retained. The tested JAR is the 1.0.4 build.
+- DyClaim 1.1.0: existing ClaimManager API created 50 chunk claims. Ownership limit 100, update checker disabled; other shipped protection/message defaults retained, including the new claim messages and visitor bans (no message or ban was set). bStats was disabled for every plugin on the test server so test runs do not appear in public statistics. The tested JAR is the 1.1.0 build.
 - GriefPrevention 16.18.3: DataStore.createClaim created 50 inclusive 16×16 rectangular player claims. Existing generated defaults retained.
 - ClaimChunk 0.0.25-FIX3: ChunkHandler.claimChunk created 50 owned chunks; getClaimed verified count 50. Generated default config/profile/feedback retained, including enabled permission checking. Version-update network requests were not inside the timed callEvent batches; default asynchronous update/metrics tasks were not disabled.
 - Towny 0.103.2.0: 50 owned residential TownBlocks inside one town, BenchOwner as resident/mayor and plot owner; visitor remained outside the town. TownyUniverse, Town, Resident and TownBlock APIs created/registered/saved the dataset. Default 16-block town block size and permission/feedback settings retained. World use of Towny was enabled; permissions were verified at all test points.
@@ -54,4 +54,4 @@ The tested versions were obtained from the official Modrinth project version API
 
 ## Reproduction data
 
-All 24 window values, raw reports, configurations and the test helper are kept with the local benchmark files. The 10 October 1.0.2 package remains available as [DyClaim-4-plugins-comparison.zip](https://github.com/DyPlugin/DyClaim/releases/download/v1.0.2/DyClaim-4-plugins-comparison.zip). Results from the two runs are not mixed.
+All 24 window values, raw reports, configurations and the test helper are kept with the local benchmark files. The 10 October 1.0.2 package remains available as [DyClaim-4-plugins-comparison.zip](https://github.com/DyPlugin/DyClaim/releases/download/v1.0.2/DyClaim-4-plugins-comparison.zip). Results from the three runs are not mixed.

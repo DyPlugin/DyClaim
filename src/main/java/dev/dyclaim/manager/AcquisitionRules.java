@@ -37,6 +37,19 @@ public class AcquisitionRules {
             admissions.put(key,admission);return admission;
         }}
     }
+    /** The highest granted dyclaim.limit.&lt;n&gt; replaces the configured total; dyclaim.limit.unlimited removes it. */
+    public int limit(Player player){
+        var cfg=plugin.getConfigManager();int base=cfg.getMaxClaimsPerPlayer();
+        if(player==null||!cfg.values().getBoolean("claim.permission-limits.enabled",true))return base;
+        int best=-1;
+        for(var info:player.getEffectivePermissions()){
+            if(!info.getValue())continue;String node=info.getPermission().toLowerCase(Locale.ROOT);
+            if(!node.startsWith("dyclaim.limit."))continue;String suffix=node.substring("dyclaim.limit.".length());
+            if(suffix.equals("unlimited"))return Integer.MAX_VALUE;
+            try{int value=Integer.parseInt(suffix);if(value>=0)best=Math.max(best,value);}catch(NumberFormatException ignored){}
+        }
+        return best<0?base:best;
+    }
     public double price(String world){return Rules.money(plugin.getConfigManager().values().getDouble("claim-rules.worlds."+world+".chunk-price",plugin.getConfigManager().getClaimPrice()));}
     public String check(Player player,Chunk chunk,ClaimData replacing,boolean acquiringCoowner) {
         var cfg=plugin.getConfigManager(); var values=cfg.values();
@@ -60,8 +73,10 @@ public class AcquisitionRules {
             if(current!=null&&(actor.equals(current.getOwnerUUID())||actor.equals(current.getCoowner())))continue;
             pendingTotal++;if(world.equals(admission.world))pendingWorld++;
         }
-        if(!already&&plugin.getClaimManager().getPlayerClaimCount(actor)+pendingTotal>=cfg.getMaxClaimsPerPlayer())return "acquire-limit";
-        int worldLimit=values.getInt("claim-rules.worlds."+chunk.getWorld().getName()+".claim-limit",cfg.getMaxClaimsPerPlayer());
+        int totalLimit=limit(player);
+        if(!already&&plugin.getClaimManager().getPlayerClaimCount(actor)+pendingTotal>=totalLimit)return "acquire-limit";
+        // Without a per-world override the world shares the player's effective total limit.
+        int worldLimit=values.getInt("claim-rules.worlds."+chunk.getWorld().getName()+".claim-limit",totalLimit);
         long count=plugin.getClaimManager().getPlayerClaims(player.getUniqueId()).stream().filter(c->c.getWorld().equals(chunk.getWorld().getName())).count();
         if(!already&&count+pendingWorld>=worldLimit)return "acquire-limit";
         if(values.getBoolean("claim-rules.spacing.enabled")) {

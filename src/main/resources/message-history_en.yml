@@ -58,6 +58,7 @@
 - '&6/claim admin give <player> &7- Give chunk'
 'admin-help-lang':
 - '&6/claim admin lang <auto/en/tr> &7- Change language'
+- '&6/claim admin lang <auto/en/tr> &7- Set the language for everyone'
 'admin-help-mob':
 - '&6/claim admin mob enable/disable [all] &7- Toggle mob spawning'
 'admin-help-prefix':
@@ -185,6 +186,7 @@
 - '&6/claim info &7- View chunk information'
 'help-lang':
 - '&6/claim lang <auto|en|tr> &7- Set your preferred language'
+- '&6/claim lang <auto|en|tr> &7- Choose your language'
 'help-list':
 - '&6/claim list &7- View your claims'
 - '&6/claim list [page] &7- View your claims'

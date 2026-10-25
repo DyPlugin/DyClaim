@@ -1,0 +1,321 @@
+# Русские сообщения. Не меняйте ключи и {заполнители}; коды & задают цвета.
+# Измените текст в кавычках и выполните /claim admin reload. Для отсутствующих ключей используются встроенные тексты.
+# Команды остаются на английском (/claim help, /claim trust ...).
+no-permission: "&cУ вас нет прав на это."
+player-only: "&cЭту команду могут использовать только игроки."
+reload-success: "&aКонфигурация перезагружена."
+claiming-disabled: "&cПривати сейчас отключены."
+world-blacklisted: "&cВ этом мире нельзя приватить землю."
+unknown-command: "&cНеизвестная команда. Введите &e/claim help&c, чтобы увидеть все команды."
+
+claim-confirmation: "&eПриватить этот чанк за &6{price}&e?"
+claim-success: "&aЧанк приватизирован! &7({chunk})"
+claim-already-claimed: "&cЭтот чанк уже принадлежит &e{owner}&c."
+claim-already-owned: "&cЭтот чанк уже ваш."
+claim-max-reached: "&cВы достигли лимита приватов. &7({max})"
+claim-no-money: "&cНедостаточно денег. Нужно &e{price}&c."
+claim-cooldown: "&cПодождите &e{remaining} сек. &cперед следующим приватом."
+claim-free: "&eПриватить этот чанк бесплатно?"
+claim-region-protected: "&cЭта область защищена другим плагином, её нельзя приватить."
+
+sell-confirmation: "&eПродать этот приват? Вы получите &6{refund}&e."
+sell-success: "&aПриват продан. &6{refund} &aзачислено на ваш баланс."
+sell-not-owner: "&cЭтот чанк вам не принадлежит."
+sell-not-claimed: "&cЭтот чанк не приватизирован."
+
+confirm-accept: "&a&l[Подтвердить]"
+confirm-deny: "&c&l[Отмена]"
+confirm-expired: "&cВремя подтверждения истекло. Повторите команду, если ещё хотите это сделать."
+confirm-none: "&cНет ничего, что ждёт подтверждения."
+
+info-header: "&7&m----------&r {prefix} &eИнформация о привате &7&m----------"
+info-owner: "&eВладелец: &f{owner}"
+info-chunk: "&eЧанк: &f{chunk}"
+info-world: "&eМир: &f{world}"
+info-date: "&eДата привата: &f{date}"
+info-pvp: "&ePvP: {status}"
+info-explosion: "&eВзрывы: {status}"
+info-mob: "&eПоявление мобов: {status}"
+info-trusted: "&eДоверенные игроки: &f{trusted}"
+info-not-claimed: "&eЭтот чанк не приватизирован."
+info-footer: "&7&m---------------------------------"
+
+list-header: "&7&m----------&r {prefix} &eВаши приваты &7&m----------"
+list-entry: "&7{number}. &e{world} &7| &fX:{x} Z:{z} &7| &f{date}"
+list-empty: "&eУ вас пока нет приватов. Встаньте в чанк и введите &6/claim&e."
+list-footer: "&eВсего: &f{count}/{max}"
+
+see-showing: "&aГраницы чанка показаны на &e{duration} сек.&a"
+see-already: "&cГраницы чанка уже показаны."
+
+protection-block-break: "&cВ этом привате нельзя ломать блоки."
+protection-block-place: "&cВ этом привате нельзя ставить блоки."
+protection-interact: "&cВ этом привате это нельзя использовать."
+protection-pvp: "&cВ этом привате PvP отключено."
+protection-enter: "&7[Вы вошли в приват {owner}]"
+protection-leave: "&7[Вы покинули приват]"
+protection-piston: "&cПоршни не могут двигать блоки в приватную землю или из неё."
+protection-entity: "&cВ этом привате так делать нельзя."
+
+actionbar-enter: "&7Приват: &a{owner} &7| &cPvP: {pvp}"
+actionbar-leave: "&7Вы покинули приватную территорию."
+
+trust-added: "&a{player} теперь доверенный в этом привате."
+trust-removed: "&e{player} больше не доверенный в этом привате."
+trust-already: "&e{player} уже доверенный в этом привате."
+trust-not-found: "&e{player} не является доверенным в этом привате."
+trust-self: "&cНельзя добавить в доверенные самого себя."
+trust-list-header: "&eДоверенные игроки в этом привате:"
+trust-list-entry: "&7- &f{player}"
+trust-list-empty: "&eВ этом привате пока нет доверенных."
+trust-usage: "&cИспользование: &e/claim trust <player> [duration]"
+untrust-usage: "&cИспользование: &e/claim untrust <player>"
+
+admin-claiming-enabled: "&aПриваты включены."
+admin-claiming-disabled: "&cПриваты отключены."
+admin-claim-deleted: "&aПриват {owner} удалён. &7({chunk})"
+admin-claim-deleted-all: "&aВсе приваты {owner} удалены. &7(всего {count})"
+admin-claim-given: "&aЭтот чанк передан игроку {player}. &7({chunk})"
+admin-price-set: "&aЦена привата установлена: &6{price}&a."
+admin-cooldown-set: "&aЗадержка между приватами: &e{seconds} сек.&a"
+admin-prefix-set: "&aПрефикс сообщений обновлён."
+admin-economy-enabled: "&aЭкономика включена."
+admin-economy-disabled: "&cЭкономика отключена."
+admin-player-not-found: "&cИгрок не найден."
+admin-no-claims: "&cУ этого игрока нет приватов."
+admin-bulk-sell-player: "&aПродано &6{count} &aприватов {owner}, возвращено &6{refund}&a."
+admin-bulk-sell-all: "&aПродано &6{count} &aприватов, владельцам сделан возврат."
+admin-refund-received: "&aАдминистратор продал ваши приваты. Возвращено &6{refund}&a. &7(всего {count})"
+admin-price-diff-success: "&aРазница в цене &6{refund} &aвозвращена &6{count} &aвладельцам."
+admin-price-diff-received: "&aЦена привата снизилась, поэтому на ваш баланс зачислено &6{refund}&a. &7({count} приватов)"
+admin-invalid-number: "&cЭто неверное число."
+admin-usage-delete: "&cИспользование: &e/claim admin delete <player> [all]"
+admin-usage-give: "&cИспользование: &e/claim admin give <player>"
+admin-usage-price: "&cИспользование: &e/claim admin price <amount>"
+admin-usage-cooldown: "&cИспользование: &e/claim admin cooldown <seconds>"
+admin-usage-prefix: "&cИспользование: &e/claim admin prefix <prefix>"
+admin-usage-toggle: "&cИспользование: &e/claim admin {feature} enable/disable [all]"
+admin-usage-blacklist: "&cИспользование: &e/claim admin blacklist add/remove <world>"
+admin-toggle-single: "&eЭтот приват: &f{feature} {status}"
+admin-toggle-all: "&eВсе приваты: &f{feature} {status}"
+admin-pricediff-error: "&cСтарая цена должна быть выше текущей (&e{price}&c)."
+admin-blacklist-added: "&aВ мире &e{world} &aтеперь нельзя приватить."
+admin-blacklist-removed: "&aВ мире &e{world} &aснова можно приватить."
+admin-blacklist-already: "&e{world} &eуже в чёрном списке."
+admin-blacklist-not-found: "&e{world} &eнет в чёрном списке."
+admin-world-not-found: "&cМир &e{world} &cне существует."
+admin-lang-set: "&aЯзык установлен: &e{lang}&a."
+
+update-available: "&eДоступна новая версия DyClaim: &6{version}"
+update-download: "&bСкачать: &n{link}"
+
+toggle-pvp-enabled: "&aPvP в этом привате теперь &aВКЛ&a. &7({chunk})"
+toggle-pvp-disabled: "&aPvP в этом привате теперь &cВЫКЛ&a. &7({chunk})"
+toggle-explosion-enabled: "&aВзрывы в этом привате теперь &aВКЛ&a. &7({chunk})"
+toggle-explosion-disabled: "&aВзрывы в этом привате теперь &cВЫКЛ&a. &7({chunk})"
+toggle-mob-enabled: "&aПоявление мобов в этом привате теперь &aВКЛ&a. &7({chunk})"
+toggle-mob-disabled: "&aПоявление мобов в этом привате теперь &cВЫКЛ&a. &7({chunk})"
+
+help-header: "&7&m----------&r {prefix} &eПомощь &7&m----------"
+help-claim: "&6/claim &7- Приватить чанк, в котором вы стоите"
+help-sell: "&6/claim sell &7- Продать этот приват с возвратом денег"
+help-unclaim: "&6/unclaim &7- Отказаться от этого привата"
+help-see: "&6/claim see &7- Показать границы вокруг вас"
+help-info: "&6/claim info &7- Показать владельца и настройки этого чанка"
+help-list: "&6/claim list [page] &7- Список ваших приватов"
+help-pvp: "&6/claim pvp &7- Включить или выключить PvP в этом привате"
+help-explosion: "&6/claim explosion [mob] &7- Включить или выключить взрывы или взрывы мобов"
+help-mob: "&6/claim mob &7- Включить или выключить появление враждебных мобов"
+help-trust: "&6/claim trust <player> [duration] &7- Разрешить игроку строить здесь, можно на время"
+help-untrust: "&6/claim untrust <player> &7- Убрать доверенного игрока"
+help-trustlist: "&6/claim trustlist &7- Посмотреть, кому здесь доверяют"
+help-admin: "&6/claim admin &7- Команды администратора"
+help-tp: "&6/claim tp <number|name> &7- Телепорт в один из ваших приватов"
+help-footer: "&7&m---------------------------------"
+
+admin-help-header: "&7&m----------&r {prefix} &eПомощь администратора &7&m----------"
+admin-help-toggle: "&6/claim admin enable/disable &7- Включить или выключить приваты для всех"
+admin-help-delete: "&6/claim admin delete <player> [all] &7- Удалить этот приват или все приваты игрока"
+admin-help-give: "&6/claim admin give <player> &7- Отдать игроку чанк, в котором вы стоите"
+admin-help-price: "&6/claim admin price <amount> &7- Установить цену привата"
+admin-help-cooldown: "&6/claim admin cooldown <seconds> &7- Установить задержку между приватами"
+admin-help-prefix: "&6/claim admin prefix <prefix> &7- Изменить префикс сообщений"
+admin-help-economy: "&6/claim admin economy enable/disable &7- Включить или выключить экономику"
+admin-help-pvp: "&6/claim admin pvp enable/disable [all] &7- Настроить PvP здесь или во всех приватах"
+admin-help-explosion: "&6/claim admin explosion enable/disable [all] &7- Настроить взрывы здесь или во всех приватах"
+admin-help-mob: "&6/claim admin mob enable/disable [all] &7- Настроить появление мобов здесь или во всех приватах"
+admin-help-bulksell: "&6/claim admin bulksell [player] &7- Продать приваты пакетом и вернуть деньги владельцам"
+admin-help-pricediff: "&6/claim admin pricediff [old price] &7- Вернуть владельцам разницу после снижения цены"
+admin-help-lang: "&6/claim admin lang <auto/en/tr/de/es/ru> &7- Установить язык для всех"
+admin-help-blacklist: "&6/claim admin blacklist add/remove <world> &7- Запретить или разрешить приваты в мире"
+admin-help-reload: "&6/claim admin reload &7- Перезагрузить конфигурацию и сообщения"
+admin-help-footer: "&7&m---------------------------------"
+
+tp-warmup: "&eТелепорт через &6{seconds} сек.&e Не двигайтесь!"
+tp-success: "&aВы телепортировались в свой приват."
+tp-cancelled: "&cТелепорт отменён, потому что вы сдвинулись."
+tp-already-pending: "&cВы уже ожидаете телепорт."
+tp-no-claims: "&cУ вас нет приватов для телепорта."
+tp-usage: "&cИспользование: &e/claim tp <1-{max}|name>"
+tp-invalid-number: "&cНет привата с таким номером или именем. Проверьте &e/claim list&c."
+tp-world-not-found: "&cМир этого привата не найден."
+
+confirm-replaced: '&eВаше предыдущее ожидающее действие заменено этим.'
+confirm-text: '&eВведите /confirm, чтобы продолжить, или /cancel, чтобы отменить.'
+operation-changed: '&cЗа это время что-то изменилось. Повторите команду.'
+operation-success: '&aГотово.'
+transaction-locked: '&cУ этого привата есть незавершённый платёж. Сначала его должен проверить администратор.'
+transaction-failed: '&cНе получилось. Администратор может проверить журнал транзакций, прежде чем вы попробуете снова.'
+invalid-input: '&cКоманда введена неверно. Введите /claim help, чтобы узнать, как её использовать.'
+reload-invalid: '&cВ новой конфигурации есть ошибки, поэтому используется прежняя.'
+feature-disabled: '&cЭта функция отключена на сервере.'
+economy-required: '&cДля этого нужен плагин экономики, но он не активен.'
+claim-banned: '&cВам запрещено получать новые приваты.'
+acquire-occupied: '&cЭтот чанк уже приватизирован.'
+acquire-limit: '&cВы достигли лимита приватов на сервере или в этом мире.'
+acquire-spacing: '&cСлишком близко к привату другого игрока.'
+acquire-cooldown: '&cНужно немного подождать перед следующим приватом.'
+setting-locked: '&cСервер заблокировал эту настройку.'
+setting-updated: '&a{setting}: {value}'
+trustperm-usage: '&cИспользование: &e/claim trust <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
+clan-unavailable: '&cЭтот клан сейчас не найден, или имя подходит к нескольким кланам.'
+coowner-usage: '&cИспользование: &e/claim coowner add <player> &cили &e/claim coowner remove'
+coowner-full: '&cУ этого привата уже есть совладелец.'
+transfer-usage: '&cИспользование: &e/claim transfer <online-player>'
+ownership-offer: '&e{owner} предлагает вам {kind} для {chunk}. Передача удаляет прежних доверенных игроков, доступ клана, совладельца и объявления о продаже. Введите /confirm, чтобы принять.'
+offer-sent: '&aПредложение отправлено. Ничего не изменится, пока другой игрок не примет его.'
+cancel-market-first: '&cСначала снимите объявление о продаже.'
+market-usage: '&cИспользование: &e/claim market list <price> | cancel | buy'
+market-unavailable: '&cЭтот приват не продаётся.'
+market-confirm: '&eКупить {chunk} за {price}? Продавец получит {income}, остальное — налог. Прежний доступ к привату будет удалён.'
+auto-unavailable: '&cАвтоприват недоступен при текущих настройках сервера.'
+auto-enabled: '&aАвтоприват включён. Чанки, в которые вы заходите, будут приватизироваться, когда это возможно.'
+auto-disabled: '&eАвтоприват выключен.'
+bypass-enabled: '&eОбход защиты включён. Теперь вы можете изменять любой приват.'
+bypass-disabled: '&aОбход защиты выключен.'
+name-duplicate: '&cУ вас уже есть приват с таким именем.'
+tp-unsafe: '&cВ этом привате не найдено безопасное место для телепорта.'
+claim-summary: '&e{name} | {chunk} | Владелец: {owner} | ID: {id}'
+claim-coowner: '&eСовладелец: {player}'
+claim-setting: '&7{setting}: {value} | заблокировано: {locked}'
+claim-market: '&eПродаётся: {price}'
+claim-private: '&7Записей доверия: {trust} | Своя точка: {spawn}'
+list-page: '&eПриваты - страница {page}/{pages}'
+list-named-entry: '&7{number}. &e{name} &7| &e{world} &7| &fX:{x} Z:{z} &7| &f{date}'
+trust-list-details: "&7  Доступ: &f{rights} &7| До: &f{expiry}"
+trust-list-clan: "&7- &eКлан: &f{clan}"
+info-name: "&eНазвание: &f{name}"
+info-setting: "&e{setting}: {status}"
+info-setting-locked: "&7{setting}: заблокировано сервером."
+info-custom-spawn: "&eТочка телепорта: &aустановлена"
+transactions-empty: "&eНезавершённых платежей нет."
+transactions-header: "&eНезавершённые платежи:"
+transactions-entry: "&7- &f{id} &7| &e{chunk} &7| &f{stage}"
+ban-usage: '&cИспользование: &e/claim admin ban <player> <30m|2h|7d|permanent> | unban <player>'
+purge-usage: '&cИспользование: &e/claim admin purge <inactive-days>'
+purge-preview: '&eБудет удалено {count} приватов у {players} владельцев. Пока ничего не удалено.'
+purge-complete: '&aУдалено {count} приватов. Перед этим была сохранена резервная копия.'
+warn-usage: '&cИспользование: &e/claim warn <visitor>'
+warn-ineligible: '&cПредупреждать можно только посетителей, которые находятся в вашем привате без разрешения.'
+warn-already-applied: '&eЭтот игрок уже наказан за эти предупреждения, или нужна проверка администратора.'
+warn-cooldown: '&eПодождите немного, прежде чем снова предупреждать этого игрока.'
+warning-received: '&cПредупреждение {count}/{max} от владельца привата. Покиньте эту область. Последнее предупреждение даст {type} на {duration}.'
+warning-ban-reason: '&cПовторное игнорирование предупреждений привата.'
+entry-exit-unavailable: '&cРядом не найден безопасный выход. Обратитесь к администратору.'
+protection-villager: '&cВ этом привате нельзя наносить урон жителям.'
+help-mobexplosion: "&6/claim explosion mob &7- Включить или выключить взрывы мобов в этом привате"
+help-villager: "&6/claim villager &7- Разрешить или запретить урон игроков по жителям"
+help-doors: "&6/claim doors &7- Разрешить или запретить посетителям двери и калитки"
+help-trapdoors: "&6/claim trapdoors &7- Разрешить или запретить посетителям люки"
+help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Выбрать, что может делать доверенный игрок"
+help-coowner-add: "&6/claim coowner add <player> &7- Пригласить совладельца"
+help-coowner-remove: "&6/claim coowner remove &7- Убрать совладельца"
+help-transfer: "&6/claim transfer <player> &7- Предложить этот приват игроку онлайн"
+help-market-list: "&6/claim market list <price> &7- Выставить этот приват на продажу"
+help-market-cancel: "&6/claim market cancel &7- Снять этот приват с продажи"
+help-market-buy: "&6/claim market buy &7- Купить приват, в котором вы стоите"
+help-auto: "&6/claim auto [on|off] &7- Автоматически приватить чанки при ходьбе"
+help-name: "&6/claim name <name> &7- Дать этому привату название"
+help-setspawn: "&6/claim setspawn &7- Выбрать место прибытия при телепорте сюда"
+help-warn: "&6/claim warn <player> &7- Предупредить посетителя, которому здесь не место"
+help-lang: "&6/claim lang <auto|en|tr|de|es|ru> &7- Выбрать язык"
+help-confirm: "&6/confirm &7- Подтвердить то, что вы собираетесь сделать"
+help-cancel: "&6/cancel &7- Отменить то, что вы собираетесь сделать"
+admin-help-bypass: "&6/claim admin bypass [on|off] &7- Игнорировать защиту приватов для себя"
+admin-help-ban: "&6/claim admin ban <player> <duration> &7- Запретить игроку получать новые приваты"
+admin-help-unban: "&6/claim admin unban <player> &7- Снова разрешить игроку приватить"
+admin-help-purge: "&6/claim admin purge <days> &7- Заранее показать удаление приватов неактивных игроков"
+admin-help-transactions: "&6/claim admin transactions &7- Показать незавершённые платежи экономики"
+state-enabled: '&aВКЛ'
+state-disabled: '&cВЫКЛ'
+state-yes: 'да'
+state-no: 'нет'
+setting-pvp: 'PvP'
+setting-explosions: 'Взрывы'
+setting-mob-spawning: 'Появление враждебных мобов'
+setting-villager-player-damage: 'Урон игроков по жителям'
+setting-visitor-doors: 'Посетители используют двери и калитки'
+setting-visitor-trapdoors: 'Посетители используют люки'
+coowner-offer: '&e{owner} приглашает вас стать совладельцем {chunk}. Вы сможете строить и управлять доверием и настройками, но не продавать, удалять или передавать приват. Введите /confirm, чтобы принять.'
+transfer-offer: '&e{owner} хочет отдать вам {chunk}. Прежние доверенные игроки, доступ клана, совладелец и объявления о продаже будут удалены. Введите /confirm, чтобы принять.'
+punishment-server-ban: 'бан на сервере'
+punishment-claim-entry-ban: 'запрет входа в этот приват'
+setting-mob-explosions: 'Взрывы мобов'
+help-list-filters: '&6/claim list [page] [name <text>] [world <world>] [sale <all|listed|unlisted>] &7- Поиск по вашим приватам'
+list-no-matches: '&7Ни один из ваших приватов не подходит под эти фильтры.'
+list-filtered: '&7Показано &f{count}&7 из &f{total}&7 приватов. Используйте эти номера с /claim tp.'
+info-access: '&7Ваш доступ: &f{role} &7| &f{rights}'
+info-access-expiry: '&7Ваше доверие закончится через: &f{remaining}'
+access-role-owner: 'Владелец'
+access-role-coowner: 'Совладелец'
+access-role-bypass: 'Обход администратора'
+access-role-trusted: 'Доверенный игрок'
+access-role-visitor: 'Посетитель'
+access-none: 'Нет'
+admin-help-diagnose: '&6/claim admin diagnose &7- Показать краткий отчёт о состоянии для поддержки'
+diagnose-header: '&eDyClaim {version} &7| &f{platform}'
+diagnose-storage: '&7Хранилище приватов: &f{status} &7| Приватов: &f{count}'
+diagnose-economy: '&7Экономика: &f{status}'
+diagnose-integrations: '&7Установленные интеграции: &f{plugins}'
+diagnose-hooks: '&7Активные подключения DyClaim: &f{hooks}'
+diagnose-ready: 'Готово'
+diagnose-unavailable: 'Недоступно'
+diagnose-disabled: 'Выкл'
+help-page: '&7Страница &e{page}&7/&e{pages}'
+help-page-next: '&7Страница &e{page}&7/&e{pages} &8| &7Далее: &e{command}'
+help-dyc: '&6/dyc &7- Короткая форма /claim, например /dyc list'
+help-cltp: '&6/cltp <number|name> &7- Короткая форма /claim tp'
+admin-help-dyca: '&6/dyca <command> &7- Короткая форма /claim admin, например /dyca reload'
+confirm-cancelled: '&7Отменено. Ничего не изменилось.'
+help-message: "&6/claim message <text|clear> &7- Показывать сообщение тем, кто входит в этот приват"
+help-ban: "&6/claim ban <player> [duration] &7- Запретить игроку входить в этот приват"
+help-unban: "&6/claim unban <player> &7- Снова впустить заблокированного игрока"
+help-banlist: "&6/claim banlist &7- Посмотреть, кому запрещён вход в этот приват"
+admin-help-import: "&6/dyclaim admin import <griefprevention|claimchunk> [confirm] &7- Перенести приваты из другого плагина"
+message-usage: '&cИспользование: &e/claim message <text> &cили &e/claim message clear'
+message-set: '&aПосетители увидят это сообщение при входе в приват.'
+message-cleared: '&aСообщение привата удалено.'
+message-invalid: '&cСообщение должно содержать от 1 до {max} символов, без специальных символов. Коды цвета работают, только если их разрешил сервер.'
+claim-greeting: '&7[{owner}] &f{message}'
+info-greeting: '&eСообщение: &f{message}'
+info-visitor-bans: '&eЗаблокированные игроки: &f{count}'
+visitor-ban-usage: '&cИспользование: &e/claim ban <player> [30m|2h|7d|permanent]'
+visitor-unban-usage: '&cИспользование: &e/claim unban <player>'
+visitor-ban-self: '&cНельзя заблокировать себя или владельца привата.'
+visitor-ban-exempt: '&cЭтого игрока нельзя заблокировать в приватах.'
+visitor-ban-full: '&cВ этом привате достигнут лимит блокировок. Сначала разблокируйте кого-нибудь.'
+visitor-banned: '&a{player} больше не может входить в этот приват. Доверие удалено.'
+visitor-ban-received: '&c{owner} запретил вам входить в этот приват.'
+visitor-ban-entry: '&cВам запрещено входить в приват {owner}.'
+visitor-ban-not-found: '&e{player} не заблокирован в этом привате.'
+visitor-unbanned: '&a{player} снова может входить в этот приват.'
+visitor-ban-list-header: '&eИгроки, которым запрещён вход в этот приват:'
+visitor-ban-list-entry: '&7- &f{player} &7| До: &f{expiry}'
+visitor-ban-list-empty: '&eНикому не запрещён вход в этот приват.'
+import-usage: '&cИспользование: &e/dyclaim admin import <griefprevention|claimchunk> [confirm]'
+import-unavailable: '&c{source} не установлен или не включён, переносить нечего.'
+import-preview: '&eНайдено {claims} приватов {source}, они покрывают {chunks} новых чанков. Пропущено: {claimed} уже заняты, {blacklisted} в запрещённых мирах, {conflicts} пересекаются. Пока ничего не изменено. Введите &6{command}&e, чтобы перенести.'
+import-complete: '&aПеренесено {created} чанков и {trusted} доверенных игроков. {skipped} чанков за это время заняли другие. Перед этим сохранена резервная копия.'
+import-failed: '&cНе удалось прочитать приваты. Подробности в консоли.'
+map-label: '{owner}'
+map-label-named: '{owner} - {names}'
