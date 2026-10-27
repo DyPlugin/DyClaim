@@ -187,6 +187,9 @@ public class ClaimData {
     public synchronized UUID getCoowner() { return coowner; }
     public synchronized void setCoowner(UUID uuid) { coowner = uuid; touch(); }
     public synchronized boolean canManage(UUID uuid) { return ownerUUID.equals(uuid) || uuid.equals(coowner); }
+    /** Owner of claims made with /claim admin server; no player can own, sell or transfer them. */
+    public static final UUID SERVER = new UUID(0L, 0L);
+    public synchronized boolean isServerClaim() { return SERVER.equals(ownerUUID); }
     public synchronized boolean allows(UUID uuid, String right) {
         if (canManage(uuid)) return true;
         TrustGrant grant = getTrustGrants().get(uuid);

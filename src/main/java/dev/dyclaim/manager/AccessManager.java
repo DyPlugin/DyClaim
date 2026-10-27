@@ -46,6 +46,7 @@ public class AccessManager {
     public boolean allows(Player player,ClaimData claim,String right){
         if(claim==null||bypass(player)||claim.allows(player.getUniqueId(),right))return true;
         if(plugin.getClanTrustManager()!=null&&plugin.getClanTrustManager().allows(player.getUniqueId(),claim,right))return true;
+        if(plugin.getConfigManager().values().getBoolean("integrations.permission-groups.enabled",true)&&GroupTrust.allows(player,claim,right))return true;
         return switch(right){case "doors"->enabled(claim,"visitor-doors");case "trapdoors"->enabled(claim,"visitor-trapdoors");default->false;};
     }
 }

@@ -129,6 +129,7 @@ help-pvp: "&6/claim pvp &7- Bu claim'de PvP'yi açın veya kapatın"
 help-explosion: "&6/claim patlama [mob] &7- Patlamaları veya mob patlamalarını açın/kapatın"
 help-mob: "&6/claim mob &7- Düşman mob doğmasını açın veya kapatın"
 help-trust: "&6/claim güven <oyuncu> [süre] &7- Bir oyuncuya burada yapı izni verin (isterseniz süreli)"
+help-trust-group: "&6/claim güven group:<ad> [süre] &7- Bir yetki grubundaki herkese güven"
 help-untrust: "&6/claim güvensil <oyuncu> &7- Güvenilen oyuncuyu çıkarın"
 help-trustlist: "&6/claim güvenliste &7- Burada kimlere güvendiğinizi görün"
 help-admin: "&6/claim admin &7- Yönetici komutları"
@@ -139,6 +140,7 @@ admin-help-header: "&7&m----------&r {prefix} &eYönetici Yardımı &7&m--------
 admin-help-toggle: "&6/claim admin aç/kapat &7- Herkes için claim almayı açın veya kapatın"
 admin-help-delete: "&6/claim admin sil <oyuncu> [tümü] &7- Bu claim'i ya da oyuncunun tüm claim'lerini silin"
 admin-help-give: "&6/claim admin ver <oyuncu> &7- Bulunduğunuz chunk'ı bir oyuncuya verin"
+admin-help-server: "&6/claim admin sunucu [kaldır] &7- Bulunduğunuz chunk'ı sunucu adına koruyun"
 admin-help-price: "&6/claim admin fiyat <miktar> &7- Claim fiyatını ayarlayın"
 admin-help-cooldown: "&6/claim admin bekleme <saniye> &7- İki claim arasındaki bekleme süresini ayarlayın"
 admin-help-prefix: "&6/claim admin önek <önek> &7- Mesaj önekini değiştirin"
@@ -181,6 +183,12 @@ setting-locked: '&cBu ayar sunucu tarafından kilitlenmiş.'
 setting-updated: '&a{setting}: {value}'
 trustperm-usage: '&cKullanım: &e/claim güven <oyuncu> <inşa|sandıklar|kapılar|tuzakkapıları|kızıltaş|varlıklar|ışınlanma> <izinver|reddet>'
 clan-unavailable: '&cBu klan şu anda bulunamıyor ya da bu isim birden fazla klanla eşleşiyor.'
+server-claim-created: "&aBu chunk artık bir sunucu claim'i. Yöneticiler yönetir; hiçbir oyuncunun değildir."
+server-claim-removed: "&aSunucu claim'i kaldırıldı."
+server-claim-exists: "&eBu chunk zaten bir sunucu claim'i."
+server-claim-owned: "&cBu chunk bir oyuncuya ait. Önce o claim'i kaldırın ya da devredin."
+server-claim-none: "&cBu chunk bir sunucu claim'i değil."
+group-unavailable: "&cBu, kullanılabilir bir yetki grubu adı değil ya da grup güveni kapalı."
 coowner-usage: '&cKullanım: &e/claim ortak ekle <oyuncu> &cveya &e/claim ortak çıkar'
 coowner-full: '&cBu claim''in zaten bir ortak sahibi var.'
 transfer-usage: '&cKullanım: &e/claim devret <çevrimiçi-oyuncu>'
@@ -206,6 +214,7 @@ list-page: '&eClaim''ler - sayfa {page}/{pages}'
 list-named-entry: '&7{number}. &e{name} &7| &e{world} &7| &fX:{x} Z:{z} &7| &f{date}'
 trust-list-details: "&7  İzinler: &f{rights} &7| Bitiş: &f{expiry}"
 trust-list-clan: "&7- &eKlan: &f{clan}"
+trust-list-group: "&7- &eGrup: &f{group}"
 info-name: "&eİsim: &f{name}"
 info-setting: "&e{setting}: {status}"
 info-setting-locked: "&7{setting} ayarı sunucu tarafından kilitlenmiş."

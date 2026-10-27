@@ -18,15 +18,11 @@ public final class PlatformTasks implements AutoCloseable {
     private PlatformTasks(Plugin plugin,boolean regionThreaded){this.plugin=plugin;this.regionThreaded=regionThreaded;}
     public static PlatformTasks bukkit(Plugin plugin){return new PlatformTasks(plugin,false);}
     public static PlatformTasks folia(Plugin plugin){return new PlatformTasks(plugin,true);}
-    public static PlatformTasks distribution(Plugin plugin){
-        java.util.Properties marker=new java.util.Properties();
-        try(var input=plugin.getResource("dyclaim-platform.properties")){if(input!=null)marker.load(input);}
-        catch(java.io.IOException failure){throw new IllegalStateException("Cannot read DyClaim platform descriptor",failure);}
-        return switch(marker.getProperty("platform","bukkit")){
-            case "bukkit"->bukkit(plugin);
-            case "folia"->folia(plugin);
-            default->throw new IllegalStateException("Unknown DyClaim distribution platform");
-        };
+    /** One JAR for every server: Folia's region scheduling is chosen when the server is Folia, Bukkit scheduling otherwise. */
+    public static PlatformTasks distribution(Plugin plugin){return foliaServer()?folia(plugin):bukkit(plugin);}
+    static boolean foliaServer(){
+        try{Class.forName("io.papermc.paper.threadedregions.RegionizedServer",false,PlatformTasks.class.getClassLoader());return true;}
+        catch(ClassNotFoundException|LinkageError missing){return false;}
     }
     public boolean isRegionThreaded(){return regionThreaded;}
     public boolean ownsEntity(Entity entity){return !regionThreaded||ownership(new Class<?>[]{Entity.class},entity);}

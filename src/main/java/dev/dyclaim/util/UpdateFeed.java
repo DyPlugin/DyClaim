@@ -82,8 +82,10 @@ public final class UpdateFeed {
         String suffix=switch(target){case BUKKIT->"";case FOLIA->"-Folia";};
         String base=version.replaceFirst("(?i)^v","");
         String expected="DyClaim-"+base+suffix+".jar",legacy="DyClaim-v"+base+suffix+".jar";
+        // From 1.2.0 one JAR serves Folia too, so a Folia server also accepts the plain file of a version listed for Folia.
+        String single="DyClaim-"+base+".jar";
         JsonArray files=candidate.getAsJsonArray("files");if(files==null)return target==Target.BUKKIT;
-        for(JsonElement file:files)try{String name=file.getAsJsonObject().get("filename").getAsString();if(expected.equalsIgnoreCase(name)||legacy.equalsIgnoreCase(name))return true;}catch(RuntimeException ignored){}
+        for(JsonElement file:files)try{String name=file.getAsJsonObject().get("filename").getAsString();if(expected.equalsIgnoreCase(name)||legacy.equalsIgnoreCase(name)||(target==Target.FOLIA&&single.equalsIgnoreCase(name)))return true;}catch(RuntimeException ignored){}
         return false;
     }
     private static boolean contains(JsonArray values, Set<String> accepted) {

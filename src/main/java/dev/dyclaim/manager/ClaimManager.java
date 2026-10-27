@@ -127,6 +127,15 @@ public class ClaimManager {
         dev.dyclaim.api.ApiEvents.created(plugin,claim,null,dev.dyclaim.api.event.ClaimCreateEvent.Cause.IMPORT);
         return claim;
     }
+    /** A claim owned by the server: free, outside every player limit, never purged as inactive. */
+    public synchronized ClaimData serverClaim(String world,int x,int z) {
+        String key=getChunkKey(world,x,z);if(claims.containsKey(key)||mutationBlocked(key))return null;
+        ClaimData claim=new ClaimData(ClaimData.SERVER,"Server",world,x,z);
+        claim.inheritChoices();claim.recordPrice(0);
+        claims.put(key,claim);playerIndex.computeIfAbsent(ClaimData.SERVER,uuid->new HashSet<>()).add(key);saveAll();
+        dev.dyclaim.api.ApiEvents.created(plugin,claim,null,dev.dyclaim.api.event.ClaimCreateEvent.Cause.ADMIN);
+        return claim;
+    }
     public boolean unclaimChunk(Chunk chunk) { return remove(getChunkKey(chunk)); }
     public boolean unclaimChunk(String world,int x,int z) { return remove(getChunkKey(world,x,z)); }
     public synchronized boolean remove(String key) {

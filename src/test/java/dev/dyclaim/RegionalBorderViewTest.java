@@ -25,6 +25,24 @@ class RegionalBorderViewTest extends ManagerFixture {
         when(tasks.playerLater(eq(actor),any(),anyLong())).thenAnswer(i->{(i.<Long>getArgument(2)>1?expiry:players).add(i.getArgument(1));return mock(BukkitTask.class);});
         view=new RegionalBorderView(plugin,tasks,p->true);
     }
+    /** Java players get glowing displays spawned on the region, shown on the player and removed on the region again. */
+    @Test void displayBordersAreSpawnedHiddenShownToTheViewerAndRemovedOnTheirRegion() {
+        BlockData lime=mock(BlockData.class);bukkit.when(()->Bukkit.createBlockData(Material.LIME_STAINED_GLASS)).thenReturn(lime);
+        List<org.bukkit.entity.BlockDisplay> spawned=new ArrayList<>();
+        when(world.spawn(any(Location.class),eq(org.bukkit.entity.BlockDisplay.class),org.mockito.ArgumentMatchers.<java.util.function.Consumer<? super org.bukkit.entity.BlockDisplay>>any())).thenAnswer(i->{
+            assertEquals("region",scope,"displays are spawned on their region");
+            var display=mock(org.bukkit.entity.BlockDisplay.class);when(display.isValid()).thenReturn(true);
+            java.util.function.Consumer<org.bukkit.entity.BlockDisplay> setup=i.getArgument(2);setup.accept(display);spawned.add(display);return display;
+        });
+        var java=new RegionalBorderView(plugin,tasks,p->false);
+        java.show(actor,target);assertTrue(spawned.isEmpty());
+        region();assertEquals(4,spawned.size(),"one line per side of a single chunk");
+        for(var display:spawned){verify(display).setVisibleByDefault(false);verify(display).setPersistent(false);verify(display).setGlowing(true);}
+        players.remove().run();for(var display:spawned)verify(actor).showEntity(plugin,display);
+        java.hide(actor);for(var display:spawned)verify(display,never()).remove();
+        region();for(var display:spawned)verify(display).remove();
+        assertFalse(java.isViewing(actor.getUniqueId()));
+    }
     void region(){scope="region";try{regions.remove().run();}finally{scope="player";}}
     @Test void bedrockReadsAndRestoresCurrentBlocksOnRegionAndSendsOnPlayer() {
         view.show(actor,target);assertTrue(view.isViewing(actor.getUniqueId()));verify(world,never()).getBlockAt(anyInt(),anyInt(),anyInt());
@@ -48,6 +66,7 @@ class RegionalBorderViewTest extends ManagerFixture {
         view.show(actor,target);stale.run();assertTrue(view.isViewing(actor.getUniqueId()));
     }
     @Test void nativeVisualizerRoutesJavaFramesThroughPlayerTimer() {
+        values.set("visualization.style","particles");
         when(tasks.isRegionThreaded()).thenReturn(true);when(plugin.getPlatformTasks()).thenReturn(tasks);
         BukkitTask timer=mock(BukkitTask.class);when(tasks.playerTimer(eq(actor),any(),eq(1L),eq(5L))).thenReturn(timer);
         var visualizer=new dev.dyclaim.visualizer.ChunkVisualizer(plugin);visualizer.showChunkBorders(actor,target);

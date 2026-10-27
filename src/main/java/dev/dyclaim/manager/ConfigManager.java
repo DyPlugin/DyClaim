@@ -152,6 +152,9 @@ public class ConfigManager {
         if(config.getInt("names.maximum-length")<1||config.getInt("names.maximum-length")>64)throw new IllegalArgumentException("names.maximum-length");
         Particle.valueOf(config.getString("visualization.particle"));
         if(!Material.valueOf(config.getString("visualization.bedrock-block")).isBlock())throw new IllegalArgumentException("visualization.bedrock-block");
+        if(!java.util.Set.of("display","particles").contains(config.getString("visualization.style","display").toLowerCase(java.util.Locale.ROOT)))throw new IllegalArgumentException("visualization.style");
+        if(!Material.valueOf(config.getString("visualization.display-block","LIME_STAINED_GLASS")).isBlock())throw new IllegalArgumentException("visualization.display-block");
+        if(!config.getString("visualization.display-glow","#55FF55").matches("#[0-9A-Fa-f]{6}"))throw new IllegalArgumentException("visualization.display-glow");
         Sound.valueOf(config.getString("warnings.sound"));
         for(String key:List.of("warnings.sound-volume","warnings.sound-pitch")) {
             double value=config.getDouble(key);if(!Double.isFinite(value)||value<0||value>4)throw new IllegalArgumentException(key);

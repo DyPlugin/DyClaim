@@ -127,6 +127,7 @@ help-pvp: "&6/claim pvp &7- Activar o desactivar el PvP en este claim"
 help-explosion: "&6/claim explosion [mob] &7- Activar o desactivar explosiones o explosiones de mobs"
 help-mob: "&6/claim mob &7- Activar o desactivar la aparición de mobs hostiles"
 help-trust: "&6/claim trust <player> [duration] &7- Dejar que un jugador construya aquí, si quieres por un tiempo"
+help-trust-group: "&6/claim trust group:<nombre> [duración] &7- Confiar en todo un grupo de permisos"
 help-untrust: "&6/claim untrust <player> &7- Quitar a un jugador de confianza"
 help-trustlist: "&6/claim trustlist &7- Ver quién es de confianza aquí"
 help-admin: "&6/claim admin &7- Comandos de administración"
@@ -137,6 +138,7 @@ admin-help-header: "&7&m----------&r {prefix} &eAyuda de admin &7&m----------"
 admin-help-toggle: "&6/claim admin enable/disable &7- Activar o desactivar los claims para todos"
 admin-help-delete: "&6/claim admin delete <player> [all] &7- Eliminar este claim o todos los de un jugador"
 admin-help-give: "&6/claim admin give <player> &7- Dar a un jugador el chunk en el que estás"
+admin-help-server: "&6/claim admin server [remove] &7- Proteger el chunk en el que estás para el servidor"
 admin-help-price: "&6/claim admin price <amount> &7- Fijar el precio del claim"
 admin-help-cooldown: "&6/claim admin cooldown <seconds> &7- Fijar la espera entre claims"
 admin-help-prefix: "&6/claim admin prefix <prefix> &7- Cambiar el prefijo de los mensajes"
@@ -179,6 +181,12 @@ setting-locked: '&cEl servidor ha bloqueado este ajuste.'
 setting-updated: '&a{setting}: {value}'
 trustperm-usage: '&cUso: &e/claim trust <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
 clan-unavailable: '&cAhora no se encuentra ese clan, o el nombre coincide con varios clanes.'
+server-claim-created: "&aEste chunk es ahora un claim del servidor. Lo gestionan los administradores; no pertenece a ningún jugador."
+server-claim-removed: "&aSe eliminó el claim del servidor."
+server-claim-exists: "&eEste chunk ya es un claim del servidor."
+server-claim-owned: "&cUn jugador es dueño de este chunk. Elimina o transfiere ese claim primero."
+server-claim-none: "&cEste chunk no es un claim del servidor."
+group-unavailable: "&cEse no es un nombre de grupo de permisos válido, o la confianza por grupos está desactivada."
 coowner-usage: '&cUso: &e/claim coowner add <player> &co &e/claim coowner remove'
 coowner-full: '&cEste claim ya tiene un copropietario.'
 transfer-usage: '&cUso: &e/claim transfer <online-player>'
@@ -204,6 +212,7 @@ list-page: '&eClaims - página {page}/{pages}'
 list-named-entry: '&7{number}. &e{name} &7| &e{world} &7| &fX:{x} Z:{z} &7| &f{date}'
 trust-list-details: "&7  Acceso: &f{rights} &7| Hasta: &f{expiry}"
 trust-list-clan: "&7- &eClan: &f{clan}"
+trust-list-group: "&7- &eGrupo: &f{group}"
 info-name: "&eNombre: &f{name}"
 info-setting: "&e{setting}: {status}"
 info-setting-locked: "&7{setting} está bloqueado por el servidor."

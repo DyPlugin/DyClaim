@@ -21,6 +21,8 @@ public final class RegionalBorderView {
         final Set<BukkitTask> handles=ConcurrentHashMap.newKeySet();
         volatile boolean closed;
         final Set<Location> sent=ConcurrentHashMap.newKeySet();
+        /** Border lines shown to this player only; removed by the region that owns each one. */
+        final Map<org.bukkit.entity.Entity,ClaimOutline.Cell> displays=new ConcurrentHashMap<>();
         List<ClaimOutline.Edge> edges;int particleOffset;
         View(Player player,Chunk chunk){this.player=player;actor=player.getUniqueId();world=chunk.getWorld();chunkX=chunk.getX();chunkZ=chunk.getZ();}
     }
@@ -42,6 +44,7 @@ public final class RegionalBorderView {
         }
         try{
             if(bedrock.test(player))showBlocks(view,cfg,duration);
+            else if("display".equalsIgnoreCase(cfg.getString("visualization.style","display"))&&DISPLAYS)showDisplays(view,cfg,duration);
             else showParticles(view,cfg,duration);
         }catch(RuntimeException|Error failure){finish(view);throw failure;}
     }
@@ -79,6 +82,63 @@ public final class RegionalBorderView {
         },1));
         track(view,tasks.playerLater(view.player,()->finish(view),duration*20L));
     }
+    private static final boolean DISPLAYS=displaysAvailable();
+    private static boolean displaysAvailable(){
+        try{Class.forName("org.bukkit.entity.BlockDisplay");org.bukkit.entity.Entity.class.getMethod("setVisibleByDefault",boolean.class);return true;}
+        catch(ClassNotFoundException|NoSuchMethodException|LinkageError missing){return false;}
+    }
+    /**
+     * Glowing lines along the claim edges, one block display per chunk side. They are spawned invisible, shown only to
+     * the viewer, never saved with the world and removed again by the region that owns them.
+     */
+    private void showDisplays(View view,FileConfiguration cfg,int duration){
+        BlockData block=Material.valueOf(cfg.getString("visualization.display-block","LIME_STAINED_GLASS")).createBlockData();
+        Color glow=Color.fromRGB(Integer.parseInt(cfg.getString("visualization.display-glow","#55FF55").substring(1),16));
+        int y=Math.max(view.world.getMinHeight(),Math.min(view.player.getLocation().getBlockY(),view.world.getMaxHeight()-2));
+        Map<ClaimOutline.Cell,List<ClaimOutline.Edge>> byCell=new LinkedHashMap<>();
+        int remaining=96;
+        for(var edge:view.edges){if(remaining--<=0)break;byCell.computeIfAbsent(edge.cell(),key->new ArrayList<>()).add(edge);}
+        for(var group:byCell.entrySet())track(view,tasks.regionLater(view.world,group.getKey().x(),group.getKey().z(),()->{
+            if(!active(view)||!view.world.isChunkLoaded(group.getKey().x(),group.getKey().z()))return;
+            List<org.bukkit.entity.Entity> spawned=new ArrayList<>();
+            for(var edge:group.getValue()){
+                int minX=edge.cell().x()*16,minZ=edge.cell().z()*16;
+                boolean alongX=edge.side()==ClaimOutline.Side.NORTH||edge.side()==ClaimOutline.Side.SOUTH;
+                double x=switch(edge.side()){case EAST->minX+16-0.04;default->minX;};
+                double z=switch(edge.side()){case SOUTH->minZ+16-0.04;default->minZ;};
+                Location at=new Location(view.world,x,y+0.05,z);
+                org.bukkit.entity.BlockDisplay display=view.world.spawn(at,org.bukkit.entity.BlockDisplay.class,entity->{
+                    entity.setVisibleByDefault(false);entity.setPersistent(false);entity.setBlock(block);
+                    entity.setGlowing(true);entity.setGlowColorOverride(glow);
+                    entity.setBrightness(new org.bukkit.entity.Display.Brightness(15,15));
+                    entity.setTransformation(new org.bukkit.util.Transformation(new org.joml.Vector3f(),new org.joml.Quaternionf(),
+                            alongX?new org.joml.Vector3f(16f,0.08f,0.04f):new org.joml.Vector3f(0.04f,0.08f,16f),new org.joml.Quaternionf()));
+                });
+                view.displays.put(display,edge.cell());spawned.add(display);
+            }
+            if(!active(view)){removeDisplays(view);return;}
+            track(view,tasks.playerLater(view.player,()->{
+                if(!active(view))return;
+                if(!view.player.isOnline()||view.player.getWorld()!=view.world){finish(view);return;}
+                for(var entity:spawned)if(entity.isValid())view.player.showEntity(plugin,entity);
+            },1));
+        },1));
+        track(view,tasks.playerLater(view.player,()->finish(view),duration*20L));
+    }
+    /** Each display is removed on the thread of the region it stands in; on shutdown only where that thread is this one. */
+    private void removeDisplays(View view){
+        Map<ClaimOutline.Cell,List<org.bukkit.entity.Entity>> byCell=new HashMap<>();
+        for(var entry:view.displays.entrySet())byCell.computeIfAbsent(entry.getValue(),key->new ArrayList<>()).add(entry.getKey());
+        view.displays.clear();
+        for(var group:byCell.entrySet()){
+            if(!plugin.isEnabled()||tasks.ownsRegion(view.world,group.getKey().x(),group.getKey().z())){
+                if(tasks.ownsRegion(view.world,group.getKey().x(),group.getKey().z()))group.getValue().forEach(org.bukkit.entity.Entity::remove);
+                continue; // Not saved with the world, so a display that cannot be reached here disappears on unload.
+            }
+            try{tasks.regionLater(view.world,group.getKey().x(),group.getKey().z(),()->group.getValue().forEach(org.bukkit.entity.Entity::remove),1);}
+            catch(RuntimeException unavailable){plugin.getLogger().warning("Border displays could not be removed: "+unavailable.getMessage());}
+        }
+    }
     private static void addAir(World world,int x,int y,int z,Set<Location> positions){if(world.getBlockAt(x,y,z).getType().isAir())positions.add(new Location(world,x,y,z));}
     private void showParticles(View view,FileConfiguration cfg,int duration){
         Particle chosen=Particle.valueOf(cfg.getString("visualization.particle"));
@@ -109,7 +169,7 @@ public final class RegionalBorderView {
     private void finish(View view){
         if(!views.remove(view.actor,view))return;view.closed=true;
         for(BukkitTask handle:List.copyOf(view.handles))try{handle.cancel();}catch(RuntimeException failure){plugin.getLogger().warning("Border task cancellation failed: "+failure.getMessage());}
-        view.handles.clear();restore(view);
+        view.handles.clear();restore(view);removeDisplays(view);
     }
     private void restore(View view){
         if(view.sent.isEmpty())return;

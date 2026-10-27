@@ -2,6 +2,7 @@ name: DyClaim
 version: ${version}
 main: dev.dyclaim.DyClaim
 api-version: '1.20'
+folia-supported: true
 description: Lightweight chunk-based land claiming plugin with per-claim settings, trust system, and multi-language support.
 author: Claww
 website: https://modrinth.com/plugin/dyclaim
@@ -76,6 +77,7 @@ permissions:
     default: op
     children:
       dyclaim.player: true
+      dyclaim.admin.serverclaims: true
       dyclaim.admin.bypass: true
   dyclaim.claim:
     description: Allow claiming chunks
@@ -100,6 +102,9 @@ permissions:
     default: true
   dyclaim.admin.bypass:
     description: Bypass claim protection
+    default: op
+  dyclaim.admin.serverclaims:
+    description: Create, remove and manage server claims with /claim admin server.
     default: op
   dyclaim.settings:
     default: true

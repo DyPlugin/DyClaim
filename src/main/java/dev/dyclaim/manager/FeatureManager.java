@@ -78,7 +78,8 @@ public class FeatureManager implements Listener {
     private ClaimData owned(Player p,boolean primary) {
         ClaimData claim=plugin.getClaimManager().getClaimAt(p.getLocation().getChunk());
         if(claim==null){send(p,"sell-not-claimed");return null;}
-        if(!(primary?claim.getOwnerUUID().equals(p.getUniqueId()):claim.canManage(p.getUniqueId()))){send(p,"sell-not-owner");return null;}
+        boolean serverManager=!primary&&claim.isServerClaim()&&p.hasPermission("dyclaim.admin.serverclaims");
+        if(!serverManager&&!(primary?claim.getOwnerUUID().equals(p.getUniqueId()):claim.canManage(p.getUniqueId()))){send(p,"sell-not-owner");return null;}
         if(plugin.getTransactionManager().isLocked(claim.getChunkKey())){send(p,"transaction-locked");return null;}
         return claim;
     }
@@ -197,6 +198,10 @@ public class FeatureManager implements Listener {
             String clan=plugin.getClanTrustManager().resolve(args[1].substring(5));
             if(clan==null){send(p,"clan-unavailable");return;}
             c.grantClan(clan,expiry);
+        }else if(args[1].toLowerCase(Locale.ROOT).startsWith("group:")) {
+            String group=GroupTrust.name(args[1].substring(6));
+            if(group==null||!enabled("integrations.permission-groups.enabled")){send(p,"group-unavailable");return;}
+            c.grantClan(GroupTrust.KEY+group,expiry);
         }else {
             UUID target=known(args[1]);if(target==null){send(p,"admin-player-not-found");return;}
             if(c.canManage(target)){send(p,"trust-self");return;}
@@ -210,6 +215,7 @@ public class FeatureManager implements Listener {
         if(args.length<2){send(p,"untrust-usage");return;}
         boolean removed;
         if(args[1].startsWith("clan:")){String id=plugin.getClanTrustManager().resolve(args[1].substring(5));removed=c.removeClan(id);}
+        else if(args[1].toLowerCase(Locale.ROOT).startsWith("group:")){String group=GroupTrust.name(args[1].substring(6));removed=group!=null&&c.removeClan(GroupTrust.KEY+group);}
         else {UUID target=known(args[1]);removed=target!=null&&c.removeTrusted(target);if(removed)dev.dyclaim.api.ApiEvents.trust(plugin,c,target,false);}
         if(!removed){send(p,"trust-not-found",Map.of("{player}",args[1]));return;}
         c.touch();invalidate(c);plugin.getClaimManager().saveAll();send(p,"trust-removed",Map.of("{player}",args[1]));
@@ -236,7 +242,11 @@ public class FeatureManager implements Listener {
             if(entry.getValue().expiresAt!=0||!entry.getValue().permissions.containsAll(TrustGrant.RIGHTS))
                 display(p,"trust-list-details",Map.of("{rights}",String.join(", ",entry.getValue().permissions.stream().sorted().map(right->dev.dyclaim.util.CommandWords.display(right,"tr".equals(plugin.getMessageManager().getPreferredLanguage(p)))).toList()),"{expiry}",entry.getValue().expiresAt==0?dev.dyclaim.util.CommandWords.display("permanent","tr".equals(plugin.getMessageManager().getPreferredLanguage(p))):displayDate(entry.getValue().expiresAt)));
         }
-        for(String clan:view.getClanGrants().keySet())if(count++<20)display(p,"trust-list-clan",Map.of("{clan}",clan));
+        for(String clan:view.getClanGrants().keySet()){
+            if(count++>=20)break;
+            if(clan.startsWith(GroupTrust.KEY))display(p,"trust-list-group",Map.of("{group}",clan.substring(GroupTrust.KEY.length())));
+            else display(p,"trust-list-clan",Map.of("{clan}",clan));
+        }
         if(count==0)display(p,"trust-list-empty");
     }
     private boolean unchanged(ClaimData c,UUID id,long revision,UUID owner) {
@@ -507,7 +517,7 @@ public class FeatureManager implements Listener {
     private boolean admin(Player p,String[] args) {
         if(args.length<2)return false;
         String sub=args[1].toLowerCase(Locale.ROOT);
-        if(!Set.of("bypass","koruma-atla","ban","yasakla","unban","yasakkaldir","purge","temizle","transactions","islemler","give","ver","delete","sil","bulksell","toplusat").contains(sub))return false;
+        if(!Set.of("bypass","koruma-atla","ban","yasakla","unban","yasakkaldir","purge","temizle","transactions","islemler","give","ver","delete","sil","bulksell","toplusat","server","sunucu").contains(sub))return false;
         if(!permission(p,"dyclaim.admin"))return true;
         switch(sub) {
             case "bypass","koruma-atla" -> {if(!permission(p,"dyclaim.admin.bypass"))return true;boolean value=args.length<3?!plugin.getAccessManager().bypass(p):parseToggle(args[2]);plugin.getAccessManager().setBypass(p,value);send(p,value?"bypass-enabled":"bypass-disabled");}
@@ -519,6 +529,7 @@ public class FeatureManager implements Listener {
                 else {send(p,"transactions-header");for(var entry:entries)send(p,"transactions-entry",Map.of("{id}",entry.id.toString(),"{chunk}",entry.chunk,"{stage}",entry.stage.toString()));}
             }
             case "give","ver" -> adminGive(p,args);
+            case "server","sunucu" -> serverClaim(p,args);
             case "delete","sil","bulksell","toplusat" -> adminDelete(p,args,sub.equals("bulksell")||sub.equals("toplusat"));
             case "purge","temizle" -> {
                 if(!permission(p,"dyclaim.admin.purge"))return true;
@@ -529,6 +540,19 @@ public class FeatureManager implements Listener {
             }
         }
         return true;
+    }
+    /** /claim admin server [remove]: protects the chunk for the server, with no owner, price or limit. */
+    private void serverClaim(Player p,String[] args) {
+        if(!permission(p,"dyclaim.admin.serverclaims"))return;
+        Chunk chunk=p.getLocation().getChunk();ClaimData existing=plugin.getClaimManager().getClaimAt(chunk);
+        if(args.length>=3&&Set.of("remove","kaldir","kaldır").contains(args[2].toLowerCase(Locale.ROOT))){
+            if(existing==null||!existing.isServerClaim()){send(p,"server-claim-none");return;}
+            if(!plugin.getClaimManager().unclaimChunk(chunk)){send(p,"transaction-failed");return;}
+            send(p,"server-claim-removed");return;
+        }
+        if(existing!=null){send(p,existing.isServerClaim()?"server-claim-exists":"server-claim-owned");return;}
+        if(plugin.getClaimManager().serverClaim(chunk.getWorld().getName(),chunk.getX(),chunk.getZ())==null){send(p,"transaction-failed");return;}
+        send(p,"server-claim-created");
     }
     private void adminGive(Player p,String[] args) {
         if(args.length!=3){send(p,"admin-usage-give");return;}Player target=Bukkit.getPlayerExact(args[2]);if(target==null){send(p,"admin-player-not-found");return;}

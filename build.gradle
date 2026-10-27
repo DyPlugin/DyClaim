@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'dev.dyclaim'
-version = '1.1.0'
+version = '1.2.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -63,50 +63,46 @@ processResources {
     }
 }
 
-def foliaResources = layout.buildDirectory.dir('generated/folia-resources')
-tasks.register('prepareFoliaResources') {
-    dependsOn processResources
-    inputs.file(layout.buildDirectory.file('resources/main/plugin.yml'))
-    outputs.dir(foliaResources)
+// One JAR serves Bukkit, Spigot, Paper, Purpur and Folia. Folia servers on 1.1.0 or older look for a
+// DyClaim-<version>-Folia.jar in update notices, so the same classes are also published under that name.
+// A small marker keeps the two files distinct for download sites that reject identical files.
+def compatResources = layout.buildDirectory.dir('generated/folia-compat')
+tasks.register('prepareFoliaCompat') {
+    outputs.dir(compatResources)
     doLast {
-        def directory = foliaResources.get().asFile
+        def directory = compatResources.get().asFile
         directory.mkdirs()
-        new File(directory, 'plugin.yml').setText(layout.buildDirectory.file('resources/main/plugin.yml').get().asFile.getText('UTF-8') + '\nfolia-supported: true\n', 'UTF-8')
-        new File(directory, 'dyclaim-platform.properties').setText('platform=folia\n', 'UTF-8')
+        new File(directory, 'dyclaim-file.properties').setText('file=Folia-named copy of the single DyClaim JAR\n', 'UTF-8')
     }
 }
 tasks.register('foliaJar', Jar) {
-    dependsOn classes, tasks.named('prepareFoliaResources')
+    dependsOn classes, processResources, tasks.named('prepareFoliaCompat')
     archiveBaseName.set('DyClaim')
     archiveVersion.set(project.version)
     archiveClassifier.set('Folia')
     preserveFileTimestamps = false
     reproducibleFileOrder = true
-    from(sourceSets.main.output) { exclude 'plugin.yml', 'dyclaim-platform.properties' }
-    from(foliaResources)
+    from(sourceSets.main.output)
+    from(compatResources)
 }
 
 tasks.register('verifyPlatformArtifacts') {
     group = 'verification'
-    description = 'Checks backend descriptors, versions and distribution isolation.'
+    description = 'Checks that both files carry the same plugin, declare Folia support and the release version.'
     dependsOn tasks.jar, tasks.named('foliaJar')
     doLast {
-        def distributions = [
-            [tasks.jar.archiveFile.get().asFile, 'plugin.yml', 'bukkit'],
-            [tasks.named('foliaJar').get().archiveFile.get().asFile, 'plugin.yml', 'folia']
-        ]
-        distributions.each { entry ->
-            new java.util.zip.ZipFile(entry[0]).withCloseable { zip ->
-                def descriptor = zip.getEntry(entry[1])
-                if (descriptor == null) throw new GradleException("Missing ${entry[1]} in ${entry[0].name}")
-                def text = zip.getInputStream(descriptor).getText('UTF-8')
-                if (!(text =~ /(?m)["']?version["']?\s*:\s*["']?${java.util.regex.Pattern.quote(project.version.toString())}["']?\s*,?\s*$/).find())
-                    throw new GradleException("Wrong version in ${entry[0].name}")
+        def names = { file -> new java.util.zip.ZipFile(file).withCloseable { zip -> zip.stream().map { it.name }.filter { it != 'dyclaim-file.properties' }.sorted().toList() } }
+        def single = tasks.jar.archiveFile.get().asFile
+        def compat = tasks.named('foliaJar').get().archiveFile.get().asFile
+        if (names(single) != names(compat)) throw new GradleException('The Folia-named copy differs from the single JAR')
+        [single, compat].each { file ->
+            new java.util.zip.ZipFile(file).withCloseable { zip ->
+                def text = zip.getInputStream(zip.getEntry('plugin.yml')).getText('UTF-8')
+                if (!text.contains("version: ${project.version}")) throw new GradleException("Wrong version in ${file.name}")
+                if (!text.contains('folia-supported: true')) throw new GradleException("Missing Folia support in ${file.name}")
+                if (zip.getEntry('dyclaim-platform.properties') != null) throw new GradleException("Old platform marker in ${file.name}")
                 if (zip.stream().anyMatch { it.name.startsWith('dev/dyclaim/platform/proxy/') || it.name == 'dyclaim-bridge-version.properties' })
-                    throw new GradleException("Archived proxy code leaked into ${entry[0].name}")
-                def marker = zip.getInputStream(zip.getEntry('dyclaim-platform.properties')).getText('UTF-8').trim()
-                if (marker != "platform=${entry[2]}" || text.contains('folia-supported: true') != (entry[2] == 'folia'))
-                    throw new GradleException("Wrong platform marker in ${entry[0].name}")
+                    throw new GradleException("Archived proxy code leaked into ${file.name}")
             }
         }
     }

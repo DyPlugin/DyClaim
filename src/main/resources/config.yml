@@ -103,6 +103,11 @@ notification:
 
 visualization:
   duration-seconds: 10
+  # display: glowing lines only the viewer sees (Minecraft 1.19.4 or newer clients). particles: the classic particle border.
+  style: "display"
+  display-block: "LIME_STAINED_GLASS"
+  # Glow colour of the display lines as #RRGGBB.
+  display-glow: "#55FF55"
   particle: "FLAME"
   bedrock-block: "ORANGE_STAINED_GLASS"
   show-after-claim: true
@@ -214,6 +219,9 @@ claim-entry-bans:
 names:
   maximum-length: 32
 integrations:
+  # Trust a whole permission group with /claim trust group:<name>. LuckPerms gives members group.<name>.
+  permission-groups:
+    enabled: true
   # Optional experimental SimpleClans trust; requires that plugin to be available.
   clans:
     enabled: false

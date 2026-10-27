@@ -127,6 +127,7 @@ help-pvp: "&6/claim pvp &7- PvP in diesem Claim ein- oder ausschalten"
 help-explosion: "&6/claim explosion [mob] &7- Explosionen oder Mob-Explosionen ein- oder ausschalten"
 help-mob: "&6/claim mob &7- Spawnen feindlicher Mobs ein- oder ausschalten"
 help-trust: "&6/claim trust <player> [duration] &7- Einem Spieler das Bauen hier erlauben, optional befristet"
+help-trust-group: "&6/claim trust group:<Name> [Dauer] &7- Allen in einer Rechtegruppe vertrauen"
 help-untrust: "&6/claim untrust <player> &7- Einen vertrauten Spieler entfernen"
 help-trustlist: "&6/claim trustlist &7- Vertraute Spieler hier anzeigen"
 help-admin: "&6/claim admin &7- Admin-Befehle"
@@ -137,6 +138,7 @@ admin-help-header: "&7&m----------&r {prefix} &eAdmin-Hilfe &7&m----------"
 admin-help-toggle: "&6/claim admin enable/disable &7- Claimen für alle ein- oder ausschalten"
 admin-help-delete: "&6/claim admin delete <player> [all] &7- Diesen Claim oder alle Claims eines Spielers löschen"
 admin-help-give: "&6/claim admin give <player> &7- Den Chunk, in dem du stehst, einem Spieler geben"
+admin-help-server: "&6/claim admin server [remove] &7- Den Chunk, in dem du stehst, für den Server schützen"
 admin-help-price: "&6/claim admin price <amount> &7- Den Claim-Preis festlegen"
 admin-help-cooldown: "&6/claim admin cooldown <seconds> &7- Die Wartezeit zwischen Claims festlegen"
 admin-help-prefix: "&6/claim admin prefix <prefix> &7- Das Nachrichten-Präfix ändern"
@@ -179,6 +181,12 @@ setting-locked: '&cDer Server hat diese Einstellung gesperrt.'
 setting-updated: '&a{setting}: {value}'
 trustperm-usage: '&cVerwendung: &e/claim trust <player> <build|containers|doors|trapdoors|redstone|entities|teleport> <allow|deny>'
 clan-unavailable: '&cDieser Clan ist gerade nicht auffindbar, oder der Name passt zu mehreren Clans.'
+server-claim-created: "&aDieser Chunk ist jetzt ein Server-Claim. Admins verwalten ihn; er gehört keinem Spieler."
+server-claim-removed: "&aDer Server-Claim wurde entfernt."
+server-claim-exists: "&eDieser Chunk ist schon ein Server-Claim."
+server-claim-owned: "&cDieser Chunk gehört einem Spieler. Entferne oder übertrage diesen Claim zuerst."
+server-claim-none: "&cDieser Chunk ist kein Server-Claim."
+group-unavailable: "&cDas ist kein gültiger Rechtegruppen-Name, oder Gruppenvertrauen ist ausgeschaltet."
 coowner-usage: '&cVerwendung: &e/claim coowner add <player> &coder &e/claim coowner remove'
 coowner-full: '&cDieser Claim hat bereits einen Mitbesitzer.'
 transfer-usage: '&cVerwendung: &e/claim transfer <online-player>'
@@ -204,6 +212,7 @@ list-page: '&eClaims - Seite {page}/{pages}'
 list-named-entry: '&7{number}. &e{name} &7| &e{world} &7| &fX:{x} Z:{z} &7| &f{date}'
 trust-list-details: "&7  Zugriff: &f{rights} &7| Bis: &f{expiry}"
 trust-list-clan: "&7- &eClan: &f{clan}"
+trust-list-group: "&7- &eGruppe: &f{group}"
 info-name: "&eName: &f{name}"
 info-setting: "&e{setting}: {status}"
 info-setting-locked: "&7{setting} ist vom Server gesperrt."

@@ -4,7 +4,7 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.1.0** adds claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, BlueMap/Dynmap/squaremap layers, importing from GriefPrevention and ClaimChunk, a developer API, German/Spanish/Russian messages, MiniMessage formatting and bStats statistics. Every new system has its own switch. Existing commands, aliases, settings and claim data are preserved.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.2.0** ships one JAR for every server, including Folia, and adds server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
@@ -14,10 +14,9 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 | Your server | File |
 |---|---|
-| Bukkit, Spigot, Paper or Purpur | `DyClaim-1.1.0.jar` |
-| Folia | `DyClaim-1.1.0-Folia.jar` |
+| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.2.0.jar` |
 
-Install **one** backend JAR per server. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder. Both builds use the same schema-2 claim data and EN/TR commands. There are no proxy companions in this release.
+Install the JAR on any supported server; it detects Folia at startup. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder; claim data stays on schema 2. Servers that used the 1.1.0 Folia build can install the same JAR. A `DyClaim-1.2.0-Folia.jar` copy with the same classes is also published, so 1.1.0 Folia servers still see the update notice. There are no proxy companions in this release.
 
 [Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md) · [Integrations and import](docs/integrations.md) · [Developer API](docs/api.md)
 
@@ -112,6 +111,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim trust <player> [duration]` | Grant permanent or temporary trust |
 | `/claim trust <player> <right> <allow\|deny>` | Change a trusted player's access rights |
 | `/claim untrust <player>` | Remove player trust |
+| `/claim trust group:<name> [duration]` | Trust everyone in a permission group (LuckPerms gives members `group.<name>`) |
 | `/claim trustlist` | View current trust |
 | `/claim coowner add <player>` | Invite one online coowner |
 | `/claim coowner remove` | Remove the coowner |
@@ -126,7 +126,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/cltp <number\|name>` | Short form of `/claim tp`, available to every player |
 | `/claim list [page]` | View a paginated claim list; optional name/world/sale filters |
 | `/claim info` | Inspect the current claim |
-| `/claim see` | Display the nearby outer outline of connected claims |
+| `/claim see` | Display the nearby outer outline of connected claims; glowing lines only you can see on 1.19.4+ clients, or particles |
 | `/claim pvp`, `/claim mob`, `/claim villager` | Toggle the corresponding unlocked setting |
 | `/claim explosion [mob]` | Toggle ordinary explosions, or select `mob` for mob explosions |
 | `/claim doors`, `/claim trapdoors` | Toggle visitor access |
@@ -145,7 +145,7 @@ The old `trustperm` / `güvenizin` and `mobexplosion` / `mobpatlama` commands re
 
 Use `/claim admin` or `/claim admin help [page]` for help. `/dyca` is a short form of `/claim admin` (for example `/dyca reload`); it requires `dyclaim.admin` and is hidden from other players. Console senders can use `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist` and `reload`, with the `dyclaim.admin` permission. Console help and TAB show this supported scope; player-specific administration and confirmation flows remain player-only. In the server console, omit the leading slash: `claim admin reload` (Turkish: `claim admin yenile`).
 
-Common tools include `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist`, `reload`, `give`, `delete`, `bulksell`, `bypass`, `ban`, `unban`, `purge` and `transactions`.
+Common tools include `enable`, `disable`, `price`, `pricediff`, `cooldown`, `prefix`, `economy`, `lang`, `blacklist`, `reload`, `give`, `delete`, `bulksell`, `bypass`, `ban`, `unban`, `purge`, `transactions` and `server`. `/claim admin server` protects the chunk you stand in for the server: no owner, price or limit, managed by holders of `dyclaim.admin.serverclaims`; `/claim admin server remove` lifts it.
 
 Examples:
 
@@ -171,6 +171,7 @@ Inactive cleanup removes claim records, not world blocks. Deletion and bulk oper
 | `dyclaim.player` | Everyone | Player command permission group |
 | `dyclaim.admin` | OP | Core administration and player permissions; includes bypass permission |
 | `dyclaim.admin.bypass` | OP | Permission to use protection bypass |
+| `dyclaim.admin.serverclaims` | OP | Create, remove and manage server claims |
 | `dyclaim.admin.purge` | OP | Additional permission for inactive cleanup |
 | `dyclaim.admin.purge.exempt` | OP | Exemption from inactive cleanup |
 | `dyclaim.warn.exempt` | OP | Exemption from visitor-warning sanctions |
