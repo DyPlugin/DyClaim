@@ -16,7 +16,7 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 |---|---|
 | Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.2.0.jar` |
 
-Install the JAR on any supported server; it detects Folia at startup. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder; claim data stays on schema 2. Servers that used the 1.1.0 Folia build can install the same JAR. A `DyClaim-1.2.0-Folia.jar` copy with the same classes is also published, so 1.1.0 Folia servers still see the update notice. There are no proxy companions in this release.
+Install the JAR on any supported server; it detects Folia at startup. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder; claim data stays on schema 2. Servers that used the 1.1.0 Folia build can install the same JAR. There are no proxy companions in this release.
 
 [Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md) · [Integrations and import](docs/integrations.md) · [Developer API](docs/api.md)
 
@@ -253,7 +253,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-Run `gradlew.bat foliaJar verifyPlatformArtifacts` (or `./gradlew foliaJar verifyPlatformArtifacts`) to also build and check the Folia distribution. Outputs: `build/libs/DyClaim-1.1.0.jar` and `build/libs/DyClaim-1.1.0-Folia.jar`. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The JAR is `build/libs/DyClaim-1.2.0.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
 Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.
