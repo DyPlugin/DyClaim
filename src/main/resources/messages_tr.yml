@@ -238,6 +238,7 @@ help-mobexplosion: "&6/claim patlama mob &7- Bu claim'de mob patlamalarını aç
 help-villager: "&6/claim köylü &7- Oyuncuların köylülere zarar vermesine izin verin veya engelleyin"
 help-doors: "&6/claim kapı &7- Ziyaretçilerin kapı ve çit kapısı kullanmasını açın/kapatın"
 help-trapdoors: "&6/claim tuzakkapısı &7- Ziyaretçilerin tuzak kapısı kullanmasını açın/kapatın"
+help-containers: "&6/claim sandıklar &7- Ziyaretçilerin sandık ve diğer depoları açmasını açın/kapatın"
 help-trustperm: "&6/claim güven <oyuncu> <izin> <izinver|reddet> &7- Güvenilen oyuncunun neler yapabileceğini seçin"
 help-coowner-add: "&6/claim ortak ekle <oyuncu> &7- Ortak sahip davet edin"
 help-coowner-remove: "&6/claim ortak çıkar &7- Ortak sahibi çıkarın"
@@ -268,6 +269,7 @@ setting-mob-spawning: 'Düşman mob doğması'
 setting-villager-player-damage: 'Oyuncuların köylülere zarar vermesi'
 setting-visitor-doors: 'Ziyaretçilerin kapı ve çit kapısı kullanması'
 setting-visitor-trapdoors: 'Ziyaretçilerin tuzak kapısı kullanması'
+setting-visitor-containers: 'Ziyaretçilerin sandık açması'
 coowner-offer: '&e{owner}, {chunk} için sizi ortak sahip olmaya davet ediyor. Yapı yapabilir, güvenilenleri ve ayarları yönetebilirsiniz; satamaz, silemez ve devredemezsiniz. Kabul etmek için /onayla yazın.'
 transfer-offer: '&e{owner}, {chunk} alanını size devretmek istiyor. Eski güvenilen oyuncular, klan erişimi, ortak sahip ve satış ilanı kaldırılır. Kabul etmek için /onayla yazın.'
 punishment-server-ban: 'sunucu yasağı'

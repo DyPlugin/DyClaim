@@ -113,6 +113,7 @@ public class FeatureManager implements Listener {
                 case "villager","koylu","köylü" -> toggle(p,"villager-player-damage");
                 case "doors","kapi","kapı" -> toggle(p,"visitor-doors");
                 case "trapdoors","tuzakkapisi","tuzakkapısı" -> toggle(p,"visitor-trapdoors");
+                case "containers","sandiklar","sandıklar" -> toggle(p,"visitor-containers");
                 case "pvp" -> toggle(p,"pvp");
                 case "explosion","patlama" -> {
                     if(args.length==1)toggle(p,"explosions");
@@ -467,7 +468,7 @@ public class FeatureManager implements Listener {
         if(c.getName()!=null)display(p,"info-name",Map.of("{name}",c.getName()));
         if(c.getGreeting()!=null&&enabled("claim-messages.enabled"))display(p,"info-greeting",Map.of("{message}",enabled("claim-messages.allow-colors")?MessageManager.colorize(c.getGreeting()):c.getGreeting().replace("&","")));
         if(c.getCoowner()!=null)display(p,"claim-coowner",Map.of("{player}",Objects.toString(Bukkit.getOfflinePlayer(c.getCoowner()).getName(),c.getCoowner().toString())));
-        for(String key:List.of("pvp","explosions","mob-explosions","mob-spawning","villager-player-damage","visitor-doors","visitor-trapdoors")) {
+        for(String key:List.of("pvp","explosions","mob-explosions","mob-spawning","villager-player-damage","visitor-doors","visitor-trapdoors","visitor-containers")) {
             var value=plugin.getAccessManager().policy(c,key);
             String status=plugin.getMessageManager().getMessage(p,value.enabled()?"state-enabled":"state-disabled");
             String legacy=switch(key){case "pvp"->"info-pvp";case "explosions"->"info-explosion";case "mob-spawning"->"info-mob";default->null;};

@@ -4,7 +4,7 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.2.0** ships one JAR for every server, including Folia, and adds server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.2.1** lets owners open their chests to visitors while blocks stay protected. Version 1.2.0 made DyClaim one JAR for every server, including Folia, and added server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
@@ -14,7 +14,7 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 | Your server | File |
 |---|---|
-| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.2.0.jar` |
+| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.2.1.jar` |
 
 Install the JAR on any supported server; it detects Folia at startup. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder; claim data stays on schema 2. Servers that used the 1.1.0 Folia build can install the same JAR. There are no proxy companions in this release.
 
@@ -42,7 +42,7 @@ On Purpur 1.20.4 with 50 claim areas, DyClaim had the lowest observed median in 
 
 ### Protection you can configure
 
-Protect building, containers and supported entity interactions, with separate settings for PvP, explosions, mob explosions, hostile mob spawning, villager damage, visitor doors and trapdoors.
+Protect building, containers and supported entity interactions, with separate settings for PvP, explosions, mob explosions, hostile mob spawning, villager damage, visitor doors, trapdoors and containers.
 
 Villager damage by players is blocked by default, including owner attacks and player projectiles. Trading remains available. Farmland has separate visitor and mob trampling policies.
 
@@ -129,7 +129,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim see` | Display the nearby outer outline of connected claims; glowing lines only you can see on 1.19.4+ clients, or particles |
 | `/claim pvp`, `/claim mob`, `/claim villager` | Toggle the corresponding unlocked setting |
 | `/claim explosion [mob]` | Toggle ordinary explosions, or select `mob` for mob explosions |
-| `/claim doors`, `/claim trapdoors` | Toggle visitor access |
+| `/claim doors`, `/claim trapdoors`, `/claim containers` | Toggle visitor access to doors, trapdoors or storage blocks |
 | `/claim warn <player>` | Warn an unauthorized visitor inside your claim |
 | `/claim message <text\|clear>` | Show a message to visitors entering the claim |
 | `/claim ban <player> [duration]`, `/claim unban <player>`, `/claim banlist` | Keep a player out of the claim |
@@ -253,7 +253,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-The JAR is `build/libs/DyClaim-1.2.0.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The JAR is `build/libs/DyClaim-1.2.1.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
 Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.

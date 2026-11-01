@@ -52,6 +52,12 @@ protection:
     default: false
     forced-value: null
     player-toggle: true
+  # Lets visitors open chests, barrels, shulker boxes, furnaces, hoppers, dispensers,
+  # droppers and brewing stands. Blocks stay protected from breaking and placing.
+  visitor-containers:
+    default: false
+    forced-value: null
+    player-toggle: true
   # pvp, explosions and mob-spawning inherit the existing beta defaults.
   pvp:
     forced-value: null

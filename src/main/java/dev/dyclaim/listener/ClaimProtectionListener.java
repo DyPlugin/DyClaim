@@ -121,6 +121,7 @@ public class ClaimProtectionListener implements Listener {
         String right=typeName.contains("TRAPDOOR")?"trapdoors":(typeName.contains("DOOR")||typeName.contains("GATE"))?"doors":
                 (typeName.contains("BUTTON")||typeName.contains("LEVER")||typeName.contains("REPEATER")||typeName.contains("COMPARATOR")||typeName.contains("PRESSURE"))?"redstone":"containers";
         if(plugin.getAccessManager().allows(player,claim,right))return;
+        if(right.equals("containers")&&dev.dyclaim.manager.AccessManager.isStorage(typeName)&&plugin.getAccessManager().allowsStorage(player,claim))return;
         if (isProtectedInteraction(typeName)) {
             event.setCancelled(true);
             player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-interact"));
@@ -604,6 +605,8 @@ public class ClaimProtectionListener implements Listener {
         if(!harmful(effects))return;
         event.getAffectedEntities().removeIf(entity->entity instanceof Player victim&&attacker!=victim&&blocksPvp(attacker,victim));
     }
+    /** True only for an inventory that sits in a storage block; minecarts, boats and animals never count. */
+    private boolean storageBlock(Inventory inventory){Location loc=inventory.getLocation();return loc!=null&&dev.dyclaim.manager.AccessManager.isStorage(loc.getBlock().getType().name());}
     private ClaimData inventoryClaim(Inventory inventory){Location loc=inventory.getLocation();return loc==null?null:claimAt(loc);}
     private java.util.List<Inventory> inventoryParts(Inventory inventory) {
         if(inventory instanceof DoubleChestInventory chest)return java.util.List.of(chest.getLeftSide(),chest.getRightSide());
@@ -612,7 +615,10 @@ public class ClaimProtectionListener implements Listener {
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void inventoryOpen(InventoryOpenEvent event) {
         if(!(event.getPlayer() instanceof Player player))return;
         for(Inventory part:inventoryParts(event.getInventory())) {
-            if(!plugin.getAccessManager().allows(player,inventoryClaim(part),"containers")){event.setCancelled(true);return;}
+            ClaimData claim=inventoryClaim(part);
+            if(plugin.getAccessManager().allows(player,claim,"containers"))continue;
+            if(claim!=null&&plugin.getAccessManager().enabled(claim,"visitor-containers")&&storageBlock(part))continue;
+            event.setCancelled(true);return;
         }
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void hopper(InventoryMoveItemEvent event) {

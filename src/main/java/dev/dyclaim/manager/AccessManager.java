@@ -49,4 +49,12 @@ public class AccessManager {
         if(plugin.getConfigManager().values().getBoolean("integrations.permission-groups.enabled",true)&&GroupTrust.allows(player,claim,right))return true;
         return switch(right){case "doors"->enabled(claim,"visitor-doors");case "trapdoors"->enabled(claim,"visitor-trapdoors");default->false;};
     }
+    /** Storage blocks also open for visitors when the claim allows visitor-containers; other "containers" blocks do not. */
+    public boolean allowsStorage(Player player,ClaimData claim){
+        return allows(player,claim,"containers")||enabled(claim,"visitor-containers");
+    }
+    public static boolean isStorage(String type){
+        return type.equals("CHEST")||type.equals("TRAPPED_CHEST")||type.equals("BARREL")||type.endsWith("SHULKER_BOX")||type.equals("FURNACE")||type.equals("BLAST_FURNACE")
+                ||type.equals("SMOKER")||type.equals("HOPPER")||type.equals("DISPENSER")||type.equals("DROPPER")||type.equals("BREWING_STAND");
+    }
 }

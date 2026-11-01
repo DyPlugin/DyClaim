@@ -237,6 +237,7 @@ help-mobexplosion: "&6/claim explosion mob &7- Turn mob explosions on or off in 
 help-villager: "&6/claim villager &7- Allow or block player damage to villagers"
 help-doors: "&6/claim doors &7- Let visitors use doors and gates, or not"
 help-trapdoors: "&6/claim trapdoors &7- Let visitors use trapdoors, or not"
+help-containers: "&6/claim containers &7- Let visitors open chests and other containers, or not"
 help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Choose what a trusted player can do"
 help-coowner-add: "&6/claim coowner add <player> &7- Invite a co-owner"
 help-coowner-remove: "&6/claim coowner remove &7- Remove the co-owner"
@@ -267,6 +268,7 @@ setting-mob-spawning: 'Hostile mob spawning'
 setting-villager-player-damage: 'Player damage to villagers'
 setting-visitor-doors: 'Visitors using doors and gates'
 setting-visitor-trapdoors: 'Visitors using trapdoors'
+setting-visitor-containers: 'Visitors opening containers'
 coowner-offer: '&e{owner} invites you to co-own {chunk}. You''ll be able to build and manage trust and settings, but not sell, delete or transfer it. Type /confirm to accept.'
 transfer-offer: '&e{owner} wants to give you {chunk}. Old trusted players, clan access, the co-owner and any sale listing will be removed. Type /confirm to accept.'
 punishment-server-ban: 'a server ban'

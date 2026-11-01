@@ -236,6 +236,7 @@ help-mobexplosion: "&6/claim explosion mob &7- Activar o desactivar explosiones 
 help-villager: "&6/claim villager &7- Permitir o bloquear el daño de jugadores a aldeanos"
 help-doors: "&6/claim doors &7- Permitir o no que los visitantes usen puertas y vallas"
 help-trapdoors: "&6/claim trapdoors &7- Permitir o no que los visitantes usen trampillas"
+help-containers: "&6/claim containers &7- Permitir o no que los visitantes abran cofres y otros contenedores"
 help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Elegir qué puede hacer un jugador de confianza"
 help-coowner-add: "&6/claim coowner add <player> &7- Invitar a un copropietario"
 help-coowner-remove: "&6/claim coowner remove &7- Quitar al copropietario"
@@ -265,6 +266,7 @@ setting-mob-spawning: 'Aparición de mobs hostiles'
 setting-villager-player-damage: 'Daño de jugadores a aldeanos'
 setting-visitor-doors: 'Visitantes usan puertas y vallas'
 setting-visitor-trapdoors: 'Visitantes usan trampillas'
+setting-visitor-containers: 'Visitantes abren contenedores'
 coowner-offer: '&e{owner} te invita a ser copropietario de {chunk}. Podrás construir y gestionar la confianza y los ajustes, pero no venderlo, eliminarlo ni transferirlo. Escribe /confirm para aceptar.'
 transfer-offer: '&e{owner} quiere darte {chunk}. Se quitarán los jugadores de confianza, el acceso de clan, el copropietario y cualquier anuncio de venta. Escribe /confirm para aceptar.'
 punishment-server-ban: 'una expulsión del servidor'

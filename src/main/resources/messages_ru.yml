@@ -236,6 +236,7 @@ help-mobexplosion: "&6/claim explosion mob &7- Включить или выкл�
 help-villager: "&6/claim villager &7- Разрешить или запретить урон игроков по жителям"
 help-doors: "&6/claim doors &7- Разрешить или запретить посетителям двери и калитки"
 help-trapdoors: "&6/claim trapdoors &7- Разрешить или запретить посетителям люки"
+help-containers: "&6/claim containers &7- Разрешить или запретить посетителям открывать сундуки и другие контейнеры"
 help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Выбрать, что может делать доверенный игрок"
 help-coowner-add: "&6/claim coowner add <player> &7- Пригласить совладельца"
 help-coowner-remove: "&6/claim coowner remove &7- Убрать совладельца"
@@ -265,6 +266,7 @@ setting-mob-spawning: 'Появление враждебных мобов'
 setting-villager-player-damage: 'Урон игроков по жителям'
 setting-visitor-doors: 'Посетители используют двери и калитки'
 setting-visitor-trapdoors: 'Посетители используют люки'
+setting-visitor-containers: 'Посетители открывают контейнеры'
 coowner-offer: '&e{owner} приглашает вас стать совладельцем {chunk}. Вы сможете строить и управлять доверием и настройками, но не продавать, удалять или передавать приват. Введите /confirm, чтобы принять.'
 transfer-offer: '&e{owner} хочет отдать вам {chunk}. Прежние доверенные игроки, доступ клана, совладелец и объявления о продаже будут удалены. Введите /confirm, чтобы принять.'
 punishment-server-ban: 'бан на сервере'

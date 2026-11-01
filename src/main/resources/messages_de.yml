@@ -236,6 +236,7 @@ help-mobexplosion: "&6/claim explosion mob &7- Mob-Explosionen in diesem Claim e
 help-villager: "&6/claim villager &7- Spielerschaden an Dorfbewohnern erlauben oder blockieren"
 help-doors: "&6/claim doors &7- Besuchern Türen und Tore erlauben oder verbieten"
 help-trapdoors: "&6/claim trapdoors &7- Besuchern Falltüren erlauben oder verbieten"
+help-containers: "&6/claim containers &7- Besuchern Truhen und andere Behälter erlauben oder verbieten"
 help-trustperm: "&6/claim trust <player> <right> <allow|deny> &7- Festlegen, was ein vertrauter Spieler darf"
 help-coowner-add: "&6/claim coowner add <player> &7- Einen Mitbesitzer einladen"
 help-coowner-remove: "&6/claim coowner remove &7- Den Mitbesitzer entfernen"
@@ -265,6 +266,7 @@ setting-mob-spawning: 'Spawnen feindlicher Mobs'
 setting-villager-player-damage: 'Spielerschaden an Dorfbewohnern'
 setting-visitor-doors: 'Besucher nutzen Türen und Tore'
 setting-visitor-trapdoors: 'Besucher nutzen Falltüren'
+setting-visitor-containers: 'Besucher öffnen Behälter'
 coowner-offer: '&e{owner} lädt dich ein, {chunk} mitzubesitzen. Du kannst bauen sowie Vertrauen und Einstellungen verwalten, aber nicht verkaufen, löschen oder übertragen. Gib /confirm ein, um anzunehmen.'
 transfer-offer: '&e{owner} möchte dir {chunk} geben. Alte vertraute Spieler, Clan-Zugriff, der Mitbesitzer und jedes Verkaufsangebot werden entfernt. Gib /confirm ein, um anzunehmen.'
 punishment-server-ban: 'einen Server-Bann'
