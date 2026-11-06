@@ -191,7 +191,7 @@ public class DyClaim extends JavaPlugin {
             metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("language_mode", () -> configManager.getLang()));
             metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("platform", () -> platformTasks.isRegionThreaded() ? "Folia" : "Standard"));
             metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("economy", () -> economyManager.isEnabled() ? "Enabled" : "Disabled"));
-            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("claims", () -> claimRange(claimManager.getAllClaims().size())));
+            metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("claims", () -> claimRange(claimManager.getClaimCount())));
             metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.SimplePie("placeholderapi", () -> integrations.placeholdersActive() ? "Yes" : "No"));
             metrics.addCustomChart(new dev.dyclaim.lib.bstats.charts.AdvancedPie("map_plugins", () -> {
                 java.util.Map<String, Integer> maps = new java.util.HashMap<>();

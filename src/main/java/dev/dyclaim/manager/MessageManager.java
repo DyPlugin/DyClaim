@@ -73,8 +73,16 @@ public class MessageManager {
         return getMessageInternal(resolveConfiguredLanguage(), key);
     }
 
+    /** The coloured prefix of the last configured text; every message starts with it. */
+    private volatile String[] prefixCache = {null, null};
+
     public String getPrefix() {
-        return colorize(plugin.getConfigManager().getPrefix()) + " ";
+        String raw = plugin.getConfigManager().getPrefix();
+        String[] cached = prefixCache;
+        if (raw != null && raw.equals(cached[0])) return cached[1];
+        String colored = colorize(raw) + " ";
+        prefixCache = new String[]{raw, colored};
+        return colored;
     }
 
     public String getPrefixed(String key) {

@@ -19,13 +19,18 @@ public final class ProtectionRules {
         Boolean choice=claim.getChoice(key);
         if(choice!=null)return new Value(choice,locked,"claim");
         if(config.contains(world+".default"))return new Value(config.bool(world+".default",false),locked,"world-default");
-        boolean fallback=switch(key){
-            case "mob-explosions"->resolve(config,claim,"explosions").enabled();
+        boolean fallback=key.equals("mob-explosions")?resolve(config,claim,"explosions").enabled():fallback(config,key);
+        return new Value(config.bool(root+".default",fallback),locked,"default");
+    }
+    /** Value used when neither the claim nor the configuration chooses; mob-explosions follows explosions instead. */
+    public static boolean fallback(Config config,String key){
+        return switch(key){
             case "pvp"->!config.bool("protection.pvp-disabled",true);
             case "explosions"->!config.bool("protection.explosion-disabled",true);
             case "mob-spawning"->!config.bool("protection.mob-griefing-disabled",true);
+            // Visitors could always walk into claims; a claim is closed only when its owner or the server says so.
+            case "visitor-entry"->true;
             default->false;
         };
-        return new Value(config.bool(root+".default",fallback),locked,"default");
     }
 }

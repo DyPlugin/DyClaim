@@ -14,6 +14,8 @@ public class ClaimManager {
     private final DyClaim plugin;
     private final Map<String, ClaimData> claims = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, Set<String>> playerIndex = new HashMap<>();
+    /** Same claims by world and packed chunk position; lookups on every event avoid building a key string. */
+    private final Map<String, Map<Long, ClaimData>> chunkIndex = new java.util.concurrent.ConcurrentHashMap<>();
     private final ClaimStore store;
     private volatile boolean writable;
     private BukkitTask pendingSave;
@@ -28,7 +30,7 @@ public class ClaimManager {
         writable = false;
         try {
             Map<String, ClaimData> loaded = store.load(plugin.getConfigManager().getClaimPrice());
-            claims.clear(); claims.putAll(loaded); rebuildPlayerIndex(); writable = true;
+            claims.clear(); claims.putAll(loaded); chunkIndex.clear(); claims.values().forEach(this::indexChunk); rebuildPlayerIndex(); writable = true;
             plugin.getLogger().info("Loaded " + claims.size() + " claims (schema 2).");
         } catch (IOException ex) {
             throw new IllegalStateException("Claim data cannot be loaded. Writes disabled; restore a verified backup. " + ex.getMessage(), ex);
@@ -98,10 +100,15 @@ public class ClaimManager {
     }
     public String getChunkKey(String world, int x, int z) { return world + ":" + x + ":" + z; }
     public String getChunkKey(Chunk chunk) { return getChunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()); }
-    public boolean isChunkClaimed(Chunk chunk) { return claims.containsKey(getChunkKey(chunk)); }
-    public boolean isChunkClaimed(String world, int x, int z) { return claims.containsKey(getChunkKey(world,x,z)); }
-    public ClaimData getClaimAt(Chunk chunk) { return claims.get(getChunkKey(chunk)); }
-    public ClaimData getClaimAt(String world, int x, int z) { return claims.get(getChunkKey(world,x,z)); }
+    public boolean isChunkClaimed(Chunk chunk) { return getClaimAt(chunk) != null; }
+    public boolean isChunkClaimed(String world, int x, int z) { return getClaimAt(world,x,z) != null; }
+    public ClaimData getClaimAt(Chunk chunk) { return getClaimAt(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()); }
+    public ClaimData getClaimAt(String world, int x, int z) { Map<Long, ClaimData> chunks = chunkIndex.get(world); return chunks == null ? null : chunks.get(cell(x, z)); }
+    /** Number of claims without copying them, for placeholders and statistics. */
+    public int getClaimCount() { return claims.size(); }
+    private static long cell(int x, int z) { return ((long) x << 32) | (z & 0xffffffffL); }
+    private void indexChunk(ClaimData claim) { chunkIndex.computeIfAbsent(claim.getWorld(), world -> new java.util.concurrent.ConcurrentHashMap<>()).put(cell(claim.getChunkX(), claim.getChunkZ()), claim); }
+    private void unindexChunk(ClaimData claim) { Map<Long, ClaimData> chunks = chunkIndex.get(claim.getWorld()); if (chunks != null) chunks.remove(cell(claim.getChunkX(), claim.getChunkZ()), claim); }
     public ClaimData getByKey(String key) { return claims.get(key); }
     public boolean isOwner(Player player, Chunk chunk) { ClaimData c=getClaimAt(chunk); return c != null && c.getOwnerUUID().equals(player.getUniqueId()); }
     public boolean isAllowed(Player player, Chunk chunk) { return plugin.getAccessManager().allows(player,getClaimAt(chunk),"build"); }
@@ -114,7 +121,7 @@ public class ClaimManager {
         synchronized(this){
             // The provider lookup above does not hold the state lock; recheck before committing.
             if(claims.containsKey(key)||mutationBlocked(key))return false;
-            claims.put(key,claim);playerIndex.computeIfAbsent(claim.getOwnerUUID(),uuid->new HashSet<>()).add(key);saveAll();
+            claims.put(key,claim);indexChunk(claim);playerIndex.computeIfAbsent(claim.getOwnerUUID(),uuid->new HashSet<>()).add(key);saveAll();
         }
         dev.dyclaim.api.ApiEvents.created(plugin,claim,player,cause);return true;
     }
@@ -123,7 +130,7 @@ public class ClaimManager {
         String key=getChunkKey(world,x,z);if(claims.containsKey(key)||mutationBlocked(key))return null;
         ClaimData claim=new ClaimData(owner,ownerName==null?owner.toString():ownerName,world,x,z);
         claim.inheritChoices();claim.recordPrice(0);
-        claims.put(key,claim);playerIndex.computeIfAbsent(owner,uuid->new HashSet<>()).add(key);saveAll();
+        claims.put(key,claim);indexChunk(claim);playerIndex.computeIfAbsent(owner,uuid->new HashSet<>()).add(key);saveAll();
         dev.dyclaim.api.ApiEvents.created(plugin,claim,null,dev.dyclaim.api.event.ClaimCreateEvent.Cause.IMPORT);
         return claim;
     }
@@ -132,7 +139,7 @@ public class ClaimManager {
         String key=getChunkKey(world,x,z);if(claims.containsKey(key)||mutationBlocked(key))return null;
         ClaimData claim=new ClaimData(ClaimData.SERVER,"Server",world,x,z);
         claim.inheritChoices();claim.recordPrice(0);
-        claims.put(key,claim);playerIndex.computeIfAbsent(ClaimData.SERVER,uuid->new HashSet<>()).add(key);saveAll();
+        claims.put(key,claim);indexChunk(claim);playerIndex.computeIfAbsent(ClaimData.SERVER,uuid->new HashSet<>()).add(key);saveAll();
         dev.dyclaim.api.ApiEvents.created(plugin,claim,null,dev.dyclaim.api.event.ClaimCreateEvent.Cause.ADMIN);
         return claim;
     }
@@ -141,6 +148,7 @@ public class ClaimManager {
     public synchronized boolean remove(String key) {
         if(mutationBlocked(key))return false;
         ClaimData removed=claims.remove(key); if (removed==null) return false;
+        unindexChunk(removed);
         removeIndex(removed.getOwnerUUID(),key);if(removed.getCoowner()!=null)removeIndex(removed.getCoowner(),key);
         if (plugin.getFeatureManager()!=null) plugin.getFeatureManager().invalidate(removed);
         saveAll(); dev.dyclaim.api.ApiEvents.removed(plugin,removed); return true;

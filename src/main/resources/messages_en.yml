@@ -340,3 +340,25 @@ import-complete: '&aImported {created} chunks and {trusted} trusted players. {sk
 import-failed: '&cThe claims could not be read. Check the console for details.'
 map-label: '{owner}'
 map-label-named: '{owner} - {names}'
+
+# Claim flight, fire, closed claims and notice choices (1.3.0).
+help-fire: "&6/claim fire &7- Let fire spread and burn blocks in this claim, or not"
+help-entry: "&6/claim entry &7- Open or close this claim to visitors who are not trusted"
+help-fly: "&6/claim fly [on|off] &7- Fly inside your own claims"
+help-notices: "&6/claim notices [on|off] &7- Show or hide claim entry and exit notices"
+setting-fire-spread: 'Fire spread'
+setting-visitor-entry: 'Visitor entry'
+actionbar-enter-named: "&7Claim: &e{name} &7({owner}) &7| &cPvP: {pvp}"
+protection-enter-named: "&7[You entered {name}, {owner}'s claim]"
+title-enter: '&a{owner}'
+title-enter-named: '&e{name}'
+title-enter-subtitle: '&7Claim of {owner} &8| &7PvP: {pvp}'
+notices-usage: '&cUsage: &e/claim notices [on|off]'
+notices-enabled: '&aClaim entry and exit notices are shown again.'
+notices-disabled: '&eClaim entry and exit notices are now hidden. Use &6/claim notices &eto show them again.'
+fly-usage: '&cUsage: &e/claim fly [on|off]'
+fly-enabled: '&aClaim flight is on. It stops when you leave claims where you may fly.'
+fly-disabled: '&eClaim flight is off.'
+fly-not-here: '&cYou can only fly inside your own claims or claims you can build in.'
+fly-left: '&eYou left the claim, so your flight stopped. It comes back when you return.'
+visitor-entry-closed: '&c{owner}''s claim is closed to visitors.'

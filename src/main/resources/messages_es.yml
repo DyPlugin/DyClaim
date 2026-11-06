@@ -330,3 +330,25 @@ import-complete: '&aSe importaron {created} chunks y {trusted} jugadores de conf
 import-failed: '&cNo se pudieron leer los claims. Revisa la consola para ver los detalles.'
 map-label: '{owner}'
 map-label-named: '{owner} - {names}'
+
+# Vuelo en claims, fuego, claims cerrados y avisos (1.3.0).
+help-fire: "&6/claim fire &7- Permitir o no que el fuego se propague y queme bloques en este claim"
+help-entry: "&6/claim entry &7- Abrir o cerrar este claim a los visitantes que no son de confianza"
+help-fly: "&6/claim fly [on|off] &7- Volar dentro de tus propios claims"
+help-notices: "&6/claim notices [on|off] &7- Mostrar u ocultar los avisos al entrar y salir de claims"
+setting-fire-spread: 'Propagación del fuego'
+setting-visitor-entry: 'Entrada de visitantes'
+actionbar-enter-named: "&7Claim: &e{name} &7({owner}) &7| &cPvP: {pvp}"
+protection-enter-named: "&7[Has entrado en {name}, el claim de {owner}]"
+title-enter: '&a{owner}'
+title-enter-named: '&e{name}'
+title-enter-subtitle: '&7Claim de {owner} &8| &7PvP: {pvp}'
+notices-usage: '&cUso: &e/claim notices [on|off]'
+notices-enabled: '&aLos avisos al entrar y salir de claims se muestran de nuevo.'
+notices-disabled: '&eLos avisos al entrar y salir de claims ahora están ocultos. Usa &6/claim notices &epara mostrarlos de nuevo.'
+fly-usage: '&cUso: &e/claim fly [on|off]'
+fly-enabled: '&aEl vuelo en claims está activado. Se detiene al salir de los claims donde puedes volar.'
+fly-disabled: '&eEl vuelo en claims está desactivado.'
+fly-not-here: '&cSolo puedes volar dentro de tus propios claims o en claims donde puedes construir.'
+fly-left: '&eSaliste del claim, así que tu vuelo se detuvo. Vuelve cuando regreses.'
+visitor-entry-closed: '&cEl claim de {owner} está cerrado a los visitantes.'

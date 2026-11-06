@@ -58,6 +58,18 @@ protection:
     default: false
     forced-value: null
     player-toggle: true
+  # Lets fire spread and burn blocks inside the claim (/claim fire). Only matters while
+  # boundaries.block-external-fire is true; otherwise fire already behaves as in the wilderness.
+  fire-spread:
+    default: false
+    forced-value: null
+    player-toggle: true
+  # false closes the claim (/claim entry): only owners, coowners and trusted players or groups may
+  # walk in, and other visitors are pushed out like banned players.
+  visitor-entry:
+    default: true
+    forced-value: null
+    player-toggle: true
   # pvp, explosions and mob-spawning inherit the existing beta defaults.
   pvp:
     forced-value: null
@@ -106,6 +118,12 @@ notification:
   use-actionbar: true
   show-enter: true
   show-leave: true
+  # true shows the notices as a title in the middle of the screen instead.
+  use-title: false
+  # Named claims show their name in the entry notice; crossing between two named claims also shows it.
+  show-claim-name: true
+  # Players can turn their own entry/exit notices off and on with /claim notices.
+  player-toggle: true
 
 visualization:
   duration-seconds: 10
@@ -224,6 +242,13 @@ claim-entry-bans:
   maximum-per-claim: 50
 names:
   maximum-length: 32
+# /claim fly: flight inside your own claims. Players also need the dyclaim.fly permission (OP by default).
+claim-fly:
+  enabled: true
+  # Players who may build in a claim (trusted players, trusted groups) can fly there too.
+  allow-trusted: true
+  # Leaving the claim ends flight; fall damage is forgiven for this many seconds afterwards (0 turns it off).
+  fall-protection-seconds: 10
 integrations:
   # Trust a whole permission group with /claim trust group:<name>. LuckPerms gives members group.<name>.
   permission-groups:

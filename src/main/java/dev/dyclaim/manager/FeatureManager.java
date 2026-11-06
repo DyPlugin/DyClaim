@@ -25,6 +25,8 @@ public class FeatureManager implements Listener {
         public Map<UUID,Long> bans=new java.util.concurrent.ConcurrentHashMap<>();
         public Map<String,WarningChain> warnings=new java.util.concurrent.ConcurrentHashMap<>();
         public Map<UUID,String> languages=new java.util.concurrent.ConcurrentHashMap<>();
+        /** Players who turned claim entry and exit notices off with /claim notices. */
+        public Set<UUID> quietNotices=java.util.concurrent.ConcurrentHashMap.newKeySet();
     }
     private final DyClaim plugin;
     private final Path stateFile;
@@ -39,6 +41,8 @@ public class FeatureManager implements Listener {
     private Iterator<String> mobClaims=Collections.emptyIterator();
     private Iterator<Entity> mobEntities=Collections.emptyIterator();
     private ClaimData scanningClaim;
+    private final ClaimFlight flight;
+    private BukkitTask pendingStateSave;
     public FeatureManager(DyClaim plugin) {
         this.plugin=plugin;stateFile=plugin.getDataFolder().toPath().resolve("state.json");
         try{state=Files.exists(stateFile)?AtomicJson.read(stateFile,State.class):new State();}
@@ -53,6 +57,9 @@ public class FeatureManager implements Listener {
         state.languages=new java.util.concurrent.ConcurrentHashMap<>(state.languages);
         state.warnings.values().forEach(chain->chain.times=new java.util.concurrent.CopyOnWriteArrayList<>(chain.times));
         state.warnings=new java.util.concurrent.ConcurrentHashMap<>(state.warnings);
+        // State files from 1.2.1 and older have no notice choices; nobody has turned notices off yet.
+        Set<UUID> quiet=java.util.concurrent.ConcurrentHashMap.newKeySet();if(state.quietNotices!=null)state.quietNotices.stream().filter(Objects::nonNull).forEach(quiet::add);state.quietNotices=quiet;
+        flight=new ClaimFlight(plugin);
         for(Player player:Bukkit.getOnlinePlayers())recordSeen(player);
         regionalEjection=new dev.dyclaim.platform.RegionalEjection(plugin,plugin.getPlatformTasks(),(world,x,z)->{
             if(!world.isChunkLoaded(x,z)||plugin.getClaimManager().isChunkClaimed(world.getName(),x,z))return null;
@@ -61,6 +68,25 @@ public class FeatureManager implements Listener {
         },this::entryBanned);
     }
     public void save(){try{AtomicJson.write(stateFile,state);}catch(IOException ex){plugin.getServer().getPluginManager().disablePlugin(plugin);throw new IllegalStateException("State write failed",ex);}}
+    /**
+     * Joins, quits and walking out of a claim only refresh activity records. They are written together a second
+     * later and off the server thread; the file is serialized under the write lock, so the last write is the newest.
+     */
+    private synchronized void saveSoon(){
+        if(pendingStateSave!=null)return;
+        try{pendingStateSave=plugin.getPlatformTasks().globalLater(()->{
+            synchronized(FeatureManager.this){pendingStateSave=null;}
+            Runnable write=()->{try{AtomicJson.write(stateFile,state);}catch(IOException ex){
+                plugin.getLogger().severe("State write failed: "+ex.getMessage());
+                try{plugin.getPlatformTasks().globalNow(()->plugin.getServer().getPluginManager().disablePlugin(plugin));}catch(RuntimeException closed){}
+            }};
+            try{plugin.getPlatformTasks().async(write);}catch(RuntimeException closed){write.run();}
+        },20);}
+        catch(RuntimeException closed){pendingStateSave=null;save();}
+    }
+    public ClaimFlight flight(){return flight;}
+    /** True when the player turned entry and exit notices off and the server still lets players choose. */
+    public boolean noticesHidden(UUID uuid){return !state.quietNotices.isEmpty()&&state.quietNotices.contains(uuid)&&enabled("notification.player-toggle");}
     public String language(UUID uuid){return state.languages.get(uuid);}
     private long now(){return System.currentTimeMillis();}
     private boolean enabled(String key){return plugin.getConfigManager().values().getBoolean(key);}
@@ -114,6 +140,10 @@ public class FeatureManager implements Listener {
                 case "doors","kapi","kapı" -> toggle(p,"visitor-doors");
                 case "trapdoors","tuzakkapisi","tuzakkapısı" -> toggle(p,"visitor-trapdoors");
                 case "containers","sandiklar","sandıklar" -> toggle(p,"visitor-containers");
+                case "fire","ates","ateş" -> toggle(p,"fire-spread");
+                case "entry","giris","giriş" -> toggle(p,"visitor-entry");
+                case "fly","uc","uç" -> flight.command(p,args,this::send);
+                case "notices","bildirim","bildirimler" -> notices(p,args);
                 case "pvp" -> toggle(p,"pvp");
                 case "explosion","patlama" -> {
                     if(args.length==1)toggle(p,"explosions");
@@ -384,7 +414,14 @@ public class FeatureManager implements Listener {
                 ||(!enabled("auto-claim.allow-zero-price")&&(!plugin.getEconomyManager().isEnabled()||plugin.getAcquisitionRules().price(p.getWorld().getName())==0)))){send(p,"auto-unavailable");return;}
         if(turnOn)auto.add(p.getUniqueId());else auto.remove(p.getUniqueId());send(p,turnOn?"auto-enabled":"auto-disabled");
     }
-    private boolean parseToggle(String value){return switch(value.toLowerCase(Locale.ROOT)){case "on","enable","ac","aç"->true;case "off","disable","kapat"->false;default->throw new IllegalArgumentException("toggle");};}
+    private void notices(Player p,String[] args) {
+        if(!enabled("notification.player-toggle")){send(p,"feature-disabled");return;}
+        if(args.length>2){send(p,"notices-usage");return;}
+        boolean show=args.length==1?state.quietNotices.contains(p.getUniqueId()):parseToggle(args[1]);
+        if(show)state.quietNotices.remove(p.getUniqueId());else state.quietNotices.add(p.getUniqueId());
+        save();send(p,show?"notices-enabled":"notices-disabled");
+    }
+    static boolean parseToggle(String value){return switch(value.toLowerCase(Locale.ROOT)){case "on","enable","ac","aç"->true;case "off","disable","kapat"->false;default->throw new IllegalArgumentException("toggle");};}
     private void name(Player p,String[] args) {
         if(!permission(p,"dyclaim.name"))return;ClaimData c=owned(p,false);if(c==null)return;
         String text=String.join(" ",Arrays.copyOfRange(args,1,args.length)).trim();
@@ -468,7 +505,7 @@ public class FeatureManager implements Listener {
         if(c.getName()!=null)display(p,"info-name",Map.of("{name}",c.getName()));
         if(c.getGreeting()!=null&&enabled("claim-messages.enabled"))display(p,"info-greeting",Map.of("{message}",enabled("claim-messages.allow-colors")?MessageManager.colorize(c.getGreeting()):c.getGreeting().replace("&","")));
         if(c.getCoowner()!=null)display(p,"claim-coowner",Map.of("{player}",Objects.toString(Bukkit.getOfflinePlayer(c.getCoowner()).getName(),c.getCoowner().toString())));
-        for(String key:List.of("pvp","explosions","mob-explosions","mob-spawning","villager-player-damage","visitor-doors","visitor-trapdoors","visitor-containers")) {
+        for(String key:List.of("pvp","explosions","mob-explosions","mob-spawning","villager-player-damage","visitor-doors","visitor-trapdoors","visitor-containers","fire-spread","visitor-entry")) {
             var value=plugin.getAccessManager().policy(c,key);
             String status=plugin.getMessageManager().getMessage(p,value.enabled()?"state-enabled":"state-disabled");
             String legacy=switch(key){case "pvp"->"info-pvp";case "explosions"->"info-explosion";case "mob-spawning"->"info-mob";default->null;};
@@ -692,12 +729,19 @@ public class FeatureManager implements Listener {
         }else save();
     }
     private boolean entryBanned(Player p,ClaimData c){
-        if(visitorBanned(p,c))return true;
-        WarningChain chain=state.warnings.get(warningKey(c,p.getUniqueId()));return enabled("warnings.enabled")&&chain!=null&&"applied".equals(chain.stage)&&"claim-entry-ban".equals(chain.mode)&&chain.until>now()&&eligibleWarning(p,c);
+        if(visitorBanned(p,c)||closedToVisitor(p,c))return true;
+        // Most servers hold no warning chains; skip building the lookup key on every step.
+        if(state.warnings.isEmpty())return false;
+        WarningChain chain=state.warnings.get(warningKey(c,p.getUniqueId()));return chain!=null&&plugin.getAccessManager().settings().warnings&&"applied".equals(chain.stage)&&"claim-entry-ban".equals(chain.mode)&&chain.until>now()&&eligibleWarning(p,c);
     }
     private boolean visitorBanned(Player p,ClaimData c){
-        return enabled("claim-entry-bans.enabled")&&c.isVisitorBanned(p.getUniqueId())&&!c.canManage(p.getUniqueId())
+        // The claim's own ban list is checked first: it is a map lookup and almost always empty.
+        return c.isVisitorBanned(p.getUniqueId())&&plugin.getAccessManager().settings().entryBans&&!c.canManage(p.getUniqueId())
                 &&!p.hasPermission("dyclaim.admin")&&!p.hasPermission("dyclaim.ban.exempt")&&!plugin.getAccessManager().bypass(p);
+    }
+    /** A claim with visitor entry turned off admits only its managers, trusted players, trusted groups and exempt staff. */
+    private boolean closedToVisitor(Player p,ClaimData c){
+        return !plugin.getAccessManager().enabled(c,"visitor-entry")&&!p.hasPermission("dyclaim.admin")&&!p.hasPermission("dyclaim.ban.exempt")&&!plugin.getAccessManager().member(p,c);
     }
     private void eject(Player p,ClaimData c) {
         if(plugin.getPlatformTasks().isRegionThreaded()){regionalEjection.start(p,c);return;}
@@ -710,9 +754,13 @@ public class FeatureManager implements Listener {
         }
         send(p,"entry-exit-unavailable");
     }
-    @EventHandler public void join(PlayerJoinEvent event){recordSeen(event.getPlayer());save();ClaimData c=plugin.getClaimManager().getClaimAt(event.getPlayer().getLocation().getChunk());if(c!=null&&entryBanned(event.getPlayer(),c))eject(event.getPlayer(),c);}
-    @EventHandler public void quit(PlayerQuitEvent event){Player p=event.getPlayer();recordSeen(p);auto.remove(p.getUniqueId());autoAttempt.remove(p.getUniqueId());banNotice.remove(p.getUniqueId());plugin.getConfirmationManager().cancelPending(p.getUniqueId());plugin.getAccessManager().quit(p.getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(p);save();}
+    @EventHandler public void join(PlayerJoinEvent event){recordSeen(event.getPlayer());saveSoon();ClaimData c=plugin.getClaimManager().getClaimAt(event.getPlayer().getLocation().getChunk());if(c!=null&&entryBanned(event.getPlayer(),c))eject(event.getPlayer(),c);}
+    @EventHandler public void quit(PlayerQuitEvent event){Player p=event.getPlayer();recordSeen(p);auto.remove(p.getUniqueId());autoAttempt.remove(p.getUniqueId());banNotice.remove(p.getUniqueId());plugin.getConfirmationManager().cancelPending(p.getUniqueId());plugin.getAccessManager().quit(p.getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(p);flight.quit(p);saveSoon();}
     @EventHandler public void world(PlayerChangedWorldEvent event){auto.remove(event.getPlayer().getUniqueId());plugin.getChunkVisualizer().cleanupPlayer(event.getPlayer());}
+    @EventHandler public void respawn(PlayerRespawnEvent event){Player p=event.getPlayer();if(flight.active(p.getUniqueId()))plugin.getPlatformTasks().playerLater(p,()->{if(p.isOnline())flight.update(p,claimAt(p.getLocation()),this::send);},1);}
+    @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void fall(org.bukkit.event.entity.EntityDamageEvent event){
+        if(event.getCause()==org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL&&event.getEntity() instanceof Player p&&flight.consumeFallProtection(p.getUniqueId()))event.setCancelled(true);
+    }
     private ClaimData claimAt(Location location){
         if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
         return plugin.getClaimManager().getClaimAt(location.getChunk());
@@ -722,14 +770,18 @@ public class FeatureManager implements Listener {
         if(to!=null&&entryBanned(p,to)){
             ClaimData from=claimAt(event.getFrom());if(from!=to)event.setCancelled(true);else plugin.getPlatformTasks().playerLater(p,()->eject(p,to),1);
             // Movement fires many times per second; tell the visitor at most every few seconds.
-            if(visitorBanned(p,to)&&now()-banNotice.getOrDefault(p.getUniqueId(),0L)>3000){banNotice.put(p.getUniqueId(),now());send(p,"visitor-ban-entry",Map.of("{owner}",to.getOwnerName()));}
+            if(now()-banNotice.getOrDefault(p.getUniqueId(),0L)>3000){
+                if(visitorBanned(p,to)){banNotice.put(p.getUniqueId(),now());send(p,"visitor-ban-entry",Map.of("{owner}",to.getOwnerName()));}
+                else if(closedToVisitor(p,to)){banNotice.put(p.getUniqueId(),now());send(p,"visitor-entry-closed",Map.of("{owner}",to.getOwnerName()));}
+            }
         }
     }
     @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true) public void move(PlayerMoveEvent event){
         if(event.getTo()==null)return;
         if(event.getFrom().getWorld()==event.getTo().getWorld()&&(event.getFrom().getBlockX()>>4)==(event.getTo().getBlockX()>>4)&&(event.getFrom().getBlockZ()>>4)==(event.getTo().getBlockZ()>>4))return;
         Player p=event.getPlayer();ClaimData from=claimAt(event.getFrom()),to=claimAt(event.getTo());
-        if(enabled("warnings.reset-on-exit")&&from!=null&&from!=to){String key=warningKey(from,p.getUniqueId());WarningChain chain=state.warnings.get(key);if(chain!=null&&chain.stage.equals("pending")){state.warnings.remove(key);save();}}
+        if(from!=to)flight.update(p,to,this::send);
+        if(from!=null&&from!=to&&!state.warnings.isEmpty()&&plugin.getAccessManager().settings().resetWarningsOnExit){String key=warningKey(from,p.getUniqueId());WarningChain chain=state.warnings.get(key);if(chain!=null&&chain.stage.equals("pending")){state.warnings.remove(key);saveSoon();}}
         if(!auto.contains(p.getUniqueId())||event instanceof PlayerTeleportEvent||p.isInsideVehicle()||to!=null)return;
         if(plugin.getPlatformTasks().isRegionThreaded()){
             Location target=event.getTo();String world=target.getWorld().getName();int x=target.getBlockX()>>4,z=target.getBlockZ()>>4;long generation=purgeGeneration;
@@ -760,6 +812,7 @@ public class FeatureManager implements Listener {
         if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();mobTask=null;purgeTask=null;
         if(regionalMobs!=null)regionalMobs.close();regionalMobs=null;
         mobClaims=Collections.emptyIterator();mobEntities=Collections.emptyIterator();auto.clear();
+        flight.reload(this::onPlayer);
         var tasks=plugin.getPlatformTasks();
         if(enabled("protection.mobs.remove-on-entry.enabled")){
             Runnable scan=this::scanMobs;
@@ -799,7 +852,7 @@ public class FeatureManager implements Listener {
         if(cfg.getStringList(prefix+"excluded-types").contains(entity.getType().name()))return false;
         return switch(cfg.getString(prefix+"entity-scope")){case "all-mobs"->true;case "list"->cfg.getStringList(prefix+"included-types").contains(entity.getType().name());default->entity instanceof Enemy;};
     }
-    public void close(){regionalEjection.reset();purgeGeneration++;if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();if(regionalMobs!=null)regionalMobs.close();for(Player p:Bukkit.getOnlinePlayers())recordSeen(p);save();}
+    public void close(){regionalEjection.reset();purgeGeneration++;flight.close();synchronized(this){if(pendingStateSave!=null){pendingStateSave.cancel();pendingStateSave=null;}}if(mobTask!=null)mobTask.cancel();if(purgeTask!=null)purgeTask.cancel();if(regionalMobs!=null)regionalMobs.close();for(Player p:Bukkit.getOnlinePlayers())recordSeen(p);save();}
 }
 
 

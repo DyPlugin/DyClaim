@@ -4,7 +4,7 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.2.1** lets owners open their chests to visitors while blocks stay protected. Version 1.2.0 made DyClaim one JAR for every server, including Folia, and added server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.3.0** adds claim flight, fire control per claim, closed claims and a choice to hide claim notices, and makes protection checks lighter. Version 1.2.1 lets owners open their chests to visitors while blocks stay protected. Version 1.2.0 made DyClaim one JAR for every server, including Folia, and added server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
@@ -14,11 +14,21 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 | Your server | File |
 |---|---|
-| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.2.1.jar` |
+| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.3.0.jar` |
 
 Install the JAR on any supported server; it detects Folia at startup. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder; claim data stays on schema 2. Servers that used the 1.1.0 Folia build can install the same JAR. There are no proxy companions in this release.
 
 [Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md) · [Integrations and import](docs/integrations.md) · [Developer API](docs/api.md)
+
+## New in 1.3.0
+
+- **Claim flight:** `/claim fly [on|off]` flies inside your own claims and claims you can build in. Flight stops when you leave and comes back when you return; fall damage is forgiven for a few seconds. Needs `dyclaim.fly` (OP by default).
+- **Fire control:** `/claim fire` lets fire spread and burn blocks in a claim. Claims stay fireproof by default (`protection.fire-spread`).
+- **Closed claims:** `/claim entry` keeps visitors out; owners, coowners and trusted players or groups still walk in. Claims stay open by default (`protection.visitor-entry`).
+- **Claim notices:** `/claim notices [on|off]` hides or shows entry and exit notices for you. Named claims show their name, and notices can be shown as a title (`notification.use-title`).
+- **Lighter:** claim lookups use a chunk index, protection rules and hot settings are worked out once per configuration load, and player joins and quits no longer write files on the server thread.
+
+All new protection settings follow the `default` / `forced-value` / `player-toggle` structure, and their defaults keep existing servers unchanged. See the [changelog](CHANGELOG.md).
 
 ## A measured look at protection
 
@@ -42,7 +52,7 @@ On Purpur 1.20.4 with 50 claim areas, DyClaim had the lowest observed median in 
 
 ### Protection you can configure
 
-Protect building, containers and supported entity interactions, with separate settings for PvP, explosions, mob explosions, hostile mob spawning, villager damage, visitor doors, trapdoors and containers.
+Protect building, containers and supported entity interactions, with separate settings for PvP, explosions, mob explosions, hostile mob spawning, villager damage, visitor doors, trapdoors and containers, fire spread and visitor entry.
 
 Villager damage by players is blocked by default, including owner attacks and player projectiles. Trading remains available. Farmland has separate visitor and mob trampling policies.
 
@@ -75,7 +85,7 @@ Give claims names, set safe spawn points and teleport by list number or name. De
 
 Paginated lists show claim names and locations. Claim information shows owners, effective settings and market status; management details require appropriate access.
 
-Claim-entry action bars show the owner and PvP status. Java players get particle borders; an optional Floodgate path provides client-side block borders for Bedrock players. Visualization tasks have duration, distance and particle limits and are cleaned up on exit or shutdown.
+Claim-entry action bars show the owner, claim name and PvP status; players can hide them with `/claim notices`, and servers can show them as titles. Owners and trusted builders with `dyclaim.fly` can fly inside claims with `/claim fly`. Java players get particle borders; an optional Floodgate path provides client-side block borders for Bedrock players. Visualization tasks have duration, distance and particle limits and are cleaned up on exit or shutdown.
 
 ### Administration and warnings
 
@@ -130,6 +140,10 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 | `/claim pvp`, `/claim mob`, `/claim villager` | Toggle the corresponding unlocked setting |
 | `/claim explosion [mob]` | Toggle ordinary explosions, or select `mob` for mob explosions |
 | `/claim doors`, `/claim trapdoors`, `/claim containers` | Toggle visitor access to doors, trapdoors or storage blocks |
+| `/claim fire` | Let fire spread and burn blocks in the claim, or not |
+| `/claim entry` | Open or close the claim to visitors who are not trusted |
+| `/claim fly [on\|off]` | Fly inside your own claims and claims you can build in |
+| `/claim notices [on\|off]` | Show or hide claim entry and exit notices |
 | `/claim warn <player>` | Warn an unauthorized visitor inside your claim |
 | `/claim message <text\|clear>` | Show a message to visitors entering the claim |
 | `/claim ban <player> [duration]`, `/claim unban <player>`, `/claim banlist` | Keep a player out of the claim |
@@ -139,7 +153,7 @@ Arguments in `<angle brackets>` are required; `[square brackets]` are optional. 
 
 Trust rights: `build`, `containers`, `doors`, `trapdoors`, `redstone`, `entities`, `teleport`. The original trust command grants all these rights. Durations use `m` for minutes, `h` for hours and `d` for days; permanent access uses `permanent` or its localized equivalent.
 
-The old `trustperm` / `güvenizin` and `mobexplosion` / `mobpatlama` commands remain accepted aliases. Help and root TAB suggestions use the grouped forms above. Turkish examples: `/claim güven Alex sandıklar reddet` and `/claim patlama mob`.
+The old `trustperm` / `güvenizin` and `mobexplosion` / `mobpatlama` commands remain accepted aliases. Help and root TAB suggestions use the grouped forms above. Turkish examples: `/claim güven Alex sandıklar reddet` and `/claim patlama mob`. The 1.3.0 commands are `/claim uç`, `/claim ateş`, `/claim giriş` and `/claim bildirim` in Turkish.
 
 ## Admin commands
 
@@ -177,7 +191,8 @@ Inactive cleanup removes claim records, not world blocks. Deletion and bulk oper
 | `dyclaim.warn.exempt` | OP | Exemption from visitor-warning sanctions |
 | `dyclaim.message` | Everyone | Set a claim message |
 | `dyclaim.ban` | Everyone | Ban visitors from your claim |
-| `dyclaim.ban.exempt` | OP | Cannot be banned from claims |
+| `dyclaim.ban.exempt` | OP | Cannot be banned from claims; can enter closed claims |
+| `dyclaim.fly` | OP | Fly inside claims with `/claim fly` |
 | `dyclaim.limit.<number>` / `dyclaim.limit.unlimited` | Not set | Replaces the default claim limit; the highest one wins |
 
 `/claim admin diagnose` works in console and for permitted administrators. It reports version, backend, storage, economy and installed integrations without secrets or filesystem paths. Turkish alias: `/claim admin tanı` (ASCII `tani` also works). Installed integrations are not a compatibility certification.
@@ -221,7 +236,7 @@ No integration is required for core claiming. Installed protection hooks are det
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-1.1.0.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-1.3.0.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
 3. Edit `config.yml` and, if desired, the message files (English, Turkish, German, Spanish, Russian).
 4. Run `/claim admin reload` as a permitted player, or `claim admin reload` in the server console.
@@ -253,7 +268,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-The JAR is `build/libs/DyClaim-1.2.1.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The JAR is `build/libs/DyClaim-1.3.0.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
 Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.

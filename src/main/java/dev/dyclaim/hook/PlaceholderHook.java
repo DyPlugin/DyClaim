@@ -26,7 +26,7 @@ public final class PlaceholderHook extends PlaceholderExpansion {
     @Override public String onRequest(OfflinePlayer offline,String params){
         if(params==null)return null;
         String key=params.toLowerCase(java.util.Locale.ROOT);
-        if(key.equals("total"))return String.valueOf(plugin.getClaimManager().getAllClaims().size());
+        if(key.equals("total"))return String.valueOf(plugin.getClaimManager().getClaimCount());
         if(offline==null)return "";
         var claims=plugin.getClaimManager();
         switch(key){

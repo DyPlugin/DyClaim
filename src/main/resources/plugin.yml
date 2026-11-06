@@ -79,6 +79,7 @@ permissions:
       dyclaim.player: true
       dyclaim.admin.serverclaims: true
       dyclaim.admin.bypass: true
+      dyclaim.fly: true
   dyclaim.claim:
     description: Allow claiming chunks
     default: true
@@ -148,3 +149,6 @@ permissions:
   dyclaim.ban.exempt:
     default: op
     description: Cannot be banned from or kept out of claims
+  dyclaim.fly:
+    default: op
+    description: Fly inside your own claims, and claims you can build in, with /claim fly

@@ -81,7 +81,13 @@ public class AcquisitionRules {
         if(!already&&count+pendingWorld>=worldLimit)return "acquire-limit";
         if(values.getBoolean("claim-rules.spacing.enabled")) {
             int distance=values.getInt("claim-rules.spacing.minimum-empty-chunks",1);
-            for(ClaimData other:plugin.getClaimManager().getAllClaims().values()) {
+            // Only chunks within the distance can break the rule; look them up directly unless that is more work than a full scan.
+            long span=2L*distance+1;Collection<ClaimData> nearby;
+            if(span*span<=plugin.getClaimManager().getClaimCount()){
+                nearby=new ArrayList<>();
+                for(int dx=-distance;dx<=distance;dx++)for(int dz=-distance;dz<=distance;dz++){ClaimData other=plugin.getClaimManager().getClaimAt(world,chunk.getX()+dx,chunk.getZ()+dz);if(other!=null)nearby.add(other);}
+            }else nearby=plugin.getClaimManager().getAllClaims().values();
+            for(ClaimData other:nearby) {
                 if(other==replacing||!other.getWorld().equals(chunk.getWorld().getName()))continue;
                 // Primary ownership alone grants the same-owner exemption. Coowner/trust do not.
                 Admission future=admissions.get(other.getChunkKey());

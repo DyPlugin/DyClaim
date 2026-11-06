@@ -17,7 +17,7 @@ public final class CommandWords {
     public static List<String> choices(boolean tr,String... words){return Arrays.stream(words).map(word->display(word,tr)).toList();}
     public static String[] normalize(String[] input){
         String[] args=input.clone();if(args.length==0)return args;String root=plain(args[0]);
-        if(Set.of("coowner","ortak","market","pazar","auto","otomatik","lang","dil").contains(root)&&args.length>1)args[1]=canonical(args[1]);
+        if(Set.of("coowner","ortak","market","pazar","auto","otomatik","lang","dil","fly","uc","notices","bildirim","bildirimler").contains(root)&&args.length>1)args[1]=canonical(args[1]);
         if(Set.of("trust","guven").contains(root)){if(args.length>2)args[2]=canonical(args[2]);if(args.length>3)args[3]=canonical(args[3]);}
         if(Set.of("ban","yasakla").contains(root)&&args.length>2)args[2]=canonical(args[2]);
         if(Set.of("trustperm","guvenizin").contains(root)){if(args.length>2)args[2]=canonical(args[2]);if(args.length>3)args[3]=canonical(args[3]);}

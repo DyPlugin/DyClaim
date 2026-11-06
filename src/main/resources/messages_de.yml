@@ -330,3 +330,25 @@ import-complete: '&a{created} Chunks und {trusted} vertraute Spieler übernommen
 import-failed: '&cDie Claims konnten nicht gelesen werden. Details stehen in der Konsole.'
 map-label: '{owner}'
 map-label-named: '{owner} - {names}'
+
+# Claim-Flug, Feuer, geschlossene Claims und Hinweis-Einstellung (1.3.0).
+help-fire: "&6/claim fire &7- Feuer in diesem Claim sich ausbreiten und Blöcke verbrennen lassen oder nicht"
+help-entry: "&6/claim entry &7- Diesen Claim für nicht vertraute Besucher öffnen oder schließen"
+help-fly: "&6/claim fly [on|off] &7- In deinen eigenen Claims fliegen"
+help-notices: "&6/claim notices [on|off] &7- Hinweise beim Betreten und Verlassen von Claims zeigen oder ausblenden"
+setting-fire-spread: 'Feuerausbreitung'
+setting-visitor-entry: 'Zutritt für Besucher'
+actionbar-enter-named: "&7Claim: &e{name} &7({owner}) &7| &cPvP: {pvp}"
+protection-enter-named: "&7[Du hast {name}, den Claim von {owner}, betreten]"
+title-enter: '&a{owner}'
+title-enter-named: '&e{name}'
+title-enter-subtitle: '&7Claim von {owner} &8| &7PvP: {pvp}'
+notices-usage: '&cVerwendung: &e/claim notices [on|off]'
+notices-enabled: '&aHinweise beim Betreten und Verlassen von Claims werden wieder angezeigt.'
+notices-disabled: '&eHinweise beim Betreten und Verlassen von Claims sind jetzt ausgeblendet. Mit &6/claim notices &ezeigst du sie wieder an.'
+fly-usage: '&cVerwendung: &e/claim fly [on|off]'
+fly-enabled: '&aClaim-Flug ist an. Er endet, wenn du die Claims verlässt, in denen du fliegen darfst.'
+fly-disabled: '&eClaim-Flug ist aus.'
+fly-not-here: '&cDu kannst nur in deinen eigenen Claims oder in Claims fliegen, in denen du bauen darfst.'
+fly-left: '&eDu hast den Claim verlassen, deshalb wurde dein Flug beendet. Er kehrt zurück, wenn du wiederkommst.'
+visitor-entry-closed: '&cDer Claim von {owner} ist für Besucher geschlossen.'

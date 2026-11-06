@@ -330,3 +330,25 @@ import-complete: '&aПеренесено {created} чанков и {trusted} д�
 import-failed: '&cНе удалось прочитать приваты. Подробности в консоли.'
 map-label: '{owner}'
 map-label-named: '{owner} - {names}'
+
+# Полёт в привате, огонь, закрытые приваты и уведомления (1.3.0).
+help-fire: "&6/claim fire &7- Разрешить или запретить огню распространяться и сжигать блоки в этом привате"
+help-entry: "&6/claim entry &7- Открыть или закрыть этот приват для посетителей без доверия"
+help-fly: "&6/claim fly [on|off] &7- Летать внутри своих приватов"
+help-notices: "&6/claim notices [on|off] &7- Показывать или скрывать уведомления о входе в приват и выходе из него"
+setting-fire-spread: 'Распространение огня'
+setting-visitor-entry: 'Вход посетителей'
+actionbar-enter-named: "&7Приват: &e{name} &7({owner}) &7| &cPvP: {pvp}"
+protection-enter-named: "&7[Вы вошли в {name}, приват {owner}]"
+title-enter: '&a{owner}'
+title-enter-named: '&e{name}'
+title-enter-subtitle: '&7Приват {owner} &8| &7PvP: {pvp}'
+notices-usage: '&cИспользование: &e/claim notices [on|off]'
+notices-enabled: '&aУведомления о входе в приваты и выходе из них снова показываются.'
+notices-disabled: '&eУведомления о входе в приваты и выходе из них скрыты. Введите &6/claim notices&e, чтобы снова их показать.'
+fly-usage: '&cИспользование: &e/claim fly [on|off]'
+fly-enabled: '&aПолёт в привате включён. Он прекращается, когда вы покидаете приваты, где можно летать.'
+fly-disabled: '&eПолёт в привате выключен.'
+fly-not-here: '&cЛетать можно только в своих приватах или в приватах, где вы можете строить.'
+fly-left: '&eВы покинули приват, поэтому полёт прекращён. Он вернётся, когда вы вернётесь.'
+visitor-entry-closed: '&cПриват {owner} закрыт для посетителей.'

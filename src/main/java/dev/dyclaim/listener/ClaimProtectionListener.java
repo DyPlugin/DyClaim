@@ -43,9 +43,21 @@ public class ClaimProtectionListener implements Listener {
             "CAMPFIRE", "COMPOSTER", "LECTERN", "RESPAWN_ANCHOR",
             "LODESTONE", "BED", "DECORATED_POT", "CHISELED_BOOKSHELF", "SIGN");
 
+    private static final java.util.Map<String,Boolean> PROTECTED_TYPES = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Set<String> TILLABLE = Set.of("GRASS_BLOCK","DIRT","PODZOL","COARSE_DIRT","MYCELIUM","ROOTED_DIRT","DIRT_PATH");
+    private static final Set<String> HARMFUL_EFFECTS = Set.of("HARM","INSTANT_DAMAGE","POISON","WITHER","SLOW","SLOWNESS",
+            "WEAKNESS","BLINDNESS","CONFUSION","NAUSEA","HUNGER","SLOW_DIGGING","MINING_FATIGUE",
+            "LEVITATION","UNLUCK","BAD_OMEN","DARKNESS","INFESTED","OOZING","WEAVING","WIND_CHARGED");
+    private static final org.bukkit.block.BlockFace[] POWER_FACES = {org.bukkit.block.BlockFace.NORTH,org.bukkit.block.BlockFace.SOUTH,org.bukkit.block.BlockFace.EAST,
+            org.bukkit.block.BlockFace.WEST,org.bukkit.block.BlockFace.UP,org.bukkit.block.BlockFace.DOWN};
+
     public ClaimProtectionListener(DyClaim plugin) {
         this.plugin = plugin;
     }
+    /** Boundary and farmland switches, read once per configuration load. */
+    private dev.dyclaim.manager.HotSettings settings(){return plugin.getAccessManager().settings();}
+    /** Fire may burn and spread inside a claim only when the boundary rule is off or the claim allows it. */
+    private boolean fireBlocked(ClaimData claim){return claim!=null&&settings().externalFire&&!plugin.getAccessManager().enabled(claim,"fire-spread");}
     private ClaimData claimAt(Location location){
         if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
         return plugin.getClaimManager().getClaimAt(location.getChunk());
@@ -56,12 +68,18 @@ public class ClaimProtectionListener implements Listener {
     }
 
     private static boolean isProtectedInteraction(String typeName) {
+        // A block type always gives the same answer, so the keyword scan runs once per type.
+        Boolean cached = PROTECTED_TYPES.get(typeName);
+        if (cached != null) return cached;
+        boolean result = false;
         for (String keyword : PROTECTED_INTERACTION_KEYWORDS) {
             if (typeName.contains(keyword)) {
-                return true;
+                result = true;
+                break;
             }
         }
-        return false;
+        PROTECTED_TYPES.put(typeName, result);
+        return result;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -132,7 +150,7 @@ public class ClaimProtectionListener implements Listener {
         boolean sign=block.contains("SIGN"),copper=block.contains("COPPER");
         if(item.endsWith("_AXE"))return copper||block.endsWith("_LOG")||block.endsWith("_WOOD")
                 ||block.endsWith("_STEM")||block.endsWith("_HYPHAE")||block.endsWith("BAMBOO_BLOCK");
-        if(item.endsWith("_HOE")||item.endsWith("_SHOVEL"))return Set.of("GRASS_BLOCK","DIRT","PODZOL","COARSE_DIRT","MYCELIUM","ROOTED_DIRT","DIRT_PATH").contains(block);
+        if(item.endsWith("_HOE")||item.endsWith("_SHOVEL"))return TILLABLE.contains(block);
         if(item.equals("SHEARS"))return block.contains("PUMPKIN")||block.equals("BEEHIVE")||block.equals("BEE_NEST");
         if(item.equals("HONEYCOMB"))return copper||sign;
         if(item.endsWith("INK_SAC")||item.endsWith("_DYE"))return sign;
@@ -313,7 +331,7 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-pistons"))return;
+        if(!settings().crossOwnerPistons)return;
         ClaimData piston=claimAt(event.getBlock());
         if(crosses(piston,claimAt(event.getBlock().getRelative(event.getDirection())))){event.setCancelled(true);return;}
         for (Block block : event.getBlocks()) {
@@ -324,7 +342,7 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-pistons"))return;
+        if(!settings().crossOwnerPistons)return;
         ClaimData piston=claimAt(event.getBlock());
         for (Block block : event.getBlocks()) {
             ClaimData source=claimAt(block);
@@ -334,10 +352,10 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockSpread(BlockSpreadEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire"))return;
+        if(!settings().externalFire)return;
         if (event.getSource().getType().name().contains("FIRE")) {
             ClaimData claim = claimAt(event.getBlock());
-            if (claim != null) {
+            if (fireBlocked(claim)) {
                 event.setCancelled(true);
             }
         }
@@ -349,7 +367,7 @@ public class ClaimProtectionListener implements Listener {
                 || event.getCause() == BlockIgniteEvent.IgniteCause.LAVA
                 || event.getCause() == BlockIgniteEvent.IgniteCause.LIGHTNING) {
             ClaimData claim = claimAt(event.getBlock());
-            if (claim != null && plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire")) {
+            if (fireBlocked(claim)) {
                 event.setCancelled(true);
             }
         }
@@ -366,7 +384,7 @@ public class ClaimProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockFromTo(BlockFromToEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fluid"))return;
+        if(!settings().externalFluid)return;
         ClaimData fromClaim,toClaim;
         if(plugin.getPlatformTasks().isRegionThreaded()){
             var from=event.getBlock();var to=event.getToBlock();
@@ -390,7 +408,7 @@ public class ClaimProtectionListener implements Listener {
 
         Entity entity = event.getEntity();
         if(event.getBlock().getType()==Material.FARMLAND && !(entity instanceof Player)
-                && plugin.getConfigManager().values().getBoolean("protection.farmland.protect-from-mobs")){event.setCancelled(true);return;}
+                && settings().farmlandMobs){event.setCancelled(true);return;}
         if (entity instanceof Enderman || entity instanceof Wither || entity instanceof WitherSkull) {
             event.setCancelled(true);
         }
@@ -536,7 +554,7 @@ public class ClaimProtectionListener implements Listener {
             return;
         }
         if (typeName.contains("FARMLAND") || typeName.contains("TURTLE_EGG")) {
-            if(typeName.contains("FARMLAND")&&!plugin.getConfigManager().values().getBoolean("protection.farmland.protect-from-visitors"))return;
+            if(typeName.contains("FARMLAND")&&!settings().farmlandVisitors)return;
             Player player = event.getPlayer();
             ClaimData claim = claimAt(event.getClickedBlock());
             if (claim == null)
@@ -553,14 +571,14 @@ public class ClaimProtectionListener implements Listener {
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void dispense(BlockDispenseEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-dispensers",true))return;
+        if(!settings().crossOwnerDispensers)return;
         if(!(event.getBlock().getBlockData() instanceof Directional facing))return;
         ClaimData source=claimAt(event.getBlock());
         ClaimData destination=claimAt(event.getBlock().getRelative(facing.getFacing()));
         if(crosses(source,destination))event.setCancelled(true);
     }
     private void filterGrowth(ClaimData from,Player player,java.util.List<BlockState> blocks) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-growth",true))return;
+        if(!settings().externalGrowth)return;
         blocks.removeIf(state->{
             ClaimData to=claimAt(state.getBlock());
             return to!=null&&(player!=null?!plugin.getAccessManager().allows(player,to,"build"):crosses(from,to));
@@ -584,10 +602,7 @@ public class ClaimProtectionListener implements Listener {
         if(tasks.isRegionThreaded()&&!tasks.ownsEntity(player))tasks.playerLater(player,message,1);else message.run();
     }
     private boolean harmful(java.util.Collection<org.bukkit.potion.PotionEffect> effects) {
-        Set<String> harmful=Set.of("HARM","INSTANT_DAMAGE","POISON","WITHER","SLOW","SLOWNESS",
-                "WEAKNESS","BLINDNESS","CONFUSION","NAUSEA","HUNGER","SLOW_DIGGING","MINING_FATIGUE",
-                "LEVITATION","UNLUCK","BAD_OMEN","DARKNESS","INFESTED","OOZING","WEAVING","WIND_CHARGED");
-        return effects.stream().anyMatch(effect->harmful.contains(effect.getType().getName()));
+        return effects.stream().anyMatch(effect->HARMFUL_EFFECTS.contains(effect.getType().getName()));
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void potionSplash(PotionSplashEvent event) {
@@ -622,22 +637,22 @@ public class ClaimProtectionListener implements Listener {
         }
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void hopper(InventoryMoveItemEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-hoppers"))return;
+        if(!settings().crossOwnerHoppers)return;
         for(Inventory source:inventoryParts(event.getSource()))for(Inventory target:inventoryParts(event.getDestination()))
             if(crosses(inventoryClaim(source),inventoryClaim(target))){event.setCancelled(true);return;}
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void hopperPickup(InventoryPickupItemEvent event) {
-        if(!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-cross-owner-hoppers"))return;
+        if(!settings().crossOwnerHoppers)return;
         for(Inventory part:inventoryParts(event.getInventory()))
             if(crosses(inventoryClaim(part),claimAt(event.getItem().getLocation()))){event.setCancelled(true);return;}
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void burn(BlockBurnEvent event){
-        if(plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-fire")&&claimAt(event.getBlock())!=null)event.setCancelled(true);
+        if(settings().externalFire&&fireBlocked(claimAt(event.getBlock())))event.setCancelled(true);
     }
     @EventHandler(priority=EventPriority.HIGH) public void redstone(BlockRedstoneEvent event){
-        if(event.getNewCurrent()<=event.getOldCurrent()||!plugin.getConfigManager().values().getBoolean("protection.boundaries.block-external-redstone-effects"))return;
+        if(event.getNewCurrent()<=event.getOldCurrent()||!settings().externalRedstone)return;
         ClaimData target=claimAt(event.getBlock());if(target==null)return;
-        for(org.bukkit.block.BlockFace face:java.util.List.of(org.bukkit.block.BlockFace.NORTH,org.bukkit.block.BlockFace.SOUTH,org.bukkit.block.BlockFace.EAST,org.bukkit.block.BlockFace.WEST,org.bukkit.block.BlockFace.UP,org.bukkit.block.BlockFace.DOWN)) {
+        for(org.bukkit.block.BlockFace face:POWER_FACES) {
             Block neighbor=event.getBlock().getRelative(face);
             if(neighbor.getBlockPower()>0&&crosses(claimAt(neighbor),target)){event.setNewCurrent(event.getOldCurrent());return;}
         }

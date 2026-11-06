@@ -37,17 +37,33 @@ public class AccessManager {
         boolean permitted;
         if(plugin.getPlatformTasks().isRegionThreaded()&&!plugin.getPlatformTasks().ownsEntity(player)){Actor actor=actor(player);permitted=actor!=null&&actor.bypassPermission;}
         else permitted=player.hasPermission("dyclaim.admin.bypass");
-        return permitted&&bypass.getOrDefault(player.getUniqueId(),plugin.getConfigManager().values().getBoolean("admin.bypass.enabled-by-default",true));
+        if(!permitted)return false;
+        Boolean chosen=bypass.get(player.getUniqueId());
+        return chosen!=null?chosen:settings().bypassDefault;
     }
     public void setBypass(Player player,boolean enabled){bypass.put(player.getUniqueId(),enabled);}
     public void quit(UUID uuid){bypass.remove(uuid);actors.remove(uuid);}
-    public ProtectionPolicy.Value policy(ClaimData claim,String key){return ProtectionPolicy.resolve(plugin.getConfigManager().values(),claim,key);}
+    /** Settings resolved once per configuration load; a configuration without that cache is read directly. */
+    public HotSettings settings(){HotSettings hot=plugin.getConfigManager().hot();return hot!=null?hot:HotSettings.of(plugin.getConfigManager().values());}
+    public ProtectionPolicy.Value policy(ClaimData claim,String key){
+        HotSettings hot=plugin.getConfigManager().hot();
+        return hot!=null?hot.resolve(claim,key):ProtectionPolicy.resolve(plugin.getConfigManager().values(),claim,key);
+    }
     public boolean enabled(ClaimData claim,String key){return policy(claim,key).enabled();}
     public boolean allows(Player player,ClaimData claim,String right){
         if(claim==null||bypass(player)||claim.allows(player.getUniqueId(),right))return true;
         if(plugin.getClanTrustManager()!=null&&plugin.getClanTrustManager().allows(player.getUniqueId(),claim,right))return true;
-        if(plugin.getConfigManager().values().getBoolean("integrations.permission-groups.enabled",true)&&GroupTrust.allows(player,claim,right))return true;
+        if(settings().permissionGroups&&GroupTrust.allows(player,claim,right))return true;
         return switch(right){case "doors"->enabled(claim,"visitor-doors");case "trapdoors"->enabled(claim,"visitor-trapdoors");default->false;};
+    }
+    /** Anyone the claim lets in when visitor entry is off: managers, trusted players, trusted clans or groups and bypass. */
+    public boolean member(Player player,ClaimData claim){
+        if(claim==null||bypass(player))return true;
+        UUID uuid=player.getUniqueId();
+        if(claim.canManage(uuid)||claim.isTrusted(uuid))return true;
+        for(String right:dev.dyclaim.model.TrustGrant.RIGHTS)
+            if((plugin.getClanTrustManager()!=null&&plugin.getClanTrustManager().allows(uuid,claim,right))||(settings().permissionGroups&&GroupTrust.allows(player,claim,right)))return true;
+        return false;
     }
     /** Storage blocks also open for visitors when the claim allows visitor-containers; other "containers" blocks do not. */
     public boolean allowsStorage(Player player,ClaimData claim){

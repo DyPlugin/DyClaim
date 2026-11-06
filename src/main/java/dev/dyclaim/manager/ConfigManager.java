@@ -17,7 +17,9 @@ import java.nio.file.StandardCopyOption;
 public class ConfigManager {
 
     private final DyClaim plugin;
-    private FileConfiguration effective;
+    // Replaced as a whole on every change, so readers on any thread take it without locking.
+    private volatile FileConfiguration effective;
+    private volatile HotSettings hot;
 
     private String prefix;
     private String lang;
@@ -51,6 +53,7 @@ public class ConfigManager {
     private boolean showLeave;
 
     private List<String> blacklistedWorlds;
+    private volatile java.util.Set<String> blacklistedLookup=java.util.Set.of();
 
     public ConfigManager(DyClaim plugin) {
         this.plugin = plugin;
@@ -60,6 +63,7 @@ public class ConfigManager {
     public synchronized void reload() {
         FileConfiguration config = loadValidated();
         this.effective = config;
+        this.hot = HotSettings.of(config);
 
         this.prefix = config.getString("prefix", "&7[&eDy&6Claim&7]");
         this.lang = config.getString("lang", "auto");
@@ -95,9 +99,12 @@ public class ConfigManager {
         this.blacklistedWorlds = config.getStringList("blacklisted-worlds");
         if (this.blacklistedWorlds == null)
             this.blacklistedWorlds = new ArrayList<>();
+        this.blacklistedLookup = java.util.Set.copyOf(this.blacklistedWorlds);
     }
 
-    public synchronized FileConfiguration values() { return effective; }
+    public FileConfiguration values() { return effective; }
+    /** Hot-path settings for the current configuration; replaced together with {@link #values()}. */
+    public HotSettings hot() { return hot; }
 
     private FileConfiguration loadValidated() {
         try {
@@ -150,6 +157,7 @@ public class ConfigManager {
         if(!"sink".equals(config.getString("market.tax-destination")))throw new IllegalArgumentException("Only tax-destination: sink is supported");
         if(config.getInt("ownership.max-coowners")!=1)throw new IllegalArgumentException("max-coowners must be 1");
         if(config.getInt("names.maximum-length")<1||config.getInt("names.maximum-length")>64)throw new IllegalArgumentException("names.maximum-length");
+        if(config.getInt("claim-fly.fall-protection-seconds",10)<0||config.getInt("claim-fly.fall-protection-seconds",10)>300)throw new IllegalArgumentException("claim-fly.fall-protection-seconds");
         Particle.valueOf(config.getString("visualization.particle"));
         if(!Material.valueOf(config.getString("visualization.bedrock-block")).isBlock())throw new IllegalArgumentException("visualization.bedrock-block");
         if(!java.util.Set.of("display","particles").contains(config.getString("visualization.style","display").toLowerCase(java.util.Locale.ROOT)))throw new IllegalArgumentException("visualization.style");
@@ -198,7 +206,7 @@ public class ConfigManager {
         YamlConfiguration snapshot=new YamlConfiguration();
         try{snapshot.loadFromString(config.saveToString());}
         catch(org.bukkit.configuration.InvalidConfigurationException ex){throw new IllegalStateException("Could not snapshot valid configuration",ex);}
-        if(config.getDefaults()!=null)snapshot.setDefaults(config.getDefaults());effective = snapshot;
+        if(config.getDefaults()!=null)snapshot.setDefaults(config.getDefaults());effective = snapshot;hot = HotSettings.of(snapshot);
     }
 
     public synchronized String getPrefix() {
@@ -281,8 +289,8 @@ public class ConfigManager {
         return List.copyOf(blacklistedWorlds);
     }
 
-    public synchronized boolean isWorldBlacklisted(String worldName) {
-        return blacklistedWorlds.contains(worldName);
+    public boolean isWorldBlacklisted(String worldName) {
+        return blacklistedLookup.contains(worldName);
     }
 
     public synchronized boolean isUseActionbar() {
@@ -345,14 +353,17 @@ public class ConfigManager {
         if (blacklistedWorlds.contains(worldName))
             return false;
         blacklistedWorlds.add(worldName);
+        blacklistedLookup = java.util.Set.copyOf(blacklistedWorlds);
         saveConfig();
         return true;
     }
 
     public synchronized boolean removeBlacklistedWorld(String worldName) {
         boolean removed = blacklistedWorlds.remove(worldName);
-        if (removed)
+        if (removed) {
+            blacklistedLookup = java.util.Set.copyOf(blacklistedWorlds);
             saveConfig();
+        }
         return removed;
     }
 }
