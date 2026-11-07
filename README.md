@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/logo.png" alt="DyClaim logo" width="128"></p>
+
 # DyClaim — Chunk Claiming Made Simple
 
 Protect your builds. Share your land. Manage your claims.
