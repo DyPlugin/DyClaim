@@ -46,6 +46,7 @@ abstract class ManagerFixture {
         when(config.isWorldBlacklisted(anyString())).thenAnswer(i->values.getStringList("blacklisted-worlds").contains(i.getArgument(0)));when(config.getSellRefundPercent()).thenReturn(60);
         MessageManager messages=mock(MessageManager.class);when(plugin.getMessageManager()).thenReturn(messages);when(messages.getPrefixed(any(org.bukkit.command.CommandSender.class),anyString())).thenAnswer(i->i.getArgument(1));when(messages.getPrefixed(any(org.bukkit.command.CommandSender.class),anyString(),anyMap())).thenAnswer(i->i.getArgument(1));
         when(messages.getMessage(any(org.bukkit.command.CommandSender.class),anyString())).thenAnswer(i->i.getArgument(1));
+        doAnswer(i->{((org.bukkit.command.CommandSender)i.getArgument(0)).sendMessage((String)i.getArgument(1));return null;}).when(messages).sendPrefixed(any(org.bukkit.command.CommandSender.class),anyString());
         economy=mock(EconomyManager.class);when(plugin.getEconomyManager()).thenReturn(economy);when(economy.isEnabled()).thenReturn(true);when(economy.isAvailable()).thenReturn(true);when(economy.hasEnough(any(OfflinePlayer.class),anyDouble())).thenReturn(true);when(economy.withdraw(any(UUID.class),anyDouble())).thenReturn(true);when(economy.deposit(any(UUID.class),anyDouble())).thenReturn(true);when(economy.formatMoney(anyDouble())).thenAnswer(i->String.valueOf((double)i.getArgument(0)));
         access=new AccessManager(plugin);when(plugin.getAccessManager()).thenReturn(access);
         var rules=new AcquisitionRules(plugin);when(plugin.getAcquisitionRules()).thenReturn(rules);
@@ -62,7 +63,7 @@ abstract class ManagerFixture {
         Player p=mock(Player.class);UUID uuid=UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         when(p.getUniqueId()).thenReturn(uuid);when(p.getName()).thenReturn(name);when(p.isOnline()).thenReturn(true);when(p.getWorld()).thenReturn(world);
         when(p.hasPermission(anyString())).thenAnswer(i->!Set.of("dyclaim.admin","dyclaim.admin.bypass","dyclaim.admin.purge.exempt","dyclaim.warn.exempt").contains(i.getArgument(0)));
-        Location l=mock(Location.class);when(l.getChunk()).thenReturn(c);when(l.getWorld()).thenReturn(world);when(p.getLocation()).thenReturn(l);
+        Location l=mock(Location.class);if(c!=null)TestBlocks.at(l,c);when(l.getWorld()).thenReturn(world);when(p.getLocation()).thenReturn(l);
         bukkit.when(()->Bukkit.getPlayer(uuid)).thenReturn(p);bukkit.when(()->Bukkit.getPlayerExact(name)).thenReturn(p);when(plugin.getServer().getPlayer(uuid)).thenReturn(p);
         when(p.spigot()).thenReturn(mock(Player.Spigot.class));return p;
     }

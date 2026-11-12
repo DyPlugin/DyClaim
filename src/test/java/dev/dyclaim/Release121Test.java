@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class Release121Test extends ManagerFixture {
-    private Block block(org.bukkit.Chunk chunk,Material type){Block b=mock(Block.class);when(b.getChunk()).thenReturn(chunk);when(b.getType()).thenReturn(type);return b;}
+    private Block block(org.bukkit.Chunk chunk,Material type){Block b=mock(Block.class);TestBlocks.at(b,chunk);when(b.getType()).thenReturn(type);return b;}
     private PlayerInteractEvent click(Player player,Block block){
         var event=mock(PlayerInteractEvent.class);when(event.getPlayer()).thenReturn(player);when(event.getAction()).thenReturn(Action.RIGHT_CLICK_BLOCK);when(event.getClickedBlock()).thenReturn(block);return event;
     }
     private InventoryOpenEvent open(Player player,org.bukkit.Chunk chunk,Material type){
-        Block b=block(chunk,type);Location location=mock(Location.class);when(location.getChunk()).thenReturn(chunk);when(location.getBlock()).thenReturn(b);
+        Block b=block(chunk,type);Location location=mock(Location.class);TestBlocks.at(location,chunk);when(location.getBlock()).thenReturn(b);
         Inventory inventory=mock(Inventory.class);when(inventory.getLocation()).thenReturn(location);
         InventoryOpenEvent event=mock(InventoryOpenEvent.class);when(event.getPlayer()).thenReturn(player);when(event.getInventory()).thenReturn(inventory);return event;
     }

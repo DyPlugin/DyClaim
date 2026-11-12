@@ -27,7 +27,7 @@ class ExplosionPolicyRegressionTest extends ManagerFixture {
     void ghastFireballBlockDamageUsesMobExplosionChoice(boolean mobExplosions) {
         var inside=chunk(0,0);var owner=player("Owner",inside);claims.claimChunk(owner,inside);
         var claim=claims.getClaimAt(inside);claim.setChoice("explosions",!mobExplosions);claim.setChoice("mob-explosions",mobExplosions);
-        Block block=mock(Block.class);when(block.getChunk()).thenReturn(inside);
+        Block block=mock(Block.class);TestBlocks.at(block,inside);
         List<Block> affected=new ArrayList<>(List.of(block));
         var fireball=ghastFireball();EntityExplodeEvent event=mock(EntityExplodeEvent.class);when(event.getEntity()).thenReturn(fireball);when(event.blockList()).thenReturn(affected);
         new ClaimProtectionListener(plugin).onEntityExplode(event);
@@ -59,7 +59,7 @@ class ExplosionPolicyRegressionTest extends ManagerFixture {
     @Test void playerFireballKeepsOrdinaryExplosionChoice() {
         var inside=chunk(0,0);var owner=player("Owner",inside);claims.claimChunk(owner,inside);
         var claim=claims.getClaimAt(inside);claim.setChoice("explosions",true);claim.setChoice("mob-explosions",false);
-        Block block=mock(Block.class);when(block.getChunk()).thenReturn(inside);
+        Block block=mock(Block.class);TestBlocks.at(block,inside);
         List<Block> affected=new ArrayList<>(List.of(block));
         LargeFireball fireball=mock(LargeFireball.class);when(fireball.getShooter()).thenReturn(owner);
         EntityExplodeEvent event=mock(EntityExplodeEvent.class);when(event.getEntity()).thenReturn(fireball);when(event.blockList()).thenReturn(affected);

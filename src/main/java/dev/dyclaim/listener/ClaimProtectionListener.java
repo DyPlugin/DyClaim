@@ -2,7 +2,6 @@ package dev.dyclaim.listener;
 
 import dev.dyclaim.DyClaim;
 import dev.dyclaim.model.ClaimData;
-import org.bukkit.Chunk;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -58,13 +57,15 @@ public class ClaimProtectionListener implements Listener {
     private dev.dyclaim.manager.HotSettings settings(){return plugin.getAccessManager().settings();}
     /** Fire may burn and spread inside a claim only when the boundary rule is off or the claim allows it. */
     private boolean fireBlocked(ClaimData claim){return claim!=null&&settings().externalFire&&!plugin.getAccessManager().enabled(claim,"fire-spread");}
+    /*
+     * Claims are found from block coordinates on every platform. getChunk() names the same chunk but builds a chunk
+     * object through the chunk provider (and may load it) on each event; on Folia it would also touch foreign regions.
+     */
     private ClaimData claimAt(Location location){
-        if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
-        return plugin.getClaimManager().getClaimAt(location.getChunk());
+        return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
     }
     private ClaimData claimAt(org.bukkit.block.Block block){
-        if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(block.getWorld().getName(),block.getX()>>4,block.getZ()>>4);
-        return plugin.getClaimManager().getClaimAt(block.getChunk());
+        return plugin.getClaimManager().getClaimAt(block.getWorld().getName(),block.getX()>>4,block.getZ()>>4);
     }
 
     private static boolean isProtectedInteraction(String typeName) {
@@ -91,7 +92,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "build"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-block-break"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-block-break");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -102,7 +103,7 @@ public class ClaimProtectionListener implements Listener {
                 ClaimData part = claimAt(state.getBlock());
                 if (!plugin.getAccessManager().allows(player, part, "build")) {
                     event.setCancelled(true);
-                    player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-block-place"));
+                    plugin.getMessageManager().sendPrefixed(player,"protection-block-place");
                     return;
                 }
             }
@@ -113,7 +114,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "build"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-block-place"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-block-place");
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -132,7 +133,7 @@ public class ClaimProtectionListener implements Listener {
             String item=event.getItem().getType().name();
             if(modifiesBlock(item,typeName)) {
                 event.setCancelled(true);
-                player.sendMessage(plugin.getMessageManager().getPrefixed(player,"protection-interact"));
+                plugin.getMessageManager().sendPrefixed(player,"protection-interact");
                 return;
             }
         }
@@ -142,7 +143,7 @@ public class ClaimProtectionListener implements Listener {
         if(right.equals("containers")&&dev.dyclaim.manager.AccessManager.isStorage(typeName)&&plugin.getAccessManager().allowsStorage(player,claim))return;
         if (isProtectedInteraction(typeName)) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-interact"));
+            plugin.getMessageManager().sendPrefixed(player,"protection-interact");
         }
     }
 
@@ -246,7 +247,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "build"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-block-place"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-block-place");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -258,7 +259,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "build"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-block-break"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-block-break");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -279,7 +280,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "entities"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-entity"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-entity");
     }
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
@@ -326,7 +327,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "entities"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-entity"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-entity");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -378,23 +379,16 @@ public class ClaimProtectionListener implements Listener {
             if (plugin.getAccessManager().allows(event.getPlayer(), claim, "build"))
                 return;
             event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.getMessageManager().getPrefixed(event.getPlayer(), "protection-interact"));
+            plugin.getMessageManager().sendPrefixed(event.getPlayer(),"protection-interact");
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockFromTo(BlockFromToEvent event) {
         if(!settings().externalFluid)return;
-        ClaimData fromClaim,toClaim;
-        if(plugin.getPlatformTasks().isRegionThreaded()){
-            var from=event.getBlock();var to=event.getToBlock();
-            if(from.getWorld()==to.getWorld()&&(from.getX()>>4)==(to.getX()>>4)&&(from.getZ()>>4)==(to.getZ()>>4))return;
-            fromClaim=claimAt(from);toClaim=claimAt(to);
-        }else{
-            Chunk fromChunk=event.getBlock().getChunk(),toChunk=event.getToBlock().getChunk();
-            if(fromChunk.equals(toChunk))return;
-            fromClaim=plugin.getClaimManager().getClaimAt(fromChunk);toClaim=plugin.getClaimManager().getClaimAt(toChunk);
-        }
+        var from=event.getBlock();var to=event.getToBlock();
+        if(from.getWorld()==to.getWorld()&&(from.getX()>>4)==(to.getX()>>4)&&(from.getZ()>>4)==(to.getZ()>>4))return;
+        ClaimData fromClaim=claimAt(from),toClaim=claimAt(to);
         if (crosses(fromClaim,toClaim)) {
             event.setCancelled(true);
         }
@@ -432,7 +426,7 @@ public class ClaimProtectionListener implements Listener {
         if (entity instanceof ItemFrame || entity instanceof ArmorStand || entity instanceof Animals
                 || entity instanceof Villager || entity instanceof Vehicle) {
             event.setCancelled(true);
-            player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-entity"));
+            plugin.getMessageManager().sendPrefixed(player,"protection-entity");
         }
     }
 
@@ -467,7 +461,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "entities"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-entity"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-entity");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -480,7 +474,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(player, claim, "entities"))
             return;
         event.setCancelled(true);
-        player.sendMessage(plugin.getMessageManager().getPrefixed(player, "protection-entity"));
+        plugin.getMessageManager().sendPrefixed(player,"protection-entity");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -498,7 +492,7 @@ public class ClaimProtectionListener implements Listener {
         if (plugin.getAccessManager().allows(event.getPlayer(), claim, "build"))
             return;
         event.setCancelled(true);
-        event.getPlayer().sendMessage(plugin.getMessageManager().getPrefixed(event.getPlayer(), "protection-entity"));
+        plugin.getMessageManager().sendPrefixed(event.getPlayer(),"protection-entity");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -518,7 +512,7 @@ public class ClaimProtectionListener implements Listener {
             ClaimData claim=claimAt(entity.getLocation());
             if(attacker!=null&&claim!=null&&!plugin.getAccessManager().bypass(attacker)
                     &&(!plugin.getAccessManager().enabled(claim,"villager-player-damage")||!plugin.getAccessManager().allows(attacker,claim,"entities"))) {
-                event.setCancelled(true);attacker.sendMessage(plugin.getMessageManager().getPrefixed(attacker,"protection-villager"));
+                event.setCancelled(true);plugin.getMessageManager().sendPrefixed(attacker,"protection-villager");
             }
             return;
         }
@@ -536,7 +530,7 @@ public class ClaimProtectionListener implements Listener {
             if (plugin.getAccessManager().allows(attacker, claim, "entities"))
                 return;
             event.setCancelled(true);
-            attacker.sendMessage(plugin.getMessageManager().getPrefixed(attacker, "protection-entity"));
+            plugin.getMessageManager().sendPrefixed(attacker,"protection-entity");
         }
     }
 
@@ -597,7 +591,7 @@ public class ClaimProtectionListener implements Listener {
                 ||(to!=null&&!plugin.getAccessManager().enabled(to,"pvp"));
     }
     private void notifyPlayer(Player player,String key){
-        Runnable message=()->{if(player.isOnline())player.sendMessage(plugin.getMessageManager().getPrefixed(player,key));};
+        Runnable message=()->{if(player.isOnline())plugin.getMessageManager().sendPrefixed(player,key);};
         var tasks=plugin.getPlatformTasks();
         if(tasks.isRegionThreaded()&&!tasks.ownsEntity(player))tasks.playerLater(player,message,1);else message.run();
     }

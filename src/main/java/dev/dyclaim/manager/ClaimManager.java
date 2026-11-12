@@ -16,6 +16,8 @@ public class ClaimManager {
     private final Map<UUID, Set<String>> playerIndex = new HashMap<>();
     /** Same claims by world and packed chunk position; lookups on every event avoid building a key string. */
     private final Map<String, Map<Long, ClaimData>> chunkIndex = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Same claims by their stable id, for the developer API; rebuilt on load and kept in step with every add and removal. */
+    private final Map<UUID, ClaimData> idIndex = new java.util.concurrent.ConcurrentHashMap<>();
     private final ClaimStore store;
     private volatile boolean writable;
     private BukkitTask pendingSave;
@@ -30,7 +32,7 @@ public class ClaimManager {
         writable = false;
         try {
             Map<String, ClaimData> loaded = store.load(plugin.getConfigManager().getClaimPrice());
-            claims.clear(); claims.putAll(loaded); chunkIndex.clear(); claims.values().forEach(this::indexChunk); rebuildPlayerIndex(); writable = true;
+            claims.clear(); claims.putAll(loaded); chunkIndex.clear(); idIndex.clear(); claims.values().forEach(this::indexChunk); rebuildPlayerIndex(); writable = true;
             plugin.getLogger().info("Loaded " + claims.size() + " claims (schema 2).");
         } catch (IOException ex) {
             throw new IllegalStateException("Claim data cannot be loaded. Writes disabled; restore a verified backup. " + ex.getMessage(), ex);
@@ -107,8 +109,10 @@ public class ClaimManager {
     /** Number of claims without copying them, for placeholders and statistics. */
     public int getClaimCount() { return claims.size(); }
     private static long cell(int x, int z) { return ((long) x << 32) | (z & 0xffffffffL); }
-    private void indexChunk(ClaimData claim) { chunkIndex.computeIfAbsent(claim.getWorld(), world -> new java.util.concurrent.ConcurrentHashMap<>()).put(cell(claim.getChunkX(), claim.getChunkZ()), claim); }
-    private void unindexChunk(ClaimData claim) { Map<Long, ClaimData> chunks = chunkIndex.get(claim.getWorld()); if (chunks != null) chunks.remove(cell(claim.getChunkX(), claim.getChunkZ()), claim); }
+    private void indexChunk(ClaimData claim) { chunkIndex.computeIfAbsent(claim.getWorld(), world -> new java.util.concurrent.ConcurrentHashMap<>()).put(cell(claim.getChunkX(), claim.getChunkZ()), claim); idIndex.put(claim.getId(), claim); }
+    private void unindexChunk(ClaimData claim) { Map<Long, ClaimData> chunks = chunkIndex.get(claim.getWorld()); if (chunks != null) chunks.remove(cell(claim.getChunkX(), claim.getChunkZ()), claim); idIndex.remove(claim.getId(), claim); }
+    /** The live claim with this id, or null. */
+    public ClaimData getById(UUID id) { return id == null ? null : idIndex.get(id); }
     public ClaimData getByKey(String key) { return claims.get(key); }
     public boolean isOwner(Player player, Chunk chunk) { ClaimData c=getClaimAt(chunk); return c != null && c.getOwnerUUID().equals(player.getUniqueId()); }
     public boolean isAllowed(Player player, Chunk chunk) { return plugin.getAccessManager().allows(player,getClaimAt(chunk),"build"); }
@@ -184,15 +188,46 @@ public class ClaimManager {
         }
     }
     private boolean mutationBlocked(String key){var transactions=plugin.getTransactionManager();return transactions!=null&&transactions.isLocked(key)&&!transactions.ownsMutation(key);}
-    public synchronized void transfer(ClaimData c,Player target) {
+    public synchronized void transfer(ClaimData c,Player target) { transfer(c,target.getUniqueId(),target.getName()); }
+    /**
+     * Moves ownership to a player who may be offline: owner id and name, player index, coowner, trust, market price and
+     * pending confirmations are reset, the file is saved and {@code ClaimTransferEvent} is fired.
+     */
+    public synchronized void transfer(ClaimData c,UUID owner,String ownerName) {
+        Objects.requireNonNull(owner,"owner");
         if(claims.get(c.getChunkKey())!=c||mutationBlocked(c.getChunkKey()))throw new IllegalStateException("Claim changed or is locked");
         UUID previous=c.getOwnerUUID();
         removeIndex(c.getOwnerUUID(),c.getChunkKey());if(c.getCoowner()!=null)removeIndex(c.getCoowner(),c.getChunkKey());
-        c.transferOwnership(target.getUniqueId(),target.getName());
-        if(c.getName()!=null && getPlayerClaims(target.getUniqueId()).stream().anyMatch(other->other!=c && c.getName().equalsIgnoreCase(other.getName()))) c.setName(null);
-        playerIndex.computeIfAbsent(target.getUniqueId(),uuid->new HashSet<>()).add(c.getChunkKey());plugin.getFeatureManager().invalidate(c); saveAll();
-        dev.dyclaim.api.ApiEvents.transferred(plugin,c,previous,target.getUniqueId());
+        c.transferOwnership(owner,ownerName==null||ownerName.isBlank()?owner.toString():ownerName);
+        if(c.getName()!=null && getPlayerClaims(owner).stream().anyMatch(other->other!=c && c.getName().equalsIgnoreCase(other.getName()))) c.setName(null);
+        playerIndex.computeIfAbsent(owner,uuid->new HashSet<>()).add(c.getChunkKey());
+        if(plugin.getFeatureManager()!=null)plugin.getFeatureManager().invalidate(c);
+        saveAll();
+        dev.dyclaim.api.ApiEvents.transferred(plugin,c,previous,owner);
     }
+    /**
+     * Grants or replaces one player's trust with exactly these rights. {@code expiresAt} is epoch milliseconds, 0 is permanent.
+     * Returns false when the claim is not live, the player manages the claim, a right is unknown or the expiry has passed.
+     */
+    public synchronized boolean setTrust(ClaimData claim,UUID player,Set<String> rights,long expiresAt) {
+        Objects.requireNonNull(player,"player");Objects.requireNonNull(rights,"rights");
+        if(!writable||claim==null||claims.get(claim.getChunkKey())!=claim||claim.canManage(player))return false;
+        if(rights.isEmpty()||!validRights(rights)||expiresAt<0||(expiresAt!=0&&expiresAt<=System.currentTimeMillis()))return false;
+        if(claim.isVisitorBanned(player))claim.unbanVisitor(player);
+        claim.setTrust(player,rights,expiresAt);
+        if(plugin.getFeatureManager()!=null)plugin.getFeatureManager().invalidate(claim);
+        saveAll();dev.dyclaim.api.ApiEvents.trust(plugin,claim,player,true);return true;
+    }
+    /** Removes one player's trust; false when the claim is not live or the player had no grant. */
+    public synchronized boolean removeTrust(ClaimData claim,UUID player) {
+        Objects.requireNonNull(player,"player");
+        if(!writable||claim==null||claims.get(claim.getChunkKey())!=claim||!claim.removeTrusted(player))return false;
+        claim.touch();
+        if(plugin.getFeatureManager()!=null)plugin.getFeatureManager().invalidate(claim);
+        saveAll();dev.dyclaim.api.ApiEvents.trust(plugin,claim,player,false);return true;
+    }
+    /** Same right names as {@code /claim trustperm}. */
+    private static boolean validRights(Set<String> rights){for(String right:rights)if(right==null||!dev.dyclaim.model.TrustGrant.RIGHTS.contains(right))return false;return true;}
     public synchronized boolean changeCoowner(ClaimData claim,UUID target,UUID expectedOwner,long expectedRevision){
         if(claims.get(claim.getChunkKey())!=claim||mutationBlocked(claim.getChunkKey())||!claim.getOwnerUUID().equals(expectedOwner)||claim.getRevision()!=expectedRevision)return false;
         UUID previous=claim.getCoowner();if(previous!=null)removeIndex(previous,claim.getChunkKey());

@@ -1,6 +1,6 @@
 # DyClaim developer API
 
-DyClaim 1.1.0 adds a small, read-only API and four notification events for other plugins. The API lives in the `dev.dyclaim.api` package of the normal DyClaim JAR. There is no separate API artifact.
+DyClaim 1.1.0 added a small, read-only API and four notification events for other plugins. DyClaim 1.3.1 adds a write API for estate and economy plugins that sell, rent or lease claims. The API lives in the `dev.dyclaim.api` package of the normal DyClaim JAR. There is no separate API artifact.
 
 ## Setup
 
@@ -13,7 +13,7 @@ DyClaim 1.1.0 adds a small, read-only API and four notification events for other
 2. Compile against the DyClaim JAR (for example as a local `compileOnly` file dependency). Do not shade it.
 3. Call `DyClaimAPI.isAvailable()` before anything else. It is false when DyClaim is missing, disabled or still starting.
 
-The API works the same on the standard and the Folia build.
+The API works the same on every supported server, including Folia.
 
 ## Reading claims
 
@@ -53,7 +53,46 @@ Every method except `isAvailable()` throws `IllegalStateException` while DyClaim
 - `getTrustedPlayers()`, which returns active trust including unexpired temporary trust
 - `allows(UUID, right)`, with the rights `build`, `containers`, `doors`, `trapdoors`, `redstone`, `entities` and `teleport`
 
-Claims cannot be changed through the API. Players and administrators change them with DyClaim's own commands, so prices, confirmations, limits and the economy journal always apply.
+Lookups never change a claim. Players and administrators change claims with DyClaim's own commands, so prices, confirmations, limits and the economy journal apply to them. The write methods below are for plugins that run their own sales or leases.
+
+## Changing claims (1.3.1)
+
+| Method | Effect |
+|---|---|
+| `getClaimById(UUID claimId)` | The claim with this id (`Claim.getId()`), or empty when it does not exist any more |
+| `transferClaim(UUID claimId, UUID newOwner, String newOwnerName)` | Makes `newOwner` (who may be offline) the owner. As with `/claim transfer`, the coowner, all trust, the market price, the claim message and visitor bans are cleared, and a duplicate claim name of the new owner is dropped. `newOwnerName` is stored as the owner name; the UUID text is used when it is null or blank. Fires `ClaimTransferEvent`. |
+| `setTrust(UUID claimId, UUID player, Set<String> rights, long expiresAt)` | Grants the player trust with exactly these rights and replaces any grant the player already had (rights are not merged). Right names are those of `/claim trustperm`: `build`, `containers`, `doors`, `trapdoors`, `redstone`, `entities`, `teleport`. `expiresAt` is epoch milliseconds; `0` is permanent. A visitor ban of the player on this claim is lifted. Fires `ClaimTrustChangeEvent` with `trusted = true`. |
+| `removeTrust(UUID claimId, UUID player)` | Ends the player's trust, timed or permanent. Fires `ClaimTrustChangeEvent` with `trusted = false`. |
+| `getTrustRights(UUID claimId, UUID player)` | The rights of the player's own active trust, unmodifiable. Empty when the claim does not exist, there is no grant or it has expired. Owners, coowners, clan and group trust are not included; use `Claim.allows(UUID, right)` for the full decision. |
+
+The three write methods return `true` when the change was made and `false` when it was refused. They throw `IllegalStateException` while DyClaim is not available and `NullPointerException` for null arguments, like the lookups.
+
+```java
+Optional<Claim> claim = DyClaimAPI.getClaimById(claimId);
+if (claim.isPresent()) {
+    // sell the claim
+    DyClaimAPI.transferClaim(claimId, buyer.getUniqueId(), buyer.getName());
+    // lease it for seven days
+    long end = System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000;
+    DyClaimAPI.setTrust(claimId, tenant.getUniqueId(), Set.of("build", "containers", "doors"), end);
+    // lease over
+    DyClaimAPI.removeTrust(claimId, tenant.getUniqueId());
+}
+```
+
+### Refusals
+
+- `transferClaim` returns `false` when the claim does not exist, is a server claim, already belongs to `newOwner`, `newOwner` is the server owner id, the claim is locked by a running DyClaim payment (market purchase, refund or similar), or claim writes are disabled.
+- `setTrust` returns `false` when the claim does not exist, the player is its owner or coowner, `rights` is empty or contains an unknown name, `expiresAt` is negative or already passed, or claim writes are disabled.
+- `removeTrust` returns `false` when the claim does not exist, the player had no grant, or claim writes are disabled.
+
+The write methods do not apply DyClaim's player-facing rules: claim limits, prices, `trust.maximum-duration-days` and feature toggles are not checked. The calling plugin decides who may do what, and handles payment itself.
+
+### Threads
+
+All methods can be called from any thread. Writes take the same lock as DyClaim's own claim changes and are saved in the background. On Folia, call the write methods on the region thread that owns the claim's chunk (or schedule them there) so they stay in order with players' own changes to that claim.
+
+Events are delivered on the calling thread when it is a server thread, and on the next global tick otherwise.
 
 ## Events
 
@@ -63,8 +102,8 @@ All events are in `dev.dyclaim.api.event`. They are fired after the change has b
 |---|---|
 | `ClaimCreateEvent` | A chunk became claimed. `getCause()` is `PLAYER`, `ADMIN` (admin give) or `IMPORT`. `getPlayer()` is null for imports. |
 | `ClaimRemoveEvent` | A claim was sold, unclaimed, deleted or purged. `getClaim()` shows its last state. |
-| `ClaimTransferEvent` | Ownership moved through a transfer, a market purchase or an admin give. Provides the previous and the new owner. |
-| `ClaimTrustChangeEvent` | A player gained or lost trust. A visitor ban also removes trust and fires this event. |
+| `ClaimTransferEvent` | Ownership moved through a transfer, a market purchase, an admin give or `transferClaim`. Provides the previous and the new owner. |
+| `ClaimTrustChangeEvent` | A player gained or lost trust, including through `setTrust` and `removeTrust`. A visitor ban also removes trust and fires this event. |
 
 ```java
 @EventHandler

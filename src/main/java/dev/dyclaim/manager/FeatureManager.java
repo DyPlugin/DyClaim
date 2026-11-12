@@ -761,9 +761,9 @@ public class FeatureManager implements Listener {
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void fall(org.bukkit.event.entity.EntityDamageEvent event){
         if(event.getCause()==org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL&&event.getEntity() instanceof Player p&&flight.consumeFallProtection(p.getUniqueId()))event.setCancelled(true);
     }
+    /** Block coordinates on every platform: same chunk as getChunk(), without building a chunk object on each move. */
     private ClaimData claimAt(Location location){
-        if(plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
-        return plugin.getClaimManager().getClaimAt(location.getChunk());
+        return plugin.getClaimManager().getClaimAt(location.getWorld().getName(),location.getBlockX()>>4,location.getBlockZ()>>4);
     }
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true) public void entry(PlayerMoveEvent event){
         if(event.getTo()==null)return;Player p=event.getPlayer();ClaimData to=claimAt(event.getTo());

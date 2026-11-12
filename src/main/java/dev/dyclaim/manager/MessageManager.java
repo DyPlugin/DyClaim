@@ -23,12 +23,23 @@ public class MessageManager {
     private static final java.util.regex.Pattern TAG = java.util.regex.Pattern.compile("<[a-zA-Z#/!][^<>]*>");
     private static final boolean MINI_MESSAGE = present("net.kyori.adventure.text.minimessage.MiniMessage")
             && present("net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer");
+    /** Players are Adventure audiences (Paper, Purpur, Folia); Spigot players only take legacy text. */
+    private static final boolean AUDIENCE = MINI_MESSAGE && present("net.kyori.adventure.audience.Audience");
 
     private final DyClaim plugin;
+    private final boolean components;
     private volatile Map<String,Map<String,String>> catalog=Map.of();
+    /** Final prefixed text of messages sent without placeholders; rebuilt after a reload or a prefix change. */
+    private volatile Formatting formatting;
 
     public MessageManager(DyClaim plugin) {
+        this(plugin, AUDIENCE);
+    }
+
+    /** {@code components} false keeps every message on the legacy text path, as on Spigot. */
+    MessageManager(DyClaim plugin, boolean components) {
         this.plugin = plugin;
+        this.components = components && AUDIENCE;
         reload();
     }
 
@@ -93,8 +104,63 @@ public class MessageManager {
         return getPrefix() + getMessage(key, placeholders);
     }
 
+    /** Same text as {@code getPrefix() + getMessage(sender, key)}, built once per language, key, catalog and prefix. */
     public String getPrefixed(CommandSender sender, String key) {
-        return getPrefix() + getMessage(sender, key);
+        return formatted(resolveLanguage(sender), key).text;
+    }
+
+    /**
+     * Sends {@link #getPrefixed(CommandSender, String)}. On servers with Adventure, players get a cached component, so the
+     * text is not parsed again on every denial; messages with line breaks or web addresses, and Spigot, keep the text path.
+     */
+    public void sendPrefixed(CommandSender sender, String key) {
+        Formatted message = formatted(resolveLanguage(sender), key);
+        if (components && sender instanceof Player) {
+            Object component = message.component;
+            if (component == null) {
+                try {
+                    component = MiniMessageBridge.component(message.text);
+                    if (component == null) component = Formatted.TEXT_ONLY;
+                } catch (RuntimeException | LinkageError unavailable) {
+                    component = Formatted.TEXT_ONLY;
+                }
+                message.component = component;
+            }
+            if (component != Formatted.TEXT_ONLY && MiniMessageBridge.send(sender, component)) return;
+        }
+        sender.sendMessage(message.text);
+    }
+
+    private Formatted formatted(String lang, String key) {
+        Map<String,Map<String,String>> view = catalog;
+        String rawPrefix = plugin.getConfigManager().getPrefix();
+        Formatting current = formatting;
+        if (current == null || current.catalog != view || !java.util.Objects.equals(current.rawPrefix, rawPrefix)) {
+            current = new Formatting(view, rawPrefix, colorize(rawPrefix) + " ");
+            formatting = current;
+        }
+        Formatting source = current;
+        return current.languages.computeIfAbsent(lang, ignored -> new java.util.concurrent.ConcurrentHashMap<>())
+                .computeIfAbsent(key, ignored -> new Formatted(source.prefix + colorize(lookup(source.catalog, lang, key))));
+    }
+
+    /** Text built from one catalog and one prefix; a reload publishes a new catalog, which retires this object. */
+    private static final class Formatting {
+        final Map<String,Map<String,String>> catalog;
+        final String rawPrefix;
+        final String prefix;
+        final Map<String,Map<String,Formatted>> languages = new java.util.concurrent.ConcurrentHashMap<>();
+        Formatting(Map<String,Map<String,String>> catalog, String rawPrefix, String prefix) {
+            this.catalog = catalog; this.rawPrefix = rawPrefix; this.prefix = prefix;
+        }
+    }
+
+    /** One finished message; the Adventure component is made on first send and then reused. */
+    private static final class Formatted {
+        static final Object TEXT_ONLY = new Object();
+        final String text;
+        volatile Object component;
+        Formatted(String text) { this.text = text; }
     }
 
     public String getPrefixed(CommandSender sender, String key, Map<String, String> placeholders) {
@@ -209,7 +275,10 @@ public class MessageManager {
     }
 
     private String getMessageInternal(String lang, String key) {
-        Map<String,Map<String,String>> view=catalog;
+        return lookup(catalog, lang, key);
+    }
+
+    private static String lookup(Map<String,Map<String,String>> view, String lang, String key) {
         Map<String, String> selected = view.getOrDefault(lang, Map.of());
         String value = selected.get(key);
         if (value != null) {

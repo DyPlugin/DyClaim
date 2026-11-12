@@ -24,10 +24,10 @@ import static org.mockito.Mockito.*;
 
 class Release130Test extends ManagerFixture {
     private Location at(Chunk chunk,int blockX,int blockZ){
-        Location l=mock(Location.class);when(l.getChunk()).thenReturn(chunk);when(l.getWorld()).thenReturn(world);when(l.getBlockX()).thenReturn(blockX);when(l.getBlockZ()).thenReturn(blockZ);return l;
+        Location l=mock(Location.class);TestBlocks.at(l,chunk);when(l.getWorld()).thenReturn(world);when(l.getBlockX()).thenReturn(blockX);when(l.getBlockZ()).thenReturn(blockZ);return l;
     }
     private PlayerMoveEvent step(Player p,Location from,Location to){return new PlayerMoveEvent(p,from,to);}
-    private Block block(Chunk chunk,Material type){Block b=mock(Block.class);when(b.getChunk()).thenReturn(chunk);when(b.getType()).thenReturn(type);return b;}
+    private Block block(Chunk chunk,Material type){Block b=mock(Block.class);TestBlocks.at(b,chunk);when(b.getType()).thenReturn(type);return b;}
     /** Flight state on a mocked player behaves like the real one. */
     private AtomicBoolean[] flightState(Player p){
         AtomicBoolean allow=new AtomicBoolean(),flying=new AtomicBoolean();

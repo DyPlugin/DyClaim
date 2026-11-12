@@ -21,5 +21,5 @@ class DoubleChestProtectionTest extends ManagerFixture {
         InventoryMoveItemEvent event=mock(InventoryMoveItemEvent.class);when(event.getSource()).thenReturn(combined);when(event.getDestination()).thenReturn(right);
         new ClaimProtectionListener(plugin).hopper(event);verify(event).setCancelled(true);
     }
-    private Inventory inventory(org.bukkit.Chunk chunk){Inventory inventory=mock(Inventory.class);Location location=mock(Location.class);when(location.getChunk()).thenReturn(chunk);when(inventory.getLocation()).thenReturn(location);return inventory;}
+    private Inventory inventory(org.bukkit.Chunk chunk){Inventory inventory=mock(Inventory.class);Location location=mock(Location.class);TestBlocks.at(location,chunk);when(inventory.getLocation()).thenReturn(location);return inventory;}
 }

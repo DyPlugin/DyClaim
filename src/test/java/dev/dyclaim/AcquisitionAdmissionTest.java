@@ -34,7 +34,7 @@ class AcquisitionAdmissionTest extends ManagerFixture {
     @Test void claimCommandAdmissionIsHeldAcrossProviderCallbacks(){
         values.set("claim.max-claims-per-player",1);values.set("confirmations.required.claim",false);
         var first=chunk(0,0);var second=chunk(2,0);var owner=player("Owner",first);
-        var moved=mock(org.bukkit.Location.class);when(moved.getChunk()).thenReturn(second);when(moved.getWorld()).thenReturn(world);
+        var moved=mock(org.bukkit.Location.class);TestBlocks.at(moved,second);when(moved.getWorld()).thenReturn(world);
         var withdrawals=new java.util.concurrent.atomic.AtomicInteger();
         when(economy.withdraw(any(java.util.UUID.class),anyDouble())).thenAnswer(i->{
             if(withdrawals.incrementAndGet()==1){when(owner.getLocation()).thenReturn(moved);features.requestClaim(owner);}

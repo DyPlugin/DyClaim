@@ -6,7 +6,7 @@ Protect your builds. Share your land. Manage your claims.
 
 DyClaim is a chunk-based land protection plugin for survival, SMP and economy servers. Claim land with a command, choose who can use it, and manage protection settings without a GUI.
 
-DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.3.0** adds claim flight, fire control per claim, closed claims and a choice to hide claim notices, and makes protection checks lighter. Version 1.2.1 lets owners open their chests to visitors while blocks stay protected. Version 1.2.0 made DyClaim one JAR for every server, including Folia, and added server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
+DyClaim combines temporary trust, shared ownership, player trading, automatic claiming and configurable protection with the familiar command-based workflow. **Version 1.3.1** adds a developer write API for estate and economy plugins such as DyMarket and makes protection checks lighter. Version 1.3.0 added claim flight, fire control per claim, closed claims and a choice to hide claim notices, and made protection checks lighter. Version 1.2.1 lets owners open their chests to visitors while blocks stay protected. Version 1.2.0 made DyClaim one JAR for every server, including Folia, and added server claims, trust for whole permission groups and glowing display borders. Version 1.1.0 added claim limits by permission, claim messages, visitor bans, PlaceholderAPI placeholders, web-map layers, importing, a developer API, three more languages, MiniMessage and bStats. Existing commands, aliases, settings and claim data are preserved.
 
 **Zero bloat.** No complex GUIs, no unnecessary features. Just clean, fast chunk protection that works. Optional systems stay disabled until you choose to enable them.
 
@@ -16,13 +16,18 @@ DyClaim combines temporary trust, shared ownership, player trading, automatic cl
 
 | Your server | File |
 |---|---|
-| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.3.0.jar` |
+| Bukkit, Spigot, Paper, Purpur or Folia | `DyClaim-1.3.1.jar` |
 
 Install the JAR on any supported server; it detects Folia at startup. Stop the server and back up `plugins/DyClaim` before replacing an older JAR. Keep the existing data folder; claim data stays on schema 2. Servers that used the 1.1.0 Folia build can install the same JAR. There are no proxy companions in this release.
 
 [Releases and checksums](https://github.com/DyPlugin/DyClaim/releases) · [Platform and verification notes](docs/platforms.md) · [Command improvements](docs/claim-management.md) · [Integrations and import](docs/integrations.md) · [Developer API](docs/api.md)
 
-## New in 1.3.0
+## New in 1.3.1
+
+- **Developer write API:** `DyClaimAPI` gains `getClaimById`, `transferClaim`, `setTrust`, `removeTrust` and `getTrustRights`, so estate and economy plugins such as DyMarket can sell, rent and lease claims. Changes fire the usual transfer and trust events. See the [developer API](docs/api.md).
+- **Lighter protection checks:** claims are found from block coordinates, owners and trusted players are answered before any permission lookup, and denial messages are built once per language instead of on every event. On Paper, Purpur and Folia the denial goes to players as a ready component. No message text and no protection result changes.
+
+## Added in 1.3.0
 
 - **Claim flight:** `/claim fly [on|off]` flies inside your own claims and claims you can build in. Flight stops when you leave and comes back when you return; fall damage is forgiven for a few seconds. Needs `dyclaim.fly` (OP by default).
 - **Fire control:** `/claim fire` lets fire spread and burn blocks in a claim. Claims stay fireproof by default (`protection.fire-spread`).
@@ -36,7 +41,7 @@ All new protection settings follow the `default` / `forced-value` / `player-togg
 
 ![Processing time for 1,000 block-break checks across four plugins](docs/images/DyClaim-4-plugins-en.png)
 
-On Purpur 1.20.4 with 50 claim areas, DyClaim had the lowest observed median in this synthetic workload: 50% owner-allowed and 50% visitor-blocked block-break checks, including default denial feedback. GriefPrevention was faster in the owner-only checks. These are event-processing durations, not CPU or RAM usage, and do not establish superiority across all workloads.
+On Purpur 1.20.4 with 50 claim areas, measured on 12 November 2026, DyClaim 1.3.1 had the lowest observed median in all three columns of this synthetic workload: owner-allowed block-break checks (0.364 against 0.586 for GriefPrevention), visitor-blocked checks (2.642 against 14.659) and a 50% / 50% mix (1.505 against 7.604), in milliseconds per 1,000 events including default denial feedback. Most of the visitor-side gain on Paper, Purpur and Folia comes from sending the denial as a ready component; Spigot keeps the text path and does not get that part. These are event-processing durations, not CPU or RAM usage, and do not establish superiority across all workloads.
 
 [Method, results and limitations](docs/benchmark-50-claims.md)
 
@@ -232,13 +237,13 @@ The v1.0.0 release passed live claim, ownership, language and protection scenari
 | PlaceholderAPI | `%dyclaim_...%` placeholders such as claims, limit, owner and role |
 | BlueMap, Dynmap, squaremap | Claim areas on the web map (BlueMap only on Folia) |
 
-DyClaim also reports anonymous statistics to [bStats](https://bstats.org/plugin/bukkit/DyClaim/34849); turn this off with `metrics.enabled: false`. Plugins can read claims and listen to claim events through the [developer API](docs/api.md).
+DyClaim also reports anonymous statistics to [bStats](https://bstats.org/plugin/bukkit/DyClaim/34849); turn this off with `metrics.enabled: false`. Plugins can read claims, listen to claim events and, since 1.3.1, transfer claims and set trust through the [developer API](docs/api.md).
 
 No integration is required for core claiming. Installed protection hooks are detected automatically; an unavailable or failing detected hook blocks acquisition rather than allowing an unchecked overlap. Actual provider-version compatibility and Bedrock visualization require testing with your chosen integrations; they are not covered by the completed core-server matrix.
 
 ## Installation and configuration
 
-1. Stop the server and place `DyClaim-1.3.0.jar` in `plugins/`.
+1. Stop the server and place `DyClaim-1.3.1.jar` in `plugins/`.
 2. Start the server to generate `plugins/DyClaim/`.
 3. Edit `config.yml` and, if desired, the message files (English, Turkish, German, Spanish, Russian).
 4. Run `/claim admin reload` as a permitted player, or `claim admin reload` in the server console.
@@ -270,7 +275,7 @@ Windows:      gradlew.bat clean build
 Linux/macOS:  ./gradlew clean build
 ```
 
-The JAR is `build/libs/DyClaim-1.3.0.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
+The JAR is `build/libs/DyClaim-1.3.1.jar`; it runs on every supported server, including Folia. Maintained by **Claww**. Issues, contributions and feature requests are welcome at [DyPlugin/DyClaim](https://github.com/DyPlugin/DyClaim).
 
 Licensed under the custom [DyClaim Source-Available License 1.0](LICENSE).
 Use and modification are permitted, including on commercial servers. Redistribution must be free, retain attribution and provide the corresponding source under the same terms. Paid distribution requires separate written permission. Third-party licenses and rights granted for earlier distributions remain unaffected.

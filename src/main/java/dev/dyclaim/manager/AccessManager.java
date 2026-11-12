@@ -25,7 +25,11 @@ public class AccessManager {
     }
     public boolean actorKnown(Player player){return !plugin.getPlatformTasks().isRegionThreaded()||actor(player)!=null;}
     public ClaimData actorClaim(Player player){
-        if(!plugin.getPlatformTasks().isRegionThreaded())return plugin.getClaimManager().getClaimAt(player.getLocation().getChunk());
+        if(!plugin.getPlatformTasks().isRegionThreaded()){
+            // Block coordinates give the same chunk as getChunk() without building a chunk object or loading it.
+            org.bukkit.Location at=player.getLocation();
+            return plugin.getClaimManager().getClaimAt(at.getWorld().getName(),at.getBlockX()>>4,at.getBlockZ()>>4);
+        }
         Actor actor=actor(player);return actor==null?null:plugin.getClaimManager().getClaimAt(actor.world,actor.x,actor.z);
     }
     public void watchActor(Player player){
@@ -50,17 +54,21 @@ public class AccessManager {
         return hot!=null?hot.resolve(claim,key):ProtectionPolicy.resolve(plugin.getConfigManager().values(),claim,key);
     }
     public boolean enabled(ClaimData claim,String key){return policy(claim,key).enabled();}
+    /**
+     * The claim's own answer (owner, coowner, trust grant) comes before the bypass permission check, so the common owner
+     * and trusted cases never reach a permission lookup; the result is the same for every input, only the order differs.
+     */
     public boolean allows(Player player,ClaimData claim,String right){
-        if(claim==null||bypass(player)||claim.allows(player.getUniqueId(),right))return true;
+        if(claim==null||claim.allows(player.getUniqueId(),right)||bypass(player))return true;
         if(plugin.getClanTrustManager()!=null&&plugin.getClanTrustManager().allows(player.getUniqueId(),claim,right))return true;
         if(settings().permissionGroups&&GroupTrust.allows(player,claim,right))return true;
         return switch(right){case "doors"->enabled(claim,"visitor-doors");case "trapdoors"->enabled(claim,"visitor-trapdoors");default->false;};
     }
     /** Anyone the claim lets in when visitor entry is off: managers, trusted players, trusted clans or groups and bypass. */
     public boolean member(Player player,ClaimData claim){
-        if(claim==null||bypass(player))return true;
+        if(claim==null)return true;
         UUID uuid=player.getUniqueId();
-        if(claim.canManage(uuid)||claim.isTrusted(uuid))return true;
+        if(claim.canManage(uuid)||claim.isTrusted(uuid)||bypass(player))return true;
         for(String right:dev.dyclaim.model.TrustGrant.RIGHTS)
             if((plugin.getClanTrustManager()!=null&&plugin.getClanTrustManager().allows(uuid,claim,right))||(settings().permissionGroups&&GroupTrust.allows(player,claim,right)))return true;
         return false;

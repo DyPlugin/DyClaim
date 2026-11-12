@@ -19,7 +19,7 @@ class ProtectionRegressionTest extends ManagerFixture {
     private ClaimProtectionListener listener(){return new ClaimProtectionListener(plugin);}
     @Test void distantDispenserArrowsCannotDamageAnimalsOrBypassDisabledPvp() {
         Chunk inside=chunk(0,0),outside=chunk(4,0);Player owner=player("Owner",inside);claims.claimChunk(owner,inside);
-        Block dispenser=mock(Block.class);when(dispenser.getChunk()).thenReturn(outside);
+        Block dispenser=mock(Block.class);TestBlocks.at(dispenser,outside);
         org.bukkit.projectiles.BlockProjectileSource source=mock(org.bukkit.projectiles.BlockProjectileSource.class);when(source.getBlock()).thenReturn(dispenser);
         Projectile arrow=mock(Projectile.class);when(arrow.getShooter()).thenReturn(source);
         Cow cow=mock(Cow.class);when(cow.getLocation()).thenAnswer(i->owner.getLocation());
@@ -39,7 +39,7 @@ class ProtectionRegressionTest extends ManagerFixture {
     }
     @Test void dispenserCannotEmptyBucketAcrossClaimBoundaryButSameOwnerAutomationWorks() {
         Chunk outside=chunk(0,0),inside=chunk(1,0);Player owner=player("Owner",inside);claims.claimChunk(owner,inside);
-        Block source=mock(Block.class),target=mock(Block.class);when(source.getChunk()).thenReturn(outside);when(target.getChunk()).thenReturn(inside);
+        Block source=mock(Block.class),target=mock(Block.class);TestBlocks.at(source,outside);TestBlocks.at(target,inside);
         org.bukkit.block.data.Directional facing=mock(org.bukkit.block.data.Directional.class);when(facing.getFacing()).thenReturn(BlockFace.EAST);when(source.getBlockData()).thenReturn(facing);when(source.getRelative(BlockFace.EAST)).thenReturn(target);
         BlockDispenseEvent event=mock(BlockDispenseEvent.class);when(event.getBlock()).thenReturn(source);
         listener().dispense(event);verify(event).setCancelled(true);
@@ -47,9 +47,9 @@ class ProtectionRegressionTest extends ManagerFixture {
     }
     @Test void outsideTreeCannotReplaceBlocksInAClaimButItsOtherBlocksRemain() {
         Chunk outside=chunk(0,0),inside=chunk(1,0);Player owner=player("Owner",inside);claims.claimChunk(owner,inside);
-        Block a=mock(Block.class),b=mock(Block.class);when(a.getChunk()).thenReturn(outside);when(b.getChunk()).thenReturn(inside);
+        Block a=mock(Block.class),b=mock(Block.class);TestBlocks.at(a,outside);TestBlocks.at(b,inside);
         BlockState wild=mock(BlockState.class),protectedBlock=mock(BlockState.class);when(wild.getBlock()).thenReturn(a);when(protectedBlock.getBlock()).thenReturn(b);
-        Location origin=mock(Location.class);when(origin.getChunk()).thenReturn(outside);
+        Location origin=mock(Location.class);TestBlocks.at(origin,outside);
         StructureGrowEvent event=mock(StructureGrowEvent.class);when(event.getLocation()).thenReturn(origin);
         List<BlockState> changes=new ArrayList<>(List.of(wild,protectedBlock));when(event.getBlocks()).thenReturn(changes);
         listener().structureGrow(event);assertEquals(List.of(wild),changes);
@@ -58,7 +58,7 @@ class ProtectionRegressionTest extends ManagerFixture {
     @Test void visitorsCannotStripLogsEvenWithContainerTrust() {
         Chunk inside=chunk(0,0);Player owner=player("Owner",inside),visitor=player("Visitor",inside);claims.claimChunk(owner,inside);
         var claim=claims.getClaimAt(inside);claim.grant(visitor.getUniqueId(),0);claim.getTrustGrants().get(visitor.getUniqueId()).permissions=new HashSet<>(Set.of("containers"));
-        Block block=mock(Block.class);when(block.getChunk()).thenReturn(inside);when(block.getType()).thenReturn(Material.OAK_LOG);
+        Block block=mock(Block.class);TestBlocks.at(block,inside);when(block.getType()).thenReturn(Material.OAK_LOG);
         org.bukkit.inventory.ItemStack axe=mock(org.bukkit.inventory.ItemStack.class);when(axe.getType()).thenReturn(Material.IRON_AXE);
         PlayerInteractEvent event=mock(PlayerInteractEvent.class);when(event.getPlayer()).thenReturn(visitor);when(event.getClickedBlock()).thenReturn(block);when(event.getAction()).thenReturn(Action.RIGHT_CLICK_BLOCK);when(event.getItem()).thenReturn(axe);
         listener().onPlayerInteract(event);verify(event).setCancelled(true);
@@ -70,14 +70,14 @@ class ProtectionRegressionTest extends ManagerFixture {
     }
     @Test void editingAnExistingSignRequiresBuildAccess() {
         Chunk inside=chunk(0,0);Player owner=player("Owner",inside),visitor=player("Visitor",inside);claims.claimChunk(owner,inside);
-        Block block=mock(Block.class);when(block.getChunk()).thenReturn(inside);
+        Block block=mock(Block.class);TestBlocks.at(block,inside);
         SignChangeEvent event=mock(SignChangeEvent.class);when(event.getPlayer()).thenReturn(visitor);when(event.getBlock()).thenReturn(block);
         listener().signChange(event);verify(event).setCancelled(true);
     }
     @Test void bedPlacedOutsideCannotReplaceBlockInsideAnotherClaim() {
         Chunk outside=chunk(0,0),inside=chunk(1,0);Player owner=player("Owner",inside),visitor=player("Visitor",outside);
         claims.claimChunk(owner,inside);
-        Block outsideBlock=mock(Block.class),insideBlock=mock(Block.class);when(outsideBlock.getChunk()).thenReturn(outside);when(insideBlock.getChunk()).thenReturn(inside);
+        Block outsideBlock=mock(Block.class),insideBlock=mock(Block.class);TestBlocks.at(outsideBlock,outside);TestBlocks.at(insideBlock,inside);
         BlockState a=mock(BlockState.class),b=mock(BlockState.class);when(a.getBlock()).thenReturn(outsideBlock);when(b.getBlock()).thenReturn(insideBlock);
         BlockMultiPlaceEvent event=mock(BlockMultiPlaceEvent.class);when(event.getPlayer()).thenReturn(visitor);when(event.getBlock()).thenReturn(outsideBlock);when(event.getReplacedBlockStates()).thenReturn(List.of(a,b));
         listener().onBlockPlace(event);verify(event).setCancelled(true);
@@ -85,7 +85,7 @@ class ProtectionRegressionTest extends ManagerFixture {
     }
     @Test void fireChargePlayerIgnitionRequiresBuildAccess() {
         Chunk inside=chunk(0,0);Player owner=player("Owner",inside),visitor=player("Visitor",inside);claims.claimChunk(owner,inside);
-        Block block=mock(Block.class);when(block.getChunk()).thenReturn(inside);
+        Block block=mock(Block.class);TestBlocks.at(block,inside);
         BlockIgniteEvent event=mock(BlockIgniteEvent.class);when(event.getBlock()).thenReturn(block);when(event.getPlayer()).thenReturn(visitor);when(event.getCause()).thenReturn(BlockIgniteEvent.IgniteCause.FIREBALL);
         listener().onBlockIgnite(event);verify(event).setCancelled(true);
     }
