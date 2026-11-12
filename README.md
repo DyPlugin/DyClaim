@@ -27,16 +27,6 @@ Install the JAR on any supported server; it detects Folia at startup. Stop the s
 - **Developer write API:** `DyClaimAPI` gains `getClaimById`, `transferClaim`, `setTrust`, `removeTrust` and `getTrustRights`, so estate and economy plugins such as DyMarket can sell, rent and lease claims. Changes fire the usual transfer and trust events. See the [developer API](docs/api.md).
 - **Lighter protection checks:** claims are found from block coordinates, owners and trusted players are answered before any permission lookup, and denial messages are built once per language instead of on every event. On Paper, Purpur and Folia the denial goes to players as a ready component. No message text and no protection result changes.
 
-## Added in 1.3.0
-
-- **Claim flight:** `/claim fly [on|off]` flies inside your own claims and claims you can build in. Flight stops when you leave and comes back when you return; fall damage is forgiven for a few seconds. Needs `dyclaim.fly` (OP by default).
-- **Fire control:** `/claim fire` lets fire spread and burn blocks in a claim. Claims stay fireproof by default (`protection.fire-spread`).
-- **Closed claims:** `/claim entry` keeps visitors out; owners, coowners and trusted players or groups still walk in. Claims stay open by default (`protection.visitor-entry`).
-- **Claim notices:** `/claim notices [on|off]` hides or shows entry and exit notices for you. Named claims show their name, and notices can be shown as a title (`notification.use-title`).
-- **Lighter:** claim lookups use a chunk index, protection rules and hot settings are worked out once per configuration load, and player joins and quits no longer write files on the server thread.
-
-All new protection settings follow the `default` / `forced-value` / `player-toggle` structure, and their defaults keep existing servers unchanged. See the [changelog](CHANGELOG.md).
-
 ## A measured look at protection
 
 ![Processing time for 1,000 block-break checks across four plugins](docs/images/DyClaim-4-plugins-en.png)
